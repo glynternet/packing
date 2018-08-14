@@ -121,12 +121,9 @@ func loadContents(path string, logger *log.Logger) (listContents, error) {
 		return listContents{}, errors.Wrapf(err, "getting lines of file at path:%q", path)
 	}
 
-	ls, is, err := processLines(lines)
+	cs, err := processLines(lines)
 	err = errors.Wrap(err, "processing lines")
-	return listContents{
-		sublistKeys: ls,
-		items:       is,
-	}, err
+	return cs, err
 }
 
 func getFileLines(path string, logger *log.Logger) ([]string, error) {
@@ -162,7 +159,7 @@ func getLines(r io.Reader) ([]string, error) {
 	return lines, errors.Wrap(scanner.Err(), "scanning file")
 }
 
-func processLines(lines []string) (lists, items []string, err error) {
+func processLines(lines []string) (listContents, error) {
 	const listNamePrefix = "list:"
 	var listNames []string
 	var itemNames []string
@@ -176,11 +173,14 @@ func processLines(lines []string) (lists, items []string, err error) {
 	for _, line := range lines {
 		err := p.Process(line)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "processing line:%q", line)
+			return listContents{}, errors.Wrapf(err, "processing line:%q", line)
 		}
 	}
 
-	return listNames, itemNames, err
+	return listContents{
+		sublistKeys: listNames,
+		items:       itemNames,
+	}, nil
 }
 
 func emptyStringCheck(s string) error {
