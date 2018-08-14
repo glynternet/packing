@@ -3,6 +3,7 @@ package parse
 import (
 	"strings"
 	"fmt"
+	"github.com/pkg/errors"
 )
 
 func NewPrefixParser(prefix string) func(string) (string, error) {
@@ -15,6 +16,9 @@ func NewPrefixParser(prefix string) func(string) (string, error) {
 	}
 }
 
-func ParseItem(s string) (string, error) {
+func Item(s string) (string, error) {
+	if s == "" {
+		return "", errors.New("empty string given")
+	}
 	return s, nil
 }

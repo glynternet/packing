@@ -68,36 +68,67 @@ func getLines(r io.Reader) ([]string, error) {
 }
 
 func processLines(lines []string) error {
-	const listIdentifier = "list:"
-	listNameParseFn := parse.NewPrefixParser(listIdentifier)
+	const listNamePrefix = "list:"
+	var listNames []string
+	var itemNames []string
+
+	p := stringProcessorGroup{
+		listNamesAppender(&listNames, listNamePrefix),
+		itemNamesAppender(&itemNames),
+		emptyStringCheck,
+	}
 
 	for _, line := range lines {
-		err := processLine(line, listNameParseFn, parse.ParseItem)
+		err := p.process(line)
 		if err != nil {
 			return errors.Wrapf(err, "processing line:%q", line)
 		}
 	}
+
+	fmt.Println(listNames)
+	fmt.Println(itemNames)
 	return nil
 }
 
-type parseFn func(string) (string, error)
+type stringProcessor func(string) error
 
-func processLine(line string, listNameParseFn parseFn, itemNameParser parseFn) error {
-	if line == "" {
+type stringProcessorGroup []stringProcessor
+
+func (p stringProcessorGroup) process(s string) error {
+	for _, fn := range p {
+		err := fn(s)
+		if err == nil {
+			return err
+		}
+		//TODO: use multi error here?
+	}
+	return fmt.Errorf("unable to process string:%q", s)
+}
+
+func itemNamesAppender(names *[]string) stringProcessor {
+	return func(s string) error {
+		name, err := parse.Item(s)
+		if err == nil {
+			*names = append(*names, name)
+		}
+		return err
+	}
+}
+
+func listNamesAppender(names *[]string, listNamePrefix string) stringProcessor {
+	return func(s string) error {
+		listNameParseFn := parse.NewPrefixParser(listNamePrefix)
+		name, err := listNameParseFn(s)
+		if err == nil {
+			*names = append(*names, name)
+		}
+		return err
+	}
+}
+
+func emptyStringCheck(s string) error {
+	if s == "" {
 		return nil
 	}
-
-	ln, err := listNameParseFn(line)
-	if err == nil {
-		fmt.Println("it's a list! " + ln)
-		return nil
-	}
-
-	in, err := itemNameParser(line)
-	if err == nil {
-		fmt.Println("it's an item! " + in)
-		return nil
-	}
-
-	return err
+	return fmt.Errorf("string:%q is not an empty string", s)
 }
