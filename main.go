@@ -52,9 +52,35 @@ func run(path string, logger *log.Logger, w io.Writer) error {
 		return err
 	}
 
-	err = processLines(lines)
+	ls, is, err := processLines(lines)
+	if err != nil {
+		err = errors.Wrap(err, "processing lines")
+		return err
+	}
+
+	if len(is) > 0 {
+		writeTitle(w, "Individual Items")
+		for _, item := range is {
+			fmt.Fprintln(w, item)
+		}
+		writeGroupBreak(w)
+	}
+
+	for _, listName := range ls {
+		writeTitle(w, listName)
+		writeGroupBreak(w)
+	}
 
 	return err
+}
+
+func writeTitle(w io.Writer, text string) {
+	fmt.Fprintln(w, strings.ToUpper(text))
+}
+
+func writeGroupBreak(w io.Writer) {
+	const groupBreak = "\n\n"
+	fmt.Fprint(w, groupBreak)
 }
 
 func getLines(r io.Reader) ([]string, error) {
@@ -67,7 +93,7 @@ func getLines(r io.Reader) ([]string, error) {
 	return lines, errors.Wrap(scanner.Err(), "scanning file")
 }
 
-func processLines(lines []string) error {
+func processLines(lines []string) (lists, items []string, err error){
 	const listNamePrefix = "list:"
 	var listNames []string
 	var itemNames []string
@@ -81,13 +107,11 @@ func processLines(lines []string) error {
 	for _, line := range lines {
 		err := p.process(line)
 		if err != nil {
-			return errors.Wrapf(err, "processing line:%q", line)
+			return nil, nil, errors.Wrapf(err, "processing line:%q", line)
 		}
 	}
 
-	fmt.Println(listNames)
-	fmt.Println(itemNames)
-	return nil
+	return listNames, itemNames, err
 }
 
 type stringProcessor func(string) error
