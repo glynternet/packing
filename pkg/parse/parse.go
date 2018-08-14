@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewPrefixParser(prefix string) func(string) (string, error) {
+func NewPrefixedParser(prefix string) func(string) (string, error) {
 	return func(s string) (string, error) {
 		ok := strings.HasPrefix(s, prefix)
 		if !ok {

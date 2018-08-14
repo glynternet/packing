@@ -28,7 +28,7 @@ func main() {
 	}
 }
 
-func run(path string, logger *log.Logger, out io.Writer) error {
+func run(path string, logger *log.Logger, w io.Writer) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return errors.Wrapf(err, "opening filer at path:%s", path)
@@ -73,8 +73,8 @@ func processLines(lines []string) error {
 	var itemNames []string
 
 	p := stringProcessorGroup{
-		listNamesAppender(&listNames, listNamePrefix),
-		itemNamesAppender(&itemNames),
+		listNamesProcessor(&listNames, listNamePrefix),
+		itemNamesProcessor(&itemNames),
 		emptyStringCheck,
 	}
 
@@ -105,7 +105,7 @@ func (p stringProcessorGroup) process(s string) error {
 	return fmt.Errorf("unable to process string:%q", s)
 }
 
-func itemNamesAppender(names *[]string) stringProcessor {
+func itemNamesProcessor(names *[]string) stringProcessor {
 	return func(s string) error {
 		name, err := parse.Item(s)
 		if err == nil {
@@ -115,9 +115,9 @@ func itemNamesAppender(names *[]string) stringProcessor {
 	}
 }
 
-func listNamesAppender(names *[]string, listNamePrefix string) stringProcessor {
+func listNamesProcessor(names *[]string, listNamePrefix string) stringProcessor {
 	return func(s string) error {
-		listNameParseFn := parse.NewPrefixParser(listNamePrefix)
+		listNameParseFn := parse.NewPrefixedParser(listNamePrefix)
 		name, err := listNameParseFn(s)
 		if err == nil {
 			*names = append(*names, name)

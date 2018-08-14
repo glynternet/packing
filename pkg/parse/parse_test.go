@@ -6,9 +6,9 @@ import (
 	"github.com/glynternet/packing/pkg/parse"
 )
 
-func TestNewPrefixParser(t *testing.T) {
+func TestNewPrefixedParser(t *testing.T) {
 	testPrefix := "TEST_PREFIX"
-	parseFn := parse.NewPrefixParser(testPrefix)
+	parseFn := parse.NewPrefixedParser(testPrefix)
 
 	t.Run("errors", func(t *testing.T) {
 		for _, test := range []struct {
