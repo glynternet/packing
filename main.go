@@ -3,15 +3,16 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
-	"github.com/pkg/errors"
-	"io"
+	gpath "path"
 	"strings"
-	"path"
+
 	"github.com/glynternet/packing/internal/stringprocessor"
-	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/internal/write"
+	"github.com/glynternet/packing/pkg/list"
+	"github.com/pkg/errors"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 	}
 
 	out := os.Stdout
-	logger := log.New(out, "", log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
+	logger := log.New(out, "", log.Ldate|log.Ltime|log.LUTC|log.Lshortfile)
 
 	path := os.Args[1]
 	listsDir := os.Args[2]
@@ -32,45 +33,93 @@ func main() {
 	}
 }
 
-type groupLoader func(string) (list.Group, error)
+type infoLoader interface {
+	load(string) (listNames, itemNames []string, err error)
+}
 
-func fileGroupLoader(parentDir string, logger *log.Logger) groupLoader {
-	return func(s string) (list.Group, error) {
-		path := path.Join(parentDir, s)
-		file, err := os.Open(path)
-		if err != nil {
-			return list.Group{}, errors.Wrapf(err, "opening file at path:%q", path)
-		}
+type fileInfoLoader struct {
+	parentDir string
+	*log.Logger
+}
 
-		defer func() {
-			cErr := file.Close()
-			if cErr == nil {
-				return
-			}
-			if err == nil {
-				err = cErr
-				return
-			}
-			logger.Println(errors.Wrap(cErr, "closing packing file"))
-		}()
+func (fil fileInfoLoader) load(key string) (listNames, itemNames []string, err error) {
+	path := gpath.Join(string(fil.parentDir), key)
+	ls, is, err := loadData(path, fil.Logger)
+	err = errors.Wrapf(err, "loading data from path:%q", path)
+	return ls, is, err
+}
 
-		lines, err := getLines(file)
-		if err != nil {
-			err = errors.Wrap(err, "getting lines")
-			return list.Group{}, err
-		}
-
-		return list.Group{
-			Name:s,
-			Items:lines,
-		}, nil
+func recursiveGroupLoad(keys []string, logger *log.Logger, loader infoLoader, groups map[string]list.Group) error {
+	if len(keys) == 0 {
+		return nil
 	}
+	var listNames []string
+	for _, key := range keys {
+		if _, ok := groups[key]; ok {
+			// skip if exists
+			continue
+		}
+
+		lns, is, err := loader.load(key)
+		if err != nil {
+			return errors.Wrap(err, "loading info")
+		}
+		groups[key] = list.Group{
+			Name:  key,
+			Items: is,
+		}
+		listNames = append(listNames, lns...)
+	}
+	return recursiveGroupLoad(listNames, logger, loader, groups)
 }
 
 func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
+	// load data in root file
+	ls, is, err := loadData(path, logger)
+	if err != nil {
+		return errors.Wrap(err, "getting root list")
+	}
+
+	groups := map[string]list.Group{
+		"Individual Items": {
+			Name:  "Individual Items",
+			Items: is,
+		},
+	}
+
+	loader := fileInfoLoader{
+		parentDir: listsDir,
+		Logger:    logger,
+	}
+
+	err = recursiveGroupLoad(ls, logger, loader, groups)
+	if err != nil {
+		return errors.Wrap(err, "loading groups recursively")
+	}
+
+	for _, g := range groups {
+		write.Group(w, g)
+		write.GroupBreak(w)
+	}
+
+	return err
+}
+
+func loadData(path string, logger *log.Logger) (lists, items []string, err error) {
+	lines, err := getFileLines(path, logger)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "getting lines of file at path:%q", path)
+	}
+
+	ls, is, err := processLines(lines)
+	err = errors.Wrap(err, "processing lines")
+	return ls, is, err
+}
+
+func getFileLines(path string, logger *log.Logger) ([]string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return errors.Wrapf(err, "opening file at path:%q", path)
+		return nil, errors.Wrapf(err, "opening file at path:%q", path)
 	}
 
 	defer func() {
@@ -86,54 +135,8 @@ func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 	}()
 
 	lines, err := getLines(file)
-	if err != nil {
-		err = errors.Wrap(err, "getting lines")
-		return err
-	}
-
-	ls, is, err := processLines(lines)
-	if err != nil {
-		err = errors.Wrap(err, "processing lines")
-		return err
-	}
-
-	var gs []list.Group
-
-	if len(is) > 0 {
-		gs = append(gs, list.Group{
-			Name:"Individual Items",
-			Items:is,
-		})
-	}
-
-	loadGroup := fileGroupLoader(listsDir, logger)
-	errs := make(map[string]error)
-
-	for _, name := range ls {
-		g, err := loadGroup(name)
-		if err != nil {
-			errs[name] = errors.Wrapf(err, "loading list with name:%q", name)
-			continue
-		}
-		gs = append(gs, g)
-	}
-
-	if len(errs) > 0 {
-		write.Title(w, "Errors")
-		for _, err := range errs {
-			fmt.Fprintln(w, err)
-		}
-		write.GroupBreak(w)
-	}
-
-	for i, g := range gs {
-		write.Group(w, g)
-		if i < len(gs) - 1 {
-			write.GroupBreak(w)
-		}
-	}
-
-	return err
+	err = errors.Wrap(err, "getting lines")
+	return lines, err
 }
 
 func getLines(r io.Reader) ([]string, error) {
@@ -146,7 +149,7 @@ func getLines(r io.Reader) ([]string, error) {
 	return lines, errors.Wrap(scanner.Err(), "scanning file")
 }
 
-func processLines(lines []string) (lists, items []string, err error){
+func processLines(lines []string) (lists, items []string, err error) {
 	const listNamePrefix = "list:"
 	var listNames []string
 	var itemNames []string
@@ -166,7 +169,6 @@ func processLines(lines []string) (lists, items []string, err error){
 
 	return listNames, itemNames, err
 }
-
 
 func emptyStringCheck(s string) error {
 	if s == "" {
