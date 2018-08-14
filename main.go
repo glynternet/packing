@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"strings"
-	"github.com/glynternet/packing/pkg/parse"
 	"path"
+	"github.com/glynternet/packing/internal/stringprocessor"
 )
 
 func main() {
@@ -174,14 +174,14 @@ func processLines(lines []string) (lists, items []string, err error){
 	var listNames []string
 	var itemNames []string
 
-	p := stringProcessorGroup{
-		listNamesProcessor(&listNames, listNamePrefix),
-		itemNamesProcessor(&itemNames),
+	p := stringprocessor.Group{
+		stringprocessor.ListNamesProcessor(&listNames, listNamePrefix),
+		stringprocessor.ItemNamesProcessor(&itemNames),
 		emptyStringCheck,
 	}
 
 	for _, line := range lines {
-		err := p.process(line)
+		err := p.Process(line)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "processing line:%q", line)
 		}
@@ -190,41 +190,6 @@ func processLines(lines []string) (lists, items []string, err error){
 	return listNames, itemNames, err
 }
 
-type stringProcessor func(string) error
-
-type stringProcessorGroup []stringProcessor
-
-func (p stringProcessorGroup) process(s string) error {
-	for _, fn := range p {
-		err := fn(s)
-		if err == nil {
-			return err
-		}
-		//TODO: use multi error here?
-	}
-	return fmt.Errorf("unable to process string:%q", s)
-}
-
-func itemNamesProcessor(names *[]string) stringProcessor {
-	return func(s string) error {
-		name, err := parse.Item(s)
-		if err == nil {
-			*names = append(*names, name)
-		}
-		return err
-	}
-}
-
-func listNamesProcessor(names *[]string, listNamePrefix string) stringProcessor {
-	return func(s string) error {
-		listNameParseFn := parse.NewPrefixedParser(listNamePrefix)
-		name, err := listNameParseFn(s)
-		if err == nil {
-			*names = append(*names, name)
-		}
-		return err
-	}
-}
 
 func emptyStringCheck(s string) error {
 	if s == "" {
