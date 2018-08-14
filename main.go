@@ -88,11 +88,13 @@ func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 		return errors.Wrap(err, "getting root list")
 	}
 
-	groups := map[string]list.Group{
-		"Individual Items": {
-			Name:  "Individual Items",
+	groups := make(map[string]list.Group)
+	if len(cs.items) > 0 {
+		name := "Individual Items"
+		groups[name] = list.Group{
+			Name:  name,
 			Items: cs.items,
-		},
+		}
 	}
 
 	loader := fileInfoLoader{
