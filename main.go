@@ -33,8 +33,13 @@ func main() {
 	}
 }
 
+type listContents struct {
+	sublistKeys []string
+	items       []string
+}
+
 type infoLoader interface {
-	load(string) (listNames, itemNames []string, err error)
+	load(string) (listContents, error)
 }
 
 type fileInfoLoader struct {
@@ -42,11 +47,11 @@ type fileInfoLoader struct {
 	*log.Logger
 }
 
-func (fil fileInfoLoader) load(key string) (listNames, itemNames []string, err error) {
+func (fil fileInfoLoader) load(key string) (listContents, error) {
 	path := gpath.Join(string(fil.parentDir), key)
-	ls, is, err := loadData(path, fil.Logger)
-	err = errors.Wrapf(err, "loading data from path:%q", path)
-	return ls, is, err
+	contents, err := loadContents(path, fil.Logger)
+	err = errors.Wrapf(err, "loading contents from path:%q", path)
+	return contents, err
 }
 
 func recursiveGroupLoad(keys []string, logger *log.Logger, loader infoLoader, groups map[string]list.Group) error {
@@ -60,22 +65,25 @@ func recursiveGroupLoad(keys []string, logger *log.Logger, loader infoLoader, gr
 			continue
 		}
 
-		lns, is, err := loader.load(key)
+		contents, err := loader.load(key)
 		if err != nil {
 			return errors.Wrap(err, "loading info")
 		}
-		groups[key] = list.Group{
-			Name:  key,
-			Items: is,
+
+		if len(contents.items) > 0 {
+			groups[key] = list.Group{
+				Name:  key,
+				Items: contents.items,
+			}
 		}
-		listNames = append(listNames, lns...)
+		listNames = append(listNames, contents.sublistKeys...)
 	}
 	return recursiveGroupLoad(listNames, logger, loader, groups)
 }
 
 func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 	// load data in root file
-	ls, is, err := loadData(path, logger)
+	cs, err := loadContents(path, logger)
 	if err != nil {
 		return errors.Wrap(err, "getting root list")
 	}
@@ -83,7 +91,7 @@ func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 	groups := map[string]list.Group{
 		"Individual Items": {
 			Name:  "Individual Items",
-			Items: is,
+			Items: cs.items,
 		},
 	}
 
@@ -92,7 +100,7 @@ func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 		Logger:    logger,
 	}
 
-	err = recursiveGroupLoad(ls, logger, loader, groups)
+	err = recursiveGroupLoad(cs.sublistKeys, logger, loader, groups)
 	if err != nil {
 		return errors.Wrap(err, "loading groups recursively")
 	}
@@ -105,15 +113,18 @@ func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 	return err
 }
 
-func loadData(path string, logger *log.Logger) (lists, items []string, err error) {
+func loadContents(path string, logger *log.Logger) (listContents, error) {
 	lines, err := getFileLines(path, logger)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "getting lines of file at path:%q", path)
+		return listContents{}, errors.Wrapf(err, "getting lines of file at path:%q", path)
 	}
 
 	ls, is, err := processLines(lines)
 	err = errors.Wrap(err, "processing lines")
-	return ls, is, err
+	return listContents{
+		sublistKeys: ls,
+		items:       is,
+	}, err
 }
 
 func getFileLines(path string, logger *log.Logger) ([]string, error) {
