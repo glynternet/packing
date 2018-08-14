@@ -9,11 +9,12 @@ import (
 	"io"
 	"strings"
 	"github.com/glynternet/packing/pkg/parse"
+	"path"
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Println("Usage: packing PACKING_FILE")
+	if len(os.Args) != 3 {
+		fmt.Println("Usage: packing PACKING_FILE LISTS_DIRECTORY")
 		return
 	}
 
@@ -21,17 +22,53 @@ func main() {
 	logger := log.New(out, "", log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
 
 	path := os.Args[1]
-	err := run(path, logger, out)
+	listsDir := os.Args[2]
+	err := run(path, listsDir, logger, out)
 	if err != nil {
 		fmt.Fprintf(out, "%v", err)
 		os.Exit(1)
 	}
 }
 
-func run(path string, logger *log.Logger, w io.Writer) error {
+type groupLoader func(string) (group, error)
+
+func fileGroupLoader(parentDir string, logger *log.Logger) groupLoader {
+	return func(s string) (group, error) {
+		path := path.Join(parentDir, s)
+		file, err := os.Open(path)
+		if err != nil {
+			return group{}, errors.Wrapf(err, "opening file at path:%q", path)
+		}
+
+		defer func() {
+			cErr := file.Close()
+			if cErr == nil {
+				return
+			}
+			if err == nil {
+				err = cErr
+				return
+			}
+			logger.Println(errors.Wrap(cErr, "closing packing file"))
+		}()
+
+		lines, err := getLines(file)
+		if err != nil {
+			err = errors.Wrap(err, "getting lines")
+			return group{}, err
+		}
+
+		return group{
+			name:s,
+			items:lines,
+		}, nil
+	}
+}
+
+func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 	file, err := os.Open(path)
 	if err != nil {
-		return errors.Wrapf(err, "opening filer at path:%s", path)
+		return errors.Wrapf(err, "opening file at path:%q", path)
 	}
 
 	defer func() {
@@ -58,20 +95,59 @@ func run(path string, logger *log.Logger, w io.Writer) error {
 		return err
 	}
 
+	var gs []group
+
 	if len(is) > 0 {
-		writeTitle(w, "Individual Items")
-		for _, item := range is {
-			fmt.Fprintln(w, item)
+		gs = append(gs, group{
+			name:"Individual Items",
+			items:is,
+		})
+	}
+
+	loadGroup := fileGroupLoader(listsDir, logger)
+	errs := make(map[string]error)
+
+	for _, name := range ls {
+		g, err := loadGroup(name)
+		if err != nil {
+			errs[name] = errors.Wrapf(err, "loading group with name:%q", name)
+			continue
+		}
+		gs = append(gs, g)
+	}
+
+	if len(errs) > 0 {
+		writeTitle(w, "Errors")
+		for _, err := range errs {
+			fmt.Fprintln(w, err)
 		}
 		writeGroupBreak(w)
 	}
 
-	for _, listName := range ls {
-		writeTitle(w, listName)
-		writeGroupBreak(w)
+	for i, g := range gs {
+		writeGroup(w, g)
+		if i < len(gs) - 1 {
+			writeGroupBreak(w)
+		}
 	}
 
 	return err
+}
+
+type group struct {
+	name string
+	items []string
+}
+
+func writeGroup(w io.Writer, g group) {
+	name := strings.TrimSpace(g.name)
+	if name == "" {
+		name = "Unnamed"
+	}
+	writeTitle(w, name)
+	for _, item := range g.items {
+		fmt.Fprintln(w, item)
+	}
 }
 
 func writeTitle(w io.Writer, text string) {
