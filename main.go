@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/glynternet/packing/internal/load"
 	"github.com/glynternet/packing/internal/write"
 	"github.com/glynternet/packing/pkg/list"
-	"github.com/glynternet/packing/pkg/storage"
 	"github.com/glynternet/packing/pkg/storage/file"
 	"github.com/pkg/errors"
 )
@@ -52,7 +52,7 @@ func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 		Logger:  logger,
 	}
 
-	err = recursiveGroupLoad(cs.SublistKeys, logger, loader, groups)
+	err = load.GroupsRecursively(cs.SublistKeys, logger, loader, groups)
 	if err != nil {
 		return errors.Wrap(err, "loading groups recursively")
 	}
@@ -63,31 +63,4 @@ func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 	}
 
 	return err
-}
-
-func recursiveGroupLoad(keys []string, logger *log.Logger, contentsGetter storage.ListContentsGetter, groups map[string]list.Group) error {
-	if len(keys) == 0 {
-		return nil
-	}
-	var listNames []string
-	for _, key := range keys {
-		if _, ok := groups[key]; ok {
-			// skip if exists
-			continue
-		}
-
-		contents, err := contentsGetter.Get(key)
-		if err != nil {
-			return errors.Wrap(err, "loading info")
-		}
-
-		if len(contents.Items) > 0 {
-			groups[key] = list.Group{
-				Name:  key,
-				Items: contents.Items,
-			}
-		}
-		listNames = append(listNames, contents.SublistKeys...)
-	}
-	return recursiveGroupLoad(listNames, logger, contentsGetter, groups)
 }
