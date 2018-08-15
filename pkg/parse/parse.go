@@ -1,8 +1,9 @@
 package parse
 
 import (
-	"strings"
 	"fmt"
+	"strings"
+
 	"github.com/pkg/errors"
 )
 
@@ -16,7 +17,7 @@ func NewPrefixedParser(prefix string) func(string) (string, error) {
 	}
 }
 
-func Item(s string) (string, error) {
+func NotEmpty(s string) (string, error) {
 	if s == "" {
 		return "", errors.New("empty string given")
 	}

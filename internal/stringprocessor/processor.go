@@ -2,6 +2,7 @@ package stringprocessor
 
 import (
 	"fmt"
+
 	"github.com/glynternet/packing/pkg/parse"
 )
 
@@ -22,7 +23,7 @@ func (p Group) Process(s string) error {
 
 func ItemNamesProcessor(names *[]string) Processor {
 	return func(s string) error {
-		name, err := parse.Item(s)
+		name, err := parse.NotEmpty(s)
 		if err == nil {
 			*names = append(*names, name)
 		}
@@ -40,4 +41,3 @@ func ListNamesProcessor(names *[]string, listNamePrefix string) Processor {
 		return err
 	}
 }
-
