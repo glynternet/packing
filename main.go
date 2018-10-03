@@ -26,7 +26,7 @@ func main() {
 	listsDir := os.Args[2]
 	err := run(path, listsDir, logger, out)
 	if err != nil {
-		fmt.Fprintf(out, "%v", err)
+		fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)
 	}
 }
