@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 
 	"github.com/glynternet/packing/internal/load"
 	"github.com/glynternet/packing/internal/write"
@@ -58,7 +59,16 @@ func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 		write.GroupBreak(w)
 	}
 
+	var gs []list.Group
 	for _, g := range groups {
+		gs = append(gs, g)
+	}
+
+	sort.Slice(gs, func(i, j int) bool {
+		return gs[i].Name < gs[j].Name
+	})
+
+	for _, g := range gs {
 		write.Group(w, g)
 		write.GroupBreak(w)
 	}
