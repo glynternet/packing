@@ -46,7 +46,7 @@ func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
 		Logger:  logger,
 	}
 
-	err = load.GroupsRecursively(cs.SublistKeys, logger, loader, groups)
+	groups, err = load.Groups(cs.SublistKeys, logger, loader)
 	if err != nil {
 		return errors.Wrap(err, "loading groups recursively")
 	}

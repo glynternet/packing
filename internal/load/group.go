@@ -8,7 +8,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-func GroupsRecursively(keys []string, logger *log.Logger, cg storage.ListContentsGetter, groups map[string]list.Group) error {
+func Groups(keys []string, logger *log.Logger, cg storage.ListContentsGetter)  (map[string]list.Group, error)  {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+
+	groups := make(map[string]list.Group)
+	err := recursiveGroupsLoad(keys, logger, cg, groups)
+	return groups, err
+}
+
+func recursiveGroupsLoad(keys []string, logger *log.Logger, cg storage.ListContentsGetter, groups map[string]list.Group) error {
 	if len(keys) == 0 {
 		return nil
 	}
@@ -32,5 +42,5 @@ func GroupsRecursively(keys []string, logger *log.Logger, cg storage.ListContent
 		}
 		sublistKeys = append(sublistKeys, c.SublistKeys...)
 	}
-	return GroupsRecursively(sublistKeys, logger, cg, groups)
+	return recursiveGroupsLoad(sublistKeys, logger, cg, groups)
 }
