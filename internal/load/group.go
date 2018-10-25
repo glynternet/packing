@@ -21,7 +21,7 @@ func GroupsRecursively(keys []string, logger *log.Logger, cg storage.ListContent
 
 		c, err := cg.Get(key)
 		if err != nil {
-			return errors.Wrap(err, "loading info")
+			return errors.Wrapf(err, "getting contents for key:%v", key)
 		}
 
 		if len(c.Items) > 0 {
