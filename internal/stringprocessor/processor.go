@@ -10,9 +10,9 @@ type Processor func(string) error
 
 type Group []Processor
 
-func (p Group) Process(s string) error {
-	for _, fn := range p {
-		err := fn(s)
+func (g Group) Process(s string) error {
+	for _, processFn := range g {
+		err := processFn(s)
 		if err == nil {
 			return err
 		}
@@ -31,7 +31,7 @@ func ItemNamesProcessor(names *[]string) Processor {
 	}
 }
 
-func ListNamesProcessor(names *[]string, listNamePrefix string) Processor {
+func GroupNamesProcessor(names *[]string, listNamePrefix string) Processor {
 	return func(s string) error {
 		listNameParseFn := parse.NewPrefixedParser(listNamePrefix)
 		name, err := listNameParseFn(s)

@@ -33,28 +33,27 @@ func main() {
 }
 
 func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
-	// Get data in root file
-	cs, err := file.LoadContents(path, logger)
+	root, err := file.LoadGroup(path, logger)
 	if err != nil {
 		return errors.Wrap(err, "getting root list")
 	}
 
 	groups := make(map[string]list.Group)
 
-	loader := file.Getter{
+	loader := file.GroupGetter{
 		DirPath: listsDir,
 		Logger:  logger,
 	}
 
-	groups, err = load.Groups(cs.SublistKeys, logger, loader)
+	groups, err = load.Groups(root.GroupKeys, logger, loader)
 	if err != nil {
 		return errors.Wrap(err, "loading groups recursively")
 	}
 
-	if len(cs.Items) > 0 {
+	if len(root.Items) > 0 {
 		write.Group(w, list.Group{
 			Name:  "Individual Items",
-			Items: cs.Items,
+			Items: root.Items,
 		})
 		write.GroupBreak(w)
 	}

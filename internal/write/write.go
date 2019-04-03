@@ -8,6 +8,14 @@ import (
 	"github.com/glynternet/packing/pkg/list"
 )
 
+// TODO: There should be a Renderer here, maybe.
+//	type Renderer struct {
+//		io.Writer
+//	}
+//
+// func (r *Renderer)RenderGroup(g list.Group) error {...}
+// etc...
+
 func Group(w io.Writer, g list.Group) {
 	name := strings.TrimSpace(g.Name)
 	if name == "" {
