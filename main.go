@@ -10,6 +10,7 @@ import (
 	"github.com/glynternet/packing/internal/load"
 	"github.com/glynternet/packing/internal/write"
 	"github.com/glynternet/packing/pkg/list"
+	"github.com/glynternet/packing/pkg/storage"
 	"github.com/glynternet/packing/pkg/storage/file"
 	"github.com/pkg/errors"
 )
@@ -32,22 +33,22 @@ func main() {
 	}
 }
 
-func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
+func run(path string, groupsDir string, logger *log.Logger, w io.Writer) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return errors.Wrapf(err, "opening file at path:%q", path)
 	}
 
-	root, err := file.LoadGroup(f)
+	root, err := storage.LoadGroup(f)
 	if err != nil {
 		return errors.Wrap(err, "getting root list")
 	}
 
 	groups := make(map[string]list.Group)
 
-	loader := file.GroupGetter{
-		DirPath: listsDir,
-		Logger:  logger,
+	loader := storage.GroupGetter{
+		GetReadCloser: file.ReadCloserGetter(groupsDir),
+		Logger:        logger,
 	}
 
 	groups, err = load.Groups(root.GroupKeys, logger, loader)
