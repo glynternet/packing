@@ -33,7 +33,12 @@ func main() {
 }
 
 func run(path string, listsDir string, logger *log.Logger, w io.Writer) error {
-	root, err := file.LoadGroup(path, logger)
+	f, err := os.Open(path)
+	if err != nil {
+		return errors.Wrapf(err, "opening file at path:%q", path)
+	}
+
+	root, err := file.LoadGroup(f)
 	if err != nil {
 		return errors.Wrap(err, "getting root list")
 	}

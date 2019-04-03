@@ -19,33 +19,24 @@ type GroupGetter struct {
 	*log.Logger
 }
 
+func (gg GroupGetter) getGroupReadCloser(key string) (*os.File, error) {
+	p := gg.getFilePath(key)
+	f, err := os.Open(p)
+	return f, errors.Wrapf(err, "opening file at path:%q", p)
+}
+
+func (gg GroupGetter) getFilePath(key string) string {
+	return path.Join(string(gg.DirPath), key)
+}
+
 func (gg GroupGetter) GetGroup(key string) (list.Group, error) {
-	p := path.Join(string(gg.DirPath), key)
-	contents, err := LoadGroup(p, gg.Logger)
-	err = errors.Wrapf(err, "loading contents from p:%q", p)
-	return contents, err
-}
-
-// LoadGroup loads a single Group from a file at path
-func LoadGroup(path string, logger *log.Logger) (list.Group, error) {
-	lines, err := getFileLines(path, logger)
+	f, err := gg.getGroupReadCloser(key)
 	if err != nil {
-		return list.Group{}, errors.Wrapf(err, "getting lines of file at path:%q", path)
-	}
-
-	group, err := processLines(lines)
-	err = errors.Wrap(err, "processing lines")
-	return group, err
-}
-
-func getFileLines(path string, logger *log.Logger) ([]string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, errors.Wrapf(err, "opening file at path:%q", path)
+		return list.Group{}, errors.Wrapf(err, "getting ReadCloser for key:%q", key)
 	}
 
 	defer func() {
-		cErr := file.Close()
+		cErr := f.Close()
 		if cErr == nil {
 			return
 		}
@@ -53,22 +44,34 @@ func getFileLines(path string, logger *log.Logger) ([]string, error) {
 			err = cErr
 			return
 		}
-		logger.Println(errors.Wrap(cErr, "closing packing file"))
+		gg.Logger.Println(errors.Wrap(cErr, "closing group ReadCloser"))
 	}()
 
-	lines, err := getLines(file)
-	err = errors.Wrap(err, "getting lines")
-	return lines, err
+	contents, err := LoadGroup(f)
+	err = errors.Wrapf(err, "loading group for key:%q", key)
+	return contents, err
 }
 
-func getLines(r io.Reader) ([]string, error) {
+// LoadGroup loads a single Group from a Reader
+func LoadGroup(r io.Reader) (list.Group, error) {
+	lines, err := readAllLines(r)
+	if err != nil {
+		return list.Group{}, errors.Wrap(err, "reading lines")
+	}
+
+	group, err := processLines(lines)
+	err = errors.Wrap(err, "processing lines")
+	return group, err
+}
+
+func readAllLines(r io.Reader) ([]string, error) {
 	scanner := bufio.NewScanner(r)
 	var lines []string
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		lines = append(lines, line)
 	}
-	return lines, errors.Wrap(scanner.Err(), "scanning file")
+	return lines, errors.Wrap(scanner.Err(), "scanning lines")
 }
 
 func processLines(lines []string) (list.Group, error) {
