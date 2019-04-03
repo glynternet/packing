@@ -33,8 +33,8 @@ func ItemNamesProcessor(names *[]string) Processor {
 
 func GroupNamesProcessor(names *[]string, listNamePrefix string) Processor {
 	return func(s string) error {
-		listNameParseFn := parse.NewPrefixedParser(listNamePrefix)
-		name, err := listNameParseFn(s)
+		groupNameParseFn := parse.NewPrefixedParser(listNamePrefix)
+		name, err := groupNameParseFn(s)
 		if err == nil {
 			*names = append(*names, name)
 		}

@@ -22,7 +22,7 @@ func recursiveGroupsLoad(keys []string, logger *log.Logger, cg storage.GroupGett
 	if len(keys) == 0 {
 		return nil
 	}
-	var sublistKeys []string
+	var subgroupKeys []string
 	for _, key := range keys {
 		if _, ok := groups[key]; ok {
 			// skip if exists
@@ -40,7 +40,7 @@ func recursiveGroupsLoad(keys []string, logger *log.Logger, cg storage.GroupGett
 				Items: g.Items,
 			}
 		}
-		sublistKeys = append(sublistKeys, g.GroupKeys...)
+		subgroupKeys = append(subgroupKeys, g.GroupKeys...)
 	}
-	return recursiveGroupsLoad(sublistKeys, logger, cg, groups)
+	return recursiveGroupsLoad(subgroupKeys, logger, cg, groups)
 }

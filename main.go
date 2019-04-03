@@ -17,7 +17,7 @@ import (
 
 func main() {
 	if len(os.Args) != 3 {
-		fmt.Println("Usage: packing PACKING_FILE LISTS_DIRECTORY")
+		fmt.Println("Usage: packing PACKING_FILE GROUPS_DIRECTORY")
 		return
 	}
 
@@ -25,8 +25,8 @@ func main() {
 	logger := log.New(out, "", log.Ldate|log.Ltime|log.LUTC|log.Lshortfile)
 
 	path := os.Args[1]
-	listsDir := os.Args[2]
-	err := run(path, listsDir, logger, out)
+	groupsDir := os.Args[2]
+	err := run(path, groupsDir, logger, out)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)
@@ -41,7 +41,7 @@ func run(path string, groupsDir string, logger *log.Logger, w io.Writer) error {
 
 	root, err := storage.LoadGroup(f)
 	if err != nil {
-		return errors.Wrap(err, "getting root list")
+		return errors.Wrap(err, "getting root group")
 	}
 
 	groups := make(map[string]list.Group)

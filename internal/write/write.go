@@ -23,7 +23,7 @@ func Group(w io.Writer, g list.Group) {
 	}
 	Title(w, name)
 	for _, item := range g.Items {
-		ListItem(w, item)
+		Item(w, item)
 	}
 }
 
@@ -36,6 +36,6 @@ func GroupBreak(w io.Writer) {
 	fmt.Fprint(w, groupBreak)
 }
 
-func ListItem(w io.Writer, item string) {
+func Item(w io.Writer, item string) {
 	fmt.Fprintln(w, "- "+item)
 }
