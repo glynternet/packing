@@ -9,6 +9,7 @@ import (
 
 	"github.com/glynternet/packing/internal/load"
 	"github.com/glynternet/packing/internal/write"
+	"github.com/glynternet/packing/pkg/config"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/pkg/storage"
 	"github.com/glynternet/packing/pkg/storage/file"
@@ -24,19 +25,20 @@ func main() {
 	out := os.Stdout
 	logger := log.New(out, "", log.Ldate|log.Ltime|log.LUTC|log.Lshortfile)
 
-	path := os.Args[1]
-	groupsDir := os.Args[2]
-	err := run(path, groupsDir, logger, out)
+	err := run(config.Run{
+		TripPath:  os.Args[1],
+		GroupsDir: os.Args[2],
+	}, logger, out)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)
 	}
 }
 
-func run(path string, groupsDir string, logger *log.Logger, w io.Writer) error {
-	f, err := os.Open(path)
+func run(conf config.Run, logger *log.Logger, w io.Writer) error {
+	f, err := os.Open(conf.TripPath)
 	if err != nil {
-		return errors.Wrapf(err, "opening file at path:%q", path)
+		return errors.Wrapf(err, "opening file at path:%q", conf.TripPath)
 	}
 
 	root, err := storage.LoadGroup(f)
@@ -47,7 +49,7 @@ func run(path string, groupsDir string, logger *log.Logger, w io.Writer) error {
 	groups := make(map[string]list.Group)
 
 	loader := storage.GroupGetter{
-		GetReadCloser: file.ReadCloserGetter(groupsDir),
+		GetReadCloser: file.ReadCloserGetter(conf.GroupsDir),
 		Logger:        logger,
 	}
 
