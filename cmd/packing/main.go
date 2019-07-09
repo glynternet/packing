@@ -29,7 +29,7 @@ func main() {
 		return
 	}
 
-	if len(os.Args) != 3 {
+	if len(os.Args) != 2 && len(os.Args) != 3 {
 		fmt.Println("Usage: packing PACKING_FILE GROUPS_DIRECTORY")
 		return
 	}
@@ -39,12 +39,19 @@ func main() {
 
 	err := run(config.Run{
 		TripPath:  os.Args[1],
-		GroupsDir: os.Args[2],
+		GroupsDir: groupsDir(),
 	}, logger, out)
 	if err != nil {
 		fmt.Fprintf(out, "%v\n", err)
 		os.Exit(1)
 	}
+}
+
+func groupsDir() string {
+	if len(os.Args) > 2 {
+		return os.Args[2]
+	}
+	return os.Getenv("PACKING_GROUPS_DIR")
 }
 
 func run(conf config.Run, logger *log.Logger, w io.Writer) error {
