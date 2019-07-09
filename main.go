@@ -30,7 +30,7 @@ func main() {
 		GroupsDir: os.Args[2],
 	}, logger, out)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
+		fmt.Fprintf(out, "%v\n", err)
 		os.Exit(1)
 	}
 }
