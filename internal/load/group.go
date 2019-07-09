@@ -31,7 +31,7 @@ func recursiveGroupsLoad(keys []string, logger *log.Logger, cg storage.GroupGett
 
 		g, err := cg.GetGroup(key)
 		if err != nil {
-			return errors.Wrapf(err, "getting contents for key:%v", key)
+			return errors.Wrapf(err, "getting group for key:%q", key)
 		}
 
 		if len(g.Items) > 0 {
