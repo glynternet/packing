@@ -8,14 +8,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ContentsGetter struct {
+type ContentsDefinitionGetter struct {
 	GetReadCloser ReadCloserGetter
 	*log.Logger
 }
 
 type ReadCloserGetter func(key list.GroupKey) (io.ReadCloser, error)
 
-func (gg ContentsGetter) GetContents(key list.GroupKey) (*list.Contents, error) {
+func (gg ContentsDefinitionGetter) GetContentsDefinition(key list.GroupKey) (*list.ContentsDefinition, error) {
 	rc, err := gg.GetReadCloser(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "getting ReadCloser for key:%q", key)
@@ -33,7 +33,7 @@ func (gg ContentsGetter) GetContents(key list.GroupKey) (*list.Contents, error) 
 		gg.Logger.Println(errors.Wrap(cErr, "closing group ReadCloser"))
 	}()
 
-	contents, err := LoadContents(rc)
+	def, err := list.ParseContentsDefinition(rc)
 	err = errors.Wrapf(err, "loading group for key:%q", key)
-	return &contents, err
+	return &def, err
 }

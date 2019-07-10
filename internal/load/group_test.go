@@ -43,12 +43,12 @@ func TestGroups(t *testing.T) {
 	t.Run("single key exists", func(t *testing.T) {
 		keys := list.GroupKeys{"foo"}
 		store := mockContentsGetter{
-			groups: map[list.GroupKey]list.Contents{
+			groups: map[list.GroupKey]list.ContentsDefinition{
 				"foo": {Items: list.Items{"fooItem"}},
 				"bar": {Items: list.Items{"barItem"}},
 			},
 		}
-		expected := []list.Group{{Name: "foo", Contents: list.Contents{Items: list.Items{"fooItem"}}}}
+		expected := []list.Group{{Name: "foo", ContentsDefinition: list.ContentsDefinition{Items: list.Items{"fooItem"}}}}
 		gs, err := load.Groups(keys, logger, store)
 		assert.NoError(t, err)
 		assert.Equal(t, expected, gs)
@@ -58,7 +58,7 @@ func TestGroups(t *testing.T) {
 		// currently completes but will probably cause a bug when changing the way that groups are loaded
 		keys := list.GroupKeys{"foo"}
 		store := mockContentsGetter{
-			groups: map[list.GroupKey]list.Contents{
+			groups: map[list.GroupKey]list.ContentsDefinition{
 				"foo": {GroupKeys: list.GroupKeys{"foo"}},
 			},
 		}
@@ -69,11 +69,11 @@ func TestGroups(t *testing.T) {
 }
 
 type mockContentsGetter struct {
-	groups map[list.GroupKey]list.Contents
+	groups map[list.GroupKey]list.ContentsDefinition
 	error
 }
 
-func (mgg mockContentsGetter) GetContents(key list.GroupKey) (*list.Contents, error) {
+func (mgg mockContentsGetter) GetContentsDefinition(key list.GroupKey) (*list.ContentsDefinition, error) {
 	g, ok := mgg.groups[key]
 	if !ok {
 		return nil, mgg.error

@@ -59,30 +59,22 @@ func run(conf config.Run, logger *log.Logger, w io.Writer) error {
 	if err != nil {
 		return errors.Wrapf(err, "opening file at path:%q", conf.TripPath)
 	}
-
-	root, err := storage.LoadContents(f)
+	root, err := list.ParseContentsDefinition(f)
 	if err != nil {
-		return errors.Wrap(err, "getting root group")
+		return errors.Wrap(err, "getting root group definition")
 	}
-
-	loader := storage.ContentsGetter{
+	err = f.Close()
+	if err != nil {
+		return errors.Wrap(err, "closing root definition file")
+	}
+	loader := storage.ContentsDefinitionGetter{
 		GetReadCloser: file.ReadCloserGetter(conf.GroupsDir),
 		Logger:        logger,
 	}
 
-	groups, err := load.Groups(root.GroupKeys, logger, loader)
+	groups, err := load.AllGroups(logger, root, loader)
 	if err != nil {
-		return errors.Wrap(err, "loading groups recursively")
-	}
-
-	if len(root.Items) > 0 {
-		write.Group(w, list.Group{
-			Name: "Individual Items",
-			Contents: list.Contents{
-				Items: root.Items,
-			},
-		})
-		write.GroupBreak(w)
+		return errors.Wrap(err, "loading all groups")
 	}
 
 	var gs []list.Group
