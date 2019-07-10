@@ -39,11 +39,11 @@ func recursiveGroupsLoad(keys []string, logger *log.Logger, cg ContentsGetter, l
 			return errors.Wrapf(err, "getting group for key:%q", key)
 		}
 
-		if len(cs.Items) > 0 {
-			loaded[key] = list.Contents{
-				Items: cs.Items,
-			}
+		if cs == nil {
+			continue
 		}
+
+		loaded[key] = *cs
 		subgroupKeys = append(subgroupKeys, cs.GroupKeys...)
 	}
 	return recursiveGroupsLoad(subgroupKeys, logger, cg, loaded)

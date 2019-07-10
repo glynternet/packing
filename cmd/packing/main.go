@@ -95,6 +95,9 @@ func run(conf config.Run, logger *log.Logger, w io.Writer) error {
 	})
 
 	for _, g := range gs {
+		if len(g.Items) == 0 {
+			continue
+		}
 		write.Group(w, g)
 		write.GroupBreak(w)
 	}
