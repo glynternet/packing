@@ -39,9 +39,10 @@ func processLines(lines []string) (list.Group, error) {
 	var itemNames []string
 
 	p := stringprocessor.Group{
+		emptyStringCheck,
+		stringprocessor.CommentProcessor(),
 		stringprocessor.GroupNamesProcessor(&groupNames, groupNamePrefix),
 		stringprocessor.ItemNamesProcessor(&itemNames),
-		emptyStringCheck,
 	}
 
 	for _, line := range lines {
