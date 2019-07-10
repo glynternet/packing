@@ -4,11 +4,10 @@ import (
 	"log"
 
 	"github.com/glynternet/packing/pkg/list"
-	"github.com/glynternet/packing/pkg/storage"
 	"github.com/pkg/errors"
 )
 
-func Groups(keys []string, logger *log.Logger, cg storage.GroupGetter) (map[string]list.Group, error) {
+func Groups(keys []string, logger *log.Logger, cg GroupGetter) (map[string]list.Group, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
@@ -18,7 +17,7 @@ func Groups(keys []string, logger *log.Logger, cg storage.GroupGetter) (map[stri
 	return groups, err
 }
 
-func recursiveGroupsLoad(keys []string, logger *log.Logger, cg storage.GroupGetter, groups map[string]list.Group) error {
+func recursiveGroupsLoad(keys []string, logger *log.Logger, cg GroupGetter, groups map[string]list.Group) error {
 	if len(keys) == 0 {
 		return nil
 	}
