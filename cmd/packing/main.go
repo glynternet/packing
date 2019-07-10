@@ -65,14 +65,12 @@ func run(conf config.Run, logger *log.Logger, w io.Writer) error {
 		return errors.Wrap(err, "getting root group")
 	}
 
-	groups := make(map[string]list.Group)
-
 	loader := storage.ContentsGetter{
 		GetReadCloser: file.ReadCloserGetter(conf.GroupsDir),
 		Logger:        logger,
 	}
 
-	groups, err = load.Groups(root.GroupKeys, logger, loader)
+	groups, err := load.Groups(root.GroupKeys, logger, loader)
 	if err != nil {
 		return errors.Wrap(err, "loading groups recursively")
 	}

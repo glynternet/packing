@@ -7,23 +7,29 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Groups(keys []string, logger *log.Logger, cg ContentsGetter) (map[string]list.Group, error) {
+func Groups(keys []string, logger *log.Logger, cg ContentsGetter) ([]list.Group, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
 
-	groups := make(map[string]list.Group)
-	err := recursiveGroupsLoad(keys, logger, cg, groups)
+	loaded := make(map[string]list.Contents)
+	err := recursiveGroupsLoad(keys, logger, cg, loaded)
+	var groups []list.Group
+	for n, cs := range loaded {
+		groups = append(groups, list.Group{
+			Name: n, Contents: cs,
+		})
+	}
 	return groups, err
 }
 
-func recursiveGroupsLoad(keys []string, logger *log.Logger, cg ContentsGetter, groups map[string]list.Group) error {
+func recursiveGroupsLoad(keys []string, logger *log.Logger, cg ContentsGetter, loaded map[string]list.Contents) error {
 	if len(keys) == 0 {
 		return nil
 	}
 	var subgroupKeys []string
 	for _, key := range keys {
-		if _, ok := groups[key]; ok {
+		if _, ok := loaded[key]; ok {
 			// skip if exists
 			continue
 		}
@@ -34,14 +40,11 @@ func recursiveGroupsLoad(keys []string, logger *log.Logger, cg ContentsGetter, g
 		}
 
 		if len(cs.Items) > 0 {
-			groups[key] = list.Group{
-				Name: key,
-				Contents: list.Contents{
-					Items: cs.Items,
-				},
+			loaded[key] = list.Contents{
+				Items: cs.Items,
 			}
 		}
 		subgroupKeys = append(subgroupKeys, cs.GroupKeys...)
 	}
-	return recursiveGroupsLoad(subgroupKeys, logger, cg, groups)
+	return recursiveGroupsLoad(subgroupKeys, logger, cg, loaded)
 }
