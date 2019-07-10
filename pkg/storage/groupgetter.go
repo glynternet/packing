@@ -8,17 +8,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GroupGetter struct {
+type ContentsGetter struct {
 	GetReadCloser ReadCloserGetter
 	*log.Logger
 }
 
 type ReadCloserGetter func(key string) (io.ReadCloser, error)
 
-func (gg GroupGetter) GetGroup(key string) (list.Group, error) {
+func (gg ContentsGetter) GetContents(key string) (list.Contents, error) {
 	rc, err := gg.GetReadCloser(key)
 	if err != nil {
-		return list.Group{}, errors.Wrapf(err, "getting ReadCloser for key:%q", key)
+		return list.Contents{}, errors.Wrapf(err, "getting ReadCloser for key:%q", key)
 	}
 
 	defer func() {
@@ -33,7 +33,7 @@ func (gg GroupGetter) GetGroup(key string) (list.Group, error) {
 		gg.Logger.Println(errors.Wrap(cErr, "closing group ReadCloser"))
 	}()
 
-	contents, err := LoadGroup(rc)
+	contents, err := LoadContents(rc)
 	err = errors.Wrapf(err, "loading group for key:%q", key)
 	return contents, err
 }

@@ -11,16 +11,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-// LoadGroup loads a single Group from a Reader
-func LoadGroup(r io.Reader) (list.Group, error) {
+// LoadContents loads the contents of a single list from a Reader
+func LoadContents(r io.Reader) (list.Contents, error) {
 	lines, err := readAllLines(r)
 	if err != nil {
-		return list.Group{}, errors.Wrap(err, "reading lines")
+		return list.Contents{}, errors.Wrap(err, "reading lines")
 	}
 
-	group, err := processLines(lines)
+	cs, err := processLines(lines)
 	err = errors.Wrap(err, "processing lines")
-	return group, err
+	return cs, err
 }
 
 func readAllLines(r io.Reader) ([]string, error) {
@@ -33,7 +33,7 @@ func readAllLines(r io.Reader) ([]string, error) {
 	return lines, errors.Wrap(scanner.Err(), "scanning lines")
 }
 
-func processLines(lines []string) (list.Group, error) {
+func processLines(lines []string) (list.Contents, error) {
 	const groupNamePrefix = "group:"
 	var groupNames []string
 	var itemNames []string
@@ -48,11 +48,11 @@ func processLines(lines []string) (list.Group, error) {
 	for _, line := range lines {
 		err := p.Process(line)
 		if err != nil {
-			return list.Group{}, errors.Wrapf(err, "processing line:%q", line)
+			return list.Contents{}, errors.Wrapf(err, "processing line:%q", line)
 		}
 	}
 
-	return list.Group{
+	return list.Contents{
 		GroupKeys: groupNames,
 		Items:     itemNames,
 	}, nil

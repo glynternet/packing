@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Groups(keys []string, logger *log.Logger, cg GroupGetter) (map[string]list.Group, error) {
+func Groups(keys []string, logger *log.Logger, cg ContentsGetter) (map[string]list.Group, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
@@ -17,7 +17,7 @@ func Groups(keys []string, logger *log.Logger, cg GroupGetter) (map[string]list.
 	return groups, err
 }
 
-func recursiveGroupsLoad(keys []string, logger *log.Logger, cg GroupGetter, groups map[string]list.Group) error {
+func recursiveGroupsLoad(keys []string, logger *log.Logger, cg ContentsGetter, groups map[string]list.Group) error {
 	if len(keys) == 0 {
 		return nil
 	}
@@ -28,18 +28,20 @@ func recursiveGroupsLoad(keys []string, logger *log.Logger, cg GroupGetter, grou
 			continue
 		}
 
-		g, err := cg.GetGroup(key)
+		cs, err := cg.GetContents(key)
 		if err != nil {
 			return errors.Wrapf(err, "getting group for key:%q", key)
 		}
 
-		if len(g.Items) > 0 {
+		if len(cs.Items) > 0 {
 			groups[key] = list.Group{
-				Name:  key,
-				Items: g.Items,
+				Name: key,
+				Contents: list.Contents{
+					Items: cs.Items,
+				},
 			}
 		}
-		subgroupKeys = append(subgroupKeys, g.GroupKeys...)
+		subgroupKeys = append(subgroupKeys, cs.GroupKeys...)
 	}
 	return recursiveGroupsLoad(subgroupKeys, logger, cg, groups)
 }

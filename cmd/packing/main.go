@@ -60,14 +60,14 @@ func run(conf config.Run, logger *log.Logger, w io.Writer) error {
 		return errors.Wrapf(err, "opening file at path:%q", conf.TripPath)
 	}
 
-	root, err := storage.LoadGroup(f)
+	root, err := storage.LoadContents(f)
 	if err != nil {
 		return errors.Wrap(err, "getting root group")
 	}
 
 	groups := make(map[string]list.Group)
 
-	loader := storage.GroupGetter{
+	loader := storage.ContentsGetter{
 		GetReadCloser: file.ReadCloserGetter(conf.GroupsDir),
 		Logger:        logger,
 	}
@@ -79,8 +79,10 @@ func run(conf config.Run, logger *log.Logger, w io.Writer) error {
 
 	if len(root.Items) > 0 {
 		write.Group(w, list.Group{
-			Name:  "Individual Items",
-			Items: root.Items,
+			Name: "Individual Items",
+			Contents: list.Contents{
+				Items: root.Items,
+			},
 		})
 		write.GroupBreak(w)
 	}
