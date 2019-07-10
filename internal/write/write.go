@@ -36,6 +36,6 @@ func GroupBreak(w io.Writer) {
 	fmt.Fprint(w, groupBreak)
 }
 
-func Item(w io.Writer, item string) {
-	fmt.Fprintln(w, "- "+item)
+func Item(w io.Writer, i list.Item) {
+	fmt.Fprintln(w, "- "+i)
 }

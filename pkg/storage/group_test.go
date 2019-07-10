@@ -21,7 +21,7 @@ func TestLoadContents(t *testing.T) {
 	t.Run("single item", func(t *testing.T) {
 		input := `foo`
 		expected := list.Contents{
-			Items: []string{"foo"},
+			Items: list.Items{"foo"},
 		}
 		actual, err := storage.LoadContents(strings.NewReader(input))
 		assert.NoError(t, err)
@@ -31,7 +31,7 @@ func TestLoadContents(t *testing.T) {
 	t.Run("multiple items", func(t *testing.T) {
 		input := "foo\nbar"
 		expected := list.Contents{
-			Items: []string{"foo", "bar"},
+			Items: list.Items{"foo", "bar"},
 		}
 		actual, err := storage.LoadContents(strings.NewReader(input))
 		assert.NoError(t, err)
@@ -41,7 +41,7 @@ func TestLoadContents(t *testing.T) {
 	t.Run("single group", func(t *testing.T) {
 		input := "group:foo"
 		expected := list.Contents{
-			GroupKeys: []string{"foo"},
+			GroupKeys: list.GroupKeys{"foo"},
 		}
 		actual, err := storage.LoadContents(strings.NewReader(input))
 		assert.NoError(t, err)
@@ -51,7 +51,7 @@ func TestLoadContents(t *testing.T) {
 	t.Run("multiple groups", func(t *testing.T) {
 		input := "group:foo\ngroup:bar"
 		expected := list.Contents{
-			GroupKeys: []string{"foo", "bar"},
+			GroupKeys: list.GroupKeys{"foo", "bar"},
 		}
 		actual, err := storage.LoadContents(strings.NewReader(input))
 		assert.NoError(t, err)
@@ -61,8 +61,8 @@ func TestLoadContents(t *testing.T) {
 	t.Run("items and groups", func(t *testing.T) {
 		input := "foo\ngroup:foo\nbar\ngroup:bar"
 		expected := list.Contents{
-			Items:     []string{"foo", "bar"},
-			GroupKeys: []string{"foo", "bar"},
+			Items:     list.Items{"foo", "bar"},
+			GroupKeys: list.GroupKeys{"foo", "bar"},
 		}
 		actual, err := storage.LoadContents(strings.NewReader(input))
 		assert.NoError(t, err)
@@ -72,8 +72,8 @@ func TestLoadContents(t *testing.T) {
 	t.Run("items and groups with whitespace", func(t *testing.T) {
 		input := "\n  foo\n\tgroup:foo\nbar\ngroup:bar"
 		expected := list.Contents{
-			Items:     []string{"foo", "bar"},
-			GroupKeys: []string{"foo", "bar"},
+			Items:     list.Items{"foo", "bar"},
+			GroupKeys: list.GroupKeys{"foo", "bar"},
 		}
 		actual, err := storage.LoadContents(strings.NewReader(input))
 		assert.NoError(t, err)
@@ -83,8 +83,8 @@ func TestLoadContents(t *testing.T) {
 	t.Run("items and groups with comment at start of line", func(t *testing.T) {
 		input := "# some comment\nfoo\ngroup:foo\nbar\ngroup:bar"
 		expected := list.Contents{
-			Items:     []string{"foo", "bar"},
-			GroupKeys: []string{"foo", "bar"},
+			Items:     list.Items{"foo", "bar"},
+			GroupKeys: list.GroupKeys{"foo", "bar"},
 		}
 		actual, err := storage.LoadContents(strings.NewReader(input))
 		assert.NoError(t, err)

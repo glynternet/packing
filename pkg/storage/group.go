@@ -35,8 +35,8 @@ func readAllLines(r io.Reader) ([]string, error) {
 
 func processLines(lines []string) (list.Contents, error) {
 	const groupNamePrefix = "group:"
-	var groupNames []string
-	var itemNames []string
+	var groupNames list.GroupKeys
+	var itemNames list.Items
 
 	p := stringprocessor.Group{
 		emptyStringCheck,

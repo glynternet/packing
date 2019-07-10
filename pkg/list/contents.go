@@ -1,6 +1,6 @@
 package list
 
 type Contents struct {
-	GroupKeys []string
-	Items     []string
+	GroupKeys GroupKeys
+	Items     Items
 }

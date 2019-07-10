@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/pkg/parse"
 )
 
@@ -28,23 +29,23 @@ func (g Group) Process(s string) error {
 	return fmt.Errorf("unable to Process string:%q", s)
 }
 
-func ItemNamesProcessor(names *[]string) Processor {
+func ItemNamesProcessor(items *list.Items) Processor {
 	// TODO(glynternet): does this need to be improved to ignore groups and other cases?
 	return func(s string) error {
 		name, err := parse.NotEmpty(s)
 		if err == nil {
-			*names = append(*names, name)
+			*items = append(*items, list.Item(name))
 		}
 		return err
 	}
 }
 
-func GroupNamesProcessor(names *[]string, listNamePrefix string) Processor {
+func GroupNamesProcessor(names *list.GroupKeys, listNamePrefix string) Processor {
 	return func(s string) error {
 		groupNameParseFn := parse.NewPrefixedParser(listNamePrefix)
 		name, err := groupNameParseFn(s)
 		if err == nil {
-			*names = append(*names, name)
+			*names = append(*names, list.GroupKey(name))
 		}
 		return err
 	}
