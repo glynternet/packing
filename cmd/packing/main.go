@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -16,7 +17,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+// to be changed using ldflags with the go build command
+var version = "unknown"
+
 func main() {
+	printVersion := flag.Bool("version", false, "print version")
+	flag.Parse()
+
+	if *printVersion {
+		fmt.Println(version)
+		return
+	}
+
 	if len(os.Args) != 3 {
 		fmt.Println("Usage: packing PACKING_FILE GROUPS_DIRECTORY")
 		return
