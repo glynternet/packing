@@ -34,8 +34,8 @@ func readAllLines(r io.Reader) ([]string, error) {
 
 func processLines(lines []string) (api.ContentsDefinition, error) {
 	const groupNamePrefix = "group:"
-	var groupNames []*api.GroupKey
-	var itemNames []*api.Item
+	var groupNames GroupKeys
+	var itemNames Items
 
 	p := ProcessorGroup{
 		emptyStringCheck,

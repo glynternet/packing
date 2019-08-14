@@ -29,7 +29,7 @@ func (g ProcessorGroup) Process(s string) error {
 	return fmt.Errorf("unable to Process string:%q", s)
 }
 
-func ItemNamesProcessor(items *[]*api.Item) Processor {
+func ItemNamesProcessor(items *Items) Processor {
 	// TODO(glynternet): does this need to be improved to ignore groups and other cases?
 	return func(s string) error {
 		name, err := parse.NotEmpty(s)
@@ -40,7 +40,7 @@ func ItemNamesProcessor(items *[]*api.Item) Processor {
 	}
 }
 
-func GroupNamesProcessor(names *[]*api.GroupKey, listNamePrefix string) Processor {
+func GroupNamesProcessor(names *GroupKeys, listNamePrefix string) Processor {
 	return func(s string) error {
 		groupNameParseFn := parse.NewPrefixedParser(listNamePrefix)
 		name, err := groupNameParseFn(s)

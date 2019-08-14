@@ -45,13 +45,13 @@ func TestGroups(t *testing.T) {
 		keys := list.GroupKeys{{Key: "foo"}}
 		store := mockContentsGetter{
 			groups: map[string]api.ContentsDefinition{
-				"foo": {Items: []*api.Item{{Name: "fooItem"}}},
-				"bar": {Items: []*api.Item{{Name: "barItem"}}},
+				"foo": {Items: list.Items{{Name: "fooItem"}}},
+				"bar": {Items: list.Items{{Name: "barItem"}}},
 			},
 		}
 		expected := []list.Group{{
 			Name:               "foo",
-			ContentsDefinition: api.ContentsDefinition{Items: []*api.Item{{Name: "fooItem"}}}},
+			ContentsDefinition: api.ContentsDefinition{Items: list.Items{{Name: "fooItem"}}}},
 		}
 		gs, err := load.Groups(keys, logger, store)
 		assert.NoError(t, err)
