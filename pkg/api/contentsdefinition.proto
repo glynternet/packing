@@ -5,6 +5,6 @@ import "item.proto";
 import "groupkey.proto";
 
 message ContentsDefinition {
-  GroupKeys group_keys = 1;
-  Items items = 2;
+  repeated GroupKey group_keys = 1;
+  repeated Item items = 2;
 }

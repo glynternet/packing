@@ -10,9 +10,9 @@ func ExtractItem(item api.Item) Item {
 
 type Items []Item
 
-func ExtractItems(items api.Items) Items {
+func ExtractItems(items []*api.Item) Items {
 	var is Items
-	for _, i := range items.Items {
+	for _, i := range items {
 		is = append(is, ExtractItem(*i))
 	}
 	return is

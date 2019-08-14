@@ -52,8 +52,8 @@ func processLines(lines []string) (api.ContentsDefinition, error) {
 	}
 
 	return api.ContentsDefinition{
-		GroupKeys: &api.GroupKeys{Keys: groupNames},
-		Items:     &api.Items{Items: itemNames},
+		GroupKeys: groupNames,
+		Items:     itemNames,
 	}, nil
 }
 

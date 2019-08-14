@@ -9,13 +9,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Groups(keys api.GroupKeys, logger *log.Logger, cg ContentsDefinitionGetter) ([]list.Group, error) {
-	if len(keys.Keys) == 0 {
+func Groups(keys []*api.GroupKey, logger *log.Logger, cg ContentsDefinitionGetter) ([]list.Group, error) {
+	if len(keys) == 0 {
 		return nil, nil
 	}
 
 	loaded := make(map[string]api.ContentsDefinition)
-	err := recursiveGroupsLoad(keys.Keys, logger, cg, loaded)
+	err := recursiveGroupsLoad(keys, logger, cg, loaded)
 	var groups []list.Group
 	for n, cs := range loaded {
 		groups = append(groups, list.Group{
@@ -45,7 +45,7 @@ func recursiveGroupsLoad(keys list.GroupKeys, logger *log.Logger, cg ContentsDef
 			continue
 		}
 
-		if cs.GroupKeys != nil && list.GroupKeys(cs.GroupKeys.Keys).Contains(*key) {
+		if cs.GroupKeys != nil && list.GroupKeys(cs.GroupKeys).Contains(*key) {
 			return GroupSelfReferenceErr
 		}
 
@@ -53,17 +53,17 @@ func recursiveGroupsLoad(keys list.GroupKeys, logger *log.Logger, cg ContentsDef
 		if cs.GroupKeys == nil {
 			continue
 		}
-		subgroupKeys = append(subgroupKeys, cs.GroupKeys.Keys...)
+		subgroupKeys = append(subgroupKeys, cs.GroupKeys...)
 	}
 	return recursiveGroupsLoad(subgroupKeys, logger, cg, loaded)
 }
 
 func AllGroups(logger *log.Logger, def api.ContentsDefinition, cg storage.ContentsDefinitionGetter) ([]list.Group, error) {
-	groups, err := Groups(*def.GroupKeys, logger, cg)
+	groups, err := Groups(def.GroupKeys, logger, cg)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading groups recursively")
 	}
-	if len(def.Items.Items) > 0 {
+	if len(def.Items) > 0 {
 		groups = append(groups, list.Group{
 			Name: "Individual Items",
 			ContentsDefinition: api.ContentsDefinition{
