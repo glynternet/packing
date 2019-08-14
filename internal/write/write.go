@@ -23,7 +23,7 @@ func Group(w io.Writer, g list.Group) {
 		name = "Unnamed"
 	}
 	Title(w, name)
-	for _, item := range g.Items.Items {
+	for _, item := range g.Items {
 		Item(w, *item)
 	}
 }

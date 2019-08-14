@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Groups(keys []*api.GroupKey, logger *log.Logger, cg ContentsDefinitionGetter) ([]list.Group, error) {
+func Groups(keys list.GroupKeys, logger *log.Logger, cg ContentsDefinitionGetter) ([]list.Group, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}

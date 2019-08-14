@@ -14,7 +14,7 @@ import (
 
 func TestGroups(t *testing.T) {
 	t.Run("empty keys", func(t *testing.T) {
-		gs, err := load.Groups([]*api.GroupKey{}, nil, nil)
+		gs, err := load.Groups(list.GroupKeys{}, nil, nil)
 		assert.NoError(t, err)
 		assert.Nil(t, gs)
 	})
@@ -23,7 +23,7 @@ func TestGroups(t *testing.T) {
 
 	t.Run("single key missing in getter", func(t *testing.T) {
 		logger := log.New(os.Stdout, "", log.LstdFlags)
-		keys := []*api.GroupKey{{Key: "foo"}}
+		keys := list.GroupKeys{{Key: "foo"}}
 		store := mockContentsGetter{}
 		var expected []list.Group
 		gs, err := load.Groups(keys, logger, store)
@@ -32,7 +32,7 @@ func TestGroups(t *testing.T) {
 	})
 
 	t.Run("single key error in getter", func(t *testing.T) {
-		keys := []*api.GroupKey{{Key: "foo"}}
+		keys := list.GroupKeys{{Key: "foo"}}
 		expectedErr := errors.New("test error")
 		store := mockContentsGetter{error: expectedErr}
 		var expected []list.Group
@@ -42,7 +42,7 @@ func TestGroups(t *testing.T) {
 	})
 
 	t.Run("single key exists", func(t *testing.T) {
-		keys := []*api.GroupKey{{Key: "foo"}}
+		keys := list.GroupKeys{{Key: "foo"}}
 		store := mockContentsGetter{
 			groups: map[string]api.ContentsDefinition{
 				"foo": {Items: []*api.Item{{Name: "fooItem"}}},
@@ -60,10 +60,10 @@ func TestGroups(t *testing.T) {
 
 	t.Run("single key containing self group reference", func(t *testing.T) {
 		// currently completes but will probably cause a bug when changing the way that groups are loaded
-		keys := []*api.GroupKey{{Key: "foo"}}
+		keys := list.GroupKeys{{Key: "foo"}}
 		store := mockContentsGetter{
 			groups: map[string]api.ContentsDefinition{
-				"foo": {GroupKeys: []*api.GroupKey{{Key: "foo"}}},
+				"foo": {GroupKeys: list.GroupKeys{{Key: "foo"}}},
 			},
 		}
 		actual, err := load.Groups(keys, logger, store)
