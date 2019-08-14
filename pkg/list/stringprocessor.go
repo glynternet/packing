@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/parse"
 )
 
@@ -33,7 +34,7 @@ func ItemNamesProcessor(items *Items) Processor {
 	return func(s string) error {
 		name, err := parse.NotEmpty(s)
 		if err == nil {
-			*items = append(*items, Item(name))
+			*items = append(*items, &api.Item{Name: name})
 		}
 		return err
 	}
@@ -44,7 +45,7 @@ func GroupNamesProcessor(names *GroupKeys, listNamePrefix string) Processor {
 		groupNameParseFn := parse.NewPrefixedParser(listNamePrefix)
 		name, err := groupNameParseFn(s)
 		if err == nil {
-			*names = append(*names, GroupKey(name))
+			*names = append(*names, &api.GroupKey{Key: name})
 		}
 		return err
 	}

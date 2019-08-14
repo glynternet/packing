@@ -1,0 +1,10 @@
+syntax = "proto3";
+package api;
+
+import "item.proto";
+import "groupkey.proto";
+
+message ContentsDefinition {
+  repeated GroupKey group_keys = 1;
+  repeated Item items = 2;
+}

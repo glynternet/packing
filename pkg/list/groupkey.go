@@ -1,12 +1,15 @@
 package list
 
-type GroupKey string
+import (
+	api "github.com/glynternet/packing/pkg/api/build"
+	"github.com/golang/protobuf/proto"
+)
 
-type GroupKeys []GroupKey
+type GroupKeys []*api.GroupKey
 
-func (gks GroupKeys) Contains(k GroupKey) bool {
+func (gks GroupKeys) Contains(k api.GroupKey) bool {
 	for _, gk := range gks {
-		if gk == k {
+		if proto.Equal(gk, &k) {
 			return true
 		}
 	}

@@ -6,19 +6,15 @@ import (
 	"io"
 	"strings"
 
+	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/pkg/errors"
 )
 
-type ContentsDefinition struct {
-	GroupKeys GroupKeys
-	Items     Items
-}
-
 // ParseContentsDefinition loads the ContentsDefinition of a single list from a Reader
-func ParseContentsDefinition(r io.Reader) (ContentsDefinition, error) {
+func ParseContentsDefinition(r io.Reader) (api.ContentsDefinition, error) {
 	lines, err := readAllLines(r)
 	if err != nil {
-		return ContentsDefinition{}, errors.Wrap(err, "reading lines")
+		return api.ContentsDefinition{}, errors.Wrap(err, "reading lines")
 	}
 
 	cs, err := processLines(lines)
@@ -36,7 +32,7 @@ func readAllLines(r io.Reader) ([]string, error) {
 	return lines, errors.Wrap(scanner.Err(), "scanning lines")
 }
 
-func processLines(lines []string) (ContentsDefinition, error) {
+func processLines(lines []string) (api.ContentsDefinition, error) {
 	const groupNamePrefix = "group:"
 	var groupNames GroupKeys
 	var itemNames Items
@@ -51,11 +47,11 @@ func processLines(lines []string) (ContentsDefinition, error) {
 	for _, line := range lines {
 		err := p.Process(line)
 		if err != nil {
-			return ContentsDefinition{}, errors.Wrapf(err, "processing line:%q", line)
+			return api.ContentsDefinition{}, errors.Wrapf(err, "processing line:%q", line)
 		}
 	}
 
-	return ContentsDefinition{
+	return api.ContentsDefinition{
 		GroupKeys: groupNames,
 		Items:     itemNames,
 	}, nil

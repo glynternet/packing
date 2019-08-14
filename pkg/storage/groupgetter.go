@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 
+	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/pkg/errors"
 )
@@ -13,9 +14,9 @@ type ContentsDefinitionGetter struct {
 	*log.Logger
 }
 
-type ReadCloserGetter func(key list.GroupKey) (io.ReadCloser, error)
+type ReadCloserGetter func(key api.GroupKey) (io.ReadCloser, error)
 
-func (gg ContentsDefinitionGetter) GetContentsDefinition(key list.GroupKey) (*list.ContentsDefinition, error) {
+func (gg ContentsDefinitionGetter) GetContentsDefinition(key api.GroupKey) (*api.ContentsDefinition, error) {
 	rc, err := gg.GetReadCloser(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "getting ReadCloser for key:%q", key)
