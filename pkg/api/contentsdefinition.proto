@@ -1,0 +1,10 @@
+syntax = "proto3";
+package api;
+
+import "item.proto";
+import "groupkey.proto";
+
+message ContentsDefinition {
+  GroupKeys group_keys = 1;
+  Items items = 2;
+}

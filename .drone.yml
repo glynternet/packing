@@ -1,10 +1,14 @@
 workspace:
 
-  base: /go
-  path: src/github.com/glynternet/packing
+  base: /go/src/github.com/glynternet
+  path: packing
 
 
 pipeline:
+  generate-proto-go:
+    image: grpc/go:1.0
+    commands:
+      - go generate ./...
 
   run-unit-tests:
     image: golang:1.10.4

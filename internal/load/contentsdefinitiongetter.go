@@ -1,8 +1,10 @@
 package load
 
-import "github.com/glynternet/packing/pkg/list"
+import (
+	api "github.com/glynternet/packing/pkg/api/build"
+)
 
 // ContentsDefinitionGetter gets the ContentsDefinition for a single group from a given key
 type ContentsDefinitionGetter interface {
-	GetContentsDefinition(list.GroupKey) (*list.ContentsDefinition, error)
+	GetContentsDefinition(api.GroupKey) (*api.ContentsDefinition, error)
 }

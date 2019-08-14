@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/list"
 )
 
@@ -22,8 +23,8 @@ func Group(w io.Writer, g list.Group) {
 		name = "Unnamed"
 	}
 	Title(w, name)
-	for _, item := range g.Items {
-		Item(w, item)
+	for _, item := range g.Items.Items {
+		Item(w, *item)
 	}
 }
 
@@ -36,6 +37,6 @@ func GroupBreak(w io.Writer) {
 	fmt.Fprint(w, groupBreak)
 }
 
-func Item(w io.Writer, i list.Item) {
-	fmt.Fprintln(w, "- "+i)
+func Item(w io.Writer, i api.Item) {
+	fmt.Fprintln(w, "- "+i.Name)
 }

@@ -1,0 +1,10 @@
+syntax = "proto3";
+package api;
+
+message GroupKey {
+  string key = 1;
+}
+
+message GroupKeys {
+	repeated GroupKey keys = 1;
+}
