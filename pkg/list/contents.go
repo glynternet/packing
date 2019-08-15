@@ -40,7 +40,7 @@ func processLines(lines []string) (api.ContentsDefinition, error) {
 	p := ProcessorGroup{
 		emptyStringCheck,
 		CommentProcessor(),
-		GroupNamesProcessor(&groupNames, groupNamePrefix),
+		GroupKeysProcessor(&groupNames, groupNamePrefix),
 		ItemNamesProcessor(&itemNames),
 	}
 

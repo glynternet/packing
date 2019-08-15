@@ -10,6 +10,7 @@ import (
 
 	"github.com/glynternet/packing/internal/load"
 	"github.com/glynternet/packing/internal/write"
+	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/config"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/pkg/storage"
@@ -42,7 +43,10 @@ func main() {
 		GroupsDir: groupsDir(),
 	}, logger, out)
 	if err != nil {
-		fmt.Fprintf(out, "%v\n", err)
+		_, pErr := fmt.Fprintf(out, "%v\n", err)
+		if pErr != nil {
+			_, _ = fmt.Fprintf(out, "%v\n", errors.Wrap(pErr, "writing error to writer"))
+		}
 		os.Exit(1)
 	}
 }
@@ -59,20 +63,16 @@ func run(conf config.Run, logger *log.Logger, w io.Writer) error {
 	if err != nil {
 		return errors.Wrapf(err, "opening file at path:%q", conf.TripPath)
 	}
-	root, err := list.ParseContentsDefinition(f)
+	seed, err := getContentsDefinitionSeed(logger, f)
 	if err != nil {
-		return errors.Wrap(err, "getting root group definition")
-	}
-	err = f.Close()
-	if err != nil {
-		return errors.Wrap(err, "closing root definition file")
+		return errors.Wrap(err, "getting contents definition seed")
 	}
 	loader := storage.ContentsDefinitionGetter{
 		GetReadCloser: file.ReadCloserGetter(conf.GroupsDir),
 		Logger:        logger,
 	}
 
-	groups, err := load.AllGroups(logger, root, loader)
+	groups, err := load.AllGroups(logger, seed, loader)
 	if err != nil {
 		return errors.Wrap(err, "loading all groups")
 	}
@@ -90,9 +90,32 @@ func run(conf config.Run, logger *log.Logger, w io.Writer) error {
 		if len(g.Items) == 0 {
 			continue
 		}
-		write.Group(w, g)
-		write.GroupBreak(w)
+		if err := write.Group(w, g); err != nil {
+			return errors.Wrapf(err, "writing Group %q to writer", g)
+		}
+		if err := write.GroupBreak(w); err != nil {
+			return errors.Wrapf(err, "writing GroupBreak %q to writer", g)
+		}
 	}
 
 	return err
+}
+
+func getContentsDefinitionSeed(logger *log.Logger, rc io.ReadCloser) (api.ContentsDefinition, error) {
+	root, err := list.ParseContentsDefinition(rc)
+	if err != nil {
+		return api.ContentsDefinition{}, errors.Wrap(err, "parsing contents definition")
+	}
+	defer func() {
+		cErr := rc.Close()
+		if cErr == nil {
+			return
+		}
+		if err != nil {
+			logger.Println(errors.Wrap(cErr, "closing route definitin reader"))
+			return
+		}
+		err = cErr
+	}()
+	return root, err
 }

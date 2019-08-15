@@ -9,13 +9,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ContentsDefinitionGetter gets a api.ContentsDefinition
 type ContentsDefinitionGetter struct {
 	GetReadCloser ReadCloserGetter
 	*log.Logger
 }
 
+// ReadCloserGetter gets an io.ReadCloser for a given api.GroupKey
 type ReadCloserGetter func(key api.GroupKey) (io.ReadCloser, error)
 
+// GetContentsDefinition gets a api.ContentsDefinition fir a given api.GroupKey
 func (gg ContentsDefinitionGetter) GetContentsDefinition(key api.GroupKey) (*api.ContentsDefinition, error) {
 	rc, err := gg.GetReadCloser(key)
 	if err != nil {

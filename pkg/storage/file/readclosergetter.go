@@ -10,6 +10,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ReadCloserGetter generates a storage.ReadCloserGetter that returns a io.ReadCloser for a file with the name of the
+// api.GroupKey contained within ggroupsDir
 func ReadCloserGetter(groupsDir string) storage.ReadCloserGetter {
 	return func(key api.GroupKey) (closer io.ReadCloser, e error) {
 		p := path.Join(groupsDir, key.Key)

@@ -5,17 +5,13 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-type Item string
-
-func ExtractItem(item api.Item) Item {
-	return Item(item.Name)
-}
-
+// Items is a set of api.Item
 type Items []*api.Item
 
-func (is Items) Contains(i *api.Item) bool {
+// Contains returns true if the Items contains the given api.Item
+func (is Items) Contains(i api.Item) bool {
 	for _, ii := range is {
-		if proto.Equal((*api.Item)(ii), (*api.Item)(i)) {
+		if proto.Equal(ii, &i) {
 			return true
 		}
 	}

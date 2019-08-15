@@ -12,7 +12,7 @@ import (
 // Processor should return an error if the string cannot be processed as the given type
 type Processor func(string) error
 
-// Group is a group of processors
+// ProcessorGroup is a group of processors
 type ProcessorGroup []Processor
 
 // Process applies each Processor in the Group in order until either:
@@ -29,6 +29,7 @@ func (g ProcessorGroup) Process(s string) error {
 	return fmt.Errorf("unable to Process string:%q", s)
 }
 
+// ItemNamesProcessor generates a Processor that parses a line into an api.Item
 func ItemNamesProcessor(items *Items) Processor {
 	// TODO(glynternet): does this need to be improved to ignore groups and other cases?
 	return func(s string) error {
@@ -40,7 +41,8 @@ func ItemNamesProcessor(items *Items) Processor {
 	}
 }
 
-func GroupNamesProcessor(names *GroupKeys, listNamePrefix string) Processor {
+// GroupKeysProcessor generates a Processor that attempts to parse lines into api.GroupKey
+func GroupKeysProcessor(names *GroupKeys, listNamePrefix string) Processor {
 	return func(s string) error {
 		groupNameParseFn := parse.NewPrefixedParser(listNamePrefix)
 		name, err := groupNameParseFn(s)
@@ -51,6 +53,8 @@ func GroupNamesProcessor(names *GroupKeys, listNamePrefix string) Processor {
 	}
 }
 
+// CommentProcessor generates a Processor that parses comment lines, returning an error if the given line is not a
+// comment
 func CommentProcessor() Processor {
 	return func(s string) error {
 		if strings.HasPrefix(strings.TrimSpace(s), "#") {
