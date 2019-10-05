@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-/// GroupsService serves groups
+// GroupsService serves groups
 type GroupsService struct {
 	load.Loader
 	Logger *log.Logger
