@@ -108,7 +108,7 @@ func getFullPackingGraph(logger *log.Logger, conf config.Run, seed api.ContentsD
 
 	lis, err := net.Listen("tcp", "")
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		return nil, errors.Wrap(err, "failed to listen on network")
 	}
 
 	sErr := make(chan error)
