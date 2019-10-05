@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Loader is used to groups and content
 type Loader struct {
 	ContentsDefinitionGetter
 }

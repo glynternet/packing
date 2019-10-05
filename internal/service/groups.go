@@ -8,11 +8,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+/// GroupsService serves groups
 type GroupsService struct {
 	load.Loader
 	Logger *log.Logger
 }
 
+// GetGroups sends the groups for the seed to the GetGroupsServer
 func (s *GroupsService) GetGroups(seed *api.ContentsDefinition, srv api.GroupsService_GetGroupsServer) error {
 	gs, err := s.AllGroups(s.Logger, *seed)
 	if err != nil {
