@@ -44,9 +44,7 @@ func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
 			if err != nil {
 				return errors.Wrapf(err, "failed to listen at %q", addr)
 			}
-			srv := grpc.NewServer()
-			api.RegisterGroupsServiceServer(srv, &s)
-			return errors.Wrap(srv.Serve(lis), "serving groups service")
+			return errors.Wrap(serve(logger, lis, &s), "serving groups service")
 		},
 	}
 
@@ -54,4 +52,22 @@ func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	serve.Flags().Uint(keyPort, 3865, "port to listen for gRPC")
 	cmd.MustBindPFlags(logger, serve)
 	rootCmd.AddCommand(serve)
+}
+
+func newServer(gss api.GroupsServiceServer) *grpc.Server {
+	srv := grpc.NewServer()
+	api.RegisterGroupsServiceServer(srv, gss)
+	return srv
+}
+
+func serve(logger *log.Logger, lis net.Listener, server api.GroupsServiceServer) error {
+	sErr := errors.Wrap(newServer(server).Serve(lis), "serving groups service")
+	cErr := errors.Wrap(lis.Close(), "closing listener")
+	if sErr == nil {
+		return cErr
+	}
+	if cErr != nil {
+		logger.Println(cErr)
+	}
+	return sErr
 }
