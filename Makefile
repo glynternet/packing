@@ -2,4 +2,7 @@ BINARIES ?= packing-cli packing-server
 
 include ./dubplate.Makefile
 include ./go.Makefile
-include ./docker.Makefile
+
+packing:
+	$(MAKE) cmd-all \
+		APP_NAME=$@

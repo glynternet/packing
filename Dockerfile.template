@@ -1,7 +1,0 @@
-# dubplate version: v1.0.0-2-g61f3327-dirty (manually edited)
-
-FROM scratch
-
-COPY ./{{BIN_NAME}} /{{APP_NAME}}
-
-ENTRYPOINT [ "/{{APP_NAME}}" ]
