@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	api "github.com/glynternet/packing/pkg/api/build"
-	"github.com/glynternet/packing/pkg/list"
 	"github.com/pkg/errors"
 )
 
@@ -21,7 +20,7 @@ import (
 // etc...
 
 // Group writes a list.Group to the given io.Writer
-func Group(w io.Writer, g list.Group) error {
+func Group(w io.Writer, g api.Group) error {
 	name := strings.TrimSpace(g.Name)
 	if name == "" {
 		name = "Unnamed"
@@ -29,7 +28,7 @@ func Group(w io.Writer, g list.Group) error {
 	if err := Title(w, name); err != nil {
 		return errors.Wrapf(err, "writing Title %q to writer", name)
 	}
-	for _, item := range g.Items {
+	for _, item := range g.Contents.Items {
 		if err := Item(w, *item); err != nil {
 			return errors.Wrapf(err, "writing Item %q to writer", *item)
 		}

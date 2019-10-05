@@ -14,9 +14,9 @@ import (
 
 func TestGroups(t *testing.T) {
 	t.Run("empty keys", func(t *testing.T) {
-		gs, err := load.Groups(nil, list.GroupKeys{}, nil)
+		actual, err := load.Loader{}.Groups(nil, list.GroupKeys{})
 		assert.NoError(t, err)
-		assert.Nil(t, gs)
+		assert.Nil(t, actual)
 	})
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
@@ -25,20 +25,20 @@ func TestGroups(t *testing.T) {
 		logger := log.New(os.Stdout, "", log.LstdFlags)
 		keys := list.GroupKeys{{Key: "foo"}}
 		store := mockContentsGetter{}
-		var expected []list.Group
-		gs, err := load.Groups(logger, keys, store)
+		var expected []api.Group
+		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
 		assert.NoError(t, err)
-		assert.Equal(t, expected, gs)
+		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("single key error in getter", func(t *testing.T) {
 		keys := list.GroupKeys{{Key: "foo"}}
 		expectedErr := errors.New("test error")
 		store := mockContentsGetter{error: expectedErr}
-		var expected []list.Group
-		gs, err := load.Groups(logger, keys, store)
+		var expected []api.Group
+		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
 		assert.Equal(t, expectedErr, errors.Cause(err))
-		assert.Equal(t, expected, gs)
+		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("single key exists", func(t *testing.T) {
@@ -49,13 +49,13 @@ func TestGroups(t *testing.T) {
 				"bar": {Items: list.Items{{Name: "barItem"}}},
 			},
 		}
-		expected := []list.Group{{
-			Name:               "foo",
-			ContentsDefinition: api.ContentsDefinition{Items: list.Items{{Name: "fooItem"}}}},
+		expected := []api.Group{{
+			Name:     "foo",
+			Contents: &api.ContentsDefinition{Items: list.Items{{Name: "fooItem"}}}},
 		}
-		gs, err := load.Groups(logger, keys, store)
+		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
 		assert.NoError(t, err)
-		assert.Equal(t, expected, gs)
+		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("single key containing self group reference", func(t *testing.T) {
@@ -66,7 +66,7 @@ func TestGroups(t *testing.T) {
 				"foo": {GroupKeys: list.GroupKeys{{Key: "foo"}}},
 			},
 		}
-		actual, err := load.Groups(logger, keys, store)
+		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
 		assert.Equal(t, load.GroupSelfReferenceErr, err)
 		assert.Nil(t, actual)
 	})

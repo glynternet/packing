@@ -1,0 +1,9 @@
+syntax = "proto3";
+package api;
+
+import "contentsdefinition.proto";
+
+message Group {
+    string name = 1;
+    ContentsDefinition contents = 2;
+}

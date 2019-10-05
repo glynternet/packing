@@ -5,22 +5,27 @@ import (
 
 	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/list"
-	"github.com/glynternet/packing/pkg/storage"
 	"github.com/pkg/errors"
 )
 
+// Loader is used to groups and content
+type Loader struct {
+	ContentsDefinitionGetter
+}
+
 // Groups returns all of the list.Group for the given GroupKeys, using the given ContentsDefinitionGetter
-func Groups(logger *log.Logger, keys list.GroupKeys, cg ContentsDefinitionGetter) ([]list.Group, error) {
+func (l Loader) Groups(logger *log.Logger, keys list.GroupKeys) ([]api.Group, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
 
 	loaded := make(map[string]api.ContentsDefinition)
-	err := recursiveGroupsLoad(keys, logger, cg, loaded)
-	var groups []list.Group
+	err := recursiveGroupsLoad(keys, logger, l.ContentsDefinitionGetter, loaded)
+	var groups []api.Group
 	for n, cs := range loaded {
-		groups = append(groups, list.Group{
-			Name: n, ContentsDefinition: cs,
+		csCopy := cs
+		groups = append(groups, api.Group{
+			Name: n, Contents: &csCopy,
 		})
 	}
 	return groups, err
@@ -64,17 +69,17 @@ func recursiveGroupsLoad(
 
 // AllGroups gets all of the Groups from the seed ContentsDefinition and recursively descending into all of those Groups
 // until the whole tree has been found.
-func AllGroups(logger *log.Logger, seed api.ContentsDefinition, cg storage.ContentsDefinitionGetter) (
-	[]list.Group, error,
+func (l *Loader) AllGroups(logger *log.Logger, seed api.ContentsDefinition) (
+	[]api.Group, error,
 ) {
-	groups, err := Groups(logger, seed.GroupKeys, cg)
+	groups, err := l.Groups(logger, seed.GroupKeys)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading groups recursively")
 	}
 	if len(seed.Items) > 0 {
-		groups = append(groups, list.Group{
+		groups = append(groups, api.Group{
 			Name: "Individual Items",
-			ContentsDefinition: api.ContentsDefinition{
+			Contents: &api.ContentsDefinition{
 				Items: seed.Items,
 			},
 		})

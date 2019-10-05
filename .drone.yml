@@ -8,7 +8,7 @@ pipeline:
   generate-proto-go:
     image: grpc/go:1.0
     commands:
-      - go generate ./...
+      - go generate -v ./...
 
   run-unit-tests:
     image: golang:1.10.4
