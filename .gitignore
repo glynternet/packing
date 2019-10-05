@@ -1,4 +1,4 @@
-bin/
 .idea
+bin
 *.pb.go
 !vendor/**

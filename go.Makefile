@@ -1,6 +1,4 @@
-ROOT_DIR ?= $(shell git rev-parse --show-toplevel)
-UNTRACKED ?= $(shell test -z "$(shell git ls-files --others --exclude-standard "$(ROOT_DIR)")" || echo -untracked)
-VERSION ?= $(shell git describe --tags --dirty --always)$(UNTRACKED)
+# dubplate version: v1.0.0-2-g61f3327 (manually edited)
 
 BUILD_DIR ?= ./bin
 OUTBIN ?= $(BUILD_DIR)/$(APP_NAME)-$(VERSION)
@@ -14,7 +12,8 @@ GOBUILD_CMD ?= $(GOBUILD_ENVVARS) go build $(GOBUILD_FLAGS)
 OS ?= linux
 ARCH ?= amd64
 
-build: $(BINARIES)
+dummy:
+	@echo No default rule set yet
 
 clean:
 	rm $(BUILD_DIR)/*
@@ -27,7 +26,13 @@ cmd-all: binary test-binary-version-output
 binary: $(BUILD_DIR)
 	$(GOBUILD_CMD) ./cmd/$(APP_NAME)
 
-test-binary-version-output: VERSION_CMD ?= $(OUTBIN) --version
+binaries: $(BINARIES)
+
+$(BINARIES):
+	$(MAKE) cmd-all \
+		APP_NAME=$@
+
+test-binary-version-output: VERSION_CMD ?= $(OUTBIN) version
 test-binary-version-output:
 	@echo testing output of $(VERSION_CMD)
 	test "$(shell $(VERSION_CMD))" = "$(VERSION)" && echo PASSED
