@@ -5,15 +5,14 @@ import (
 	"io"
 	"log"
 	"os"
-	"sort"
 	"strconv"
 
-	"github.com/glynternet/packing/internal/write"
 	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/client"
 	"github.com/glynternet/packing/pkg/cmd"
 	"github.com/glynternet/packing/pkg/grpc"
 	"github.com/glynternet/packing/pkg/list"
+	"github.com/glynternet/packing/pkg/render"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -51,26 +50,10 @@ func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
 
 			gs, err := client.GetGraph(context.Background(), conn, seed)
 			if err != nil {
-				return errors.Wrap(err, "getting full packing graph")
+				return errors.Wrap(err, "getting graph")
 			}
 
-			sort.Slice(gs, func(i, j int) bool {
-				return gs[i].Name < gs[j].Name
-			})
-
-			for _, g := range gs {
-				if len(g.Contents.Items) == 0 {
-					continue
-				}
-				if err := write.Group(w, g); err != nil {
-					return errors.Wrapf(err, "writing Group %q to writer", g)
-				}
-				if err := write.GroupBreak(w); err != nil {
-					return errors.Wrapf(err, "writing GroupBreak %q to writer", g)
-				}
-			}
-
-			return err
+			return errors.Wrap(render.SortedMarkdownRenderer{Writer: w}.Render(gs), "rendering graph")
 		},
 	}
 
