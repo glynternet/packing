@@ -13,7 +13,7 @@ type Loader struct {
 }
 
 // Groups returns all of the list.Group for the given GroupKeys, using the given ContentsDefinitionGetter
-func (l *Loader) Groups(logger *log.Logger, keys list.GroupKeys) ([]api.Group, error) {
+func (l Loader) Groups(logger *log.Logger, keys list.GroupKeys) ([]api.Group, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
