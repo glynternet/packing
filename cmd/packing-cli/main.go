@@ -1,4 +1,4 @@
-// dubplate version: v1.0.0-2-g61f3327-dirty (manually edited)
+// dubplate version: v1.0.0-2-g61f3327 (manually edited)
 
 package main
 
