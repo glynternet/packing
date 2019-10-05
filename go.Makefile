@@ -1,7 +1,7 @@
-# dubplate version: v1.0.0-2-g61f3327 (manually edited)
+# dubplate version: v1.0.0-2-g61f3327-dirty (manually edited)
 
-BUILD_DIR ?= ./bin
-OUTBIN ?= $(BUILD_DIR)/$(APP_NAME)-$(VERSION)
+BIN_NAME ?= $(APP_NAME)-$(VERSION)
+OUTBIN ?= $(BUILD_DIR)/$(BIN_NAME)
 
 VERSION_VAR ?= main.version
 LDFLAGS = -ldflags "-w -X $(VERSION_VAR)=$(VERSION)"
@@ -14,14 +14,6 @@ ARCH ?= amd64
 
 dummy:
 	@echo No default rule set yet
-
-clean:
-	rm $(BUILD_DIR)/*
-
-$(BUILD_DIR):
-	mkdir -p $@
-
-cmd-all: binary test-binary-version-output
 
 binary: $(BUILD_DIR)
 	$(GOBUILD_CMD) ./cmd/$(APP_NAME)
