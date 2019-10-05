@@ -40,11 +40,7 @@ func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
 				}}
 
 			addr := ":" + strconv.FormatUint(uint64(viper.GetInt64(keyPort)), 10)
-			lis, err := net.Listen("tcp", addr)
-			if err != nil {
-				return errors.Wrapf(err, "failed to listen at %q", addr)
-			}
-			return errors.Wrap(serve(logger, lis, &s), "serving groups service")
+			return errors.Wrap(serve(logger, &s, addr), "serving groups service")
 		},
 	}
 
@@ -60,7 +56,12 @@ func newServer(gss api.GroupsServiceServer) *grpc.Server {
 	return srv
 }
 
-func serve(logger *log.Logger, lis net.Listener, server api.GroupsServiceServer) error {
+func serve(logger *log.Logger, server api.GroupsServiceServer, addr string) error {
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		return errors.Wrapf(err, "failed to listen at %q", addr)
+	}
+	logger.Printf("Starting server at %q", addr)
 	sErr := errors.Wrap(newServer(server).Serve(lis), "serving groups service")
 	cErr := errors.Wrap(lis.Close(), "closing listener")
 	if sErr == nil {
