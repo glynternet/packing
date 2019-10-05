@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// GetGraph fetches the graph for the given seed
 func GetGraph(ctx context.Context, conn *grpc.ClientConn, seed api.ContentsDefinition) ([]api.Group, error) {
 	groups, err := api.NewGroupsServiceClient(conn).GetGroups(ctx, &seed)
 	if err != nil {
