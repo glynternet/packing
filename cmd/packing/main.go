@@ -72,7 +72,7 @@ func run(conf config.Run, logger *log.Logger, w io.Writer) error {
 	if err != nil {
 		return errors.Wrap(err, "getting contents definition seed")
 	}
-	gs, err := getFullPackingGraph(conf, logger, seed)
+	gs, err := getFullPackingGraph(logger, conf, seed)
 	if err != nil {
 		return errors.Wrap(err, "getting full packing graph")
 	}
@@ -96,7 +96,7 @@ func run(conf config.Run, logger *log.Logger, w io.Writer) error {
 	return err
 }
 
-func getFullPackingGraph(conf config.Run, logger *log.Logger, seed api.ContentsDefinition) ([]api.Group, error) {
+func getFullPackingGraph(logger *log.Logger, conf config.Run, seed api.ContentsDefinition) ([]api.Group, error) {
 	s := service.GroupsService{
 		Logger: logger,
 		Loader: load.Loader{
