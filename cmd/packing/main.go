@@ -117,7 +117,7 @@ func getFullPackingGraph(logger *log.Logger, conf config.Run, seed api.ContentsD
 
 	go func(errCh chan<- error) {
 		logger.Printf("starting server at %s", lis.Addr())
-		errCh <- serve(lis, &s)
+		errCh <- serve(logger, lis, &s)
 	}(sErr)
 
 	go func(gsCh chan<- []api.Group, sErr, cErr chan<- error) {
@@ -177,8 +177,16 @@ func getGraph(ctx context.Context, addr string, seed api.ContentsDefinition) ([]
 	return gs, nil
 }
 
-func serve(lis net.Listener, server api.GroupsServiceServer) error {
-	return errors.Wrap(newServer(server).Serve(lis), "serving groups service")
+func serve(logger *log.Logger, lis net.Listener, server api.GroupsServiceServer) error {
+	sErr := errors.Wrap(newServer(server).Serve(lis), "serving groups service")
+	cErr := errors.Wrap(lis.Close(), "closing listener")
+	if sErr == nil {
+		return cErr
+	}
+	if cErr != nil {
+		logger.Println(cErr)
+	}
+	return sErr
 }
 
 func newServer(gss api.GroupsServiceServer) *grpc.Server {
