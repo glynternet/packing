@@ -9,16 +9,10 @@ pipeline:
     image: grpc/go:1.0
     commands:
       - go generate -v ./...
-      - pwd
-      - ls
-      - ls pkg/api
 
   run-unit-tests:
     image: golang:1.10.4
     commands:
-      - pwd
-      - ls
-      - ls pkg/api
       - go test -v -race ./...
 
   run-linters:
