@@ -27,3 +27,5 @@ pipeline:
     image: golang:1.10.4
     commands:
       - make binaries
+    environment:
+      - DOCKER_USERNAME=glynhanmer
