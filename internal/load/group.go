@@ -69,9 +69,7 @@ func recursiveGroupsLoad(
 
 // AllGroups gets all of the Groups from the seed ContentsDefinition and recursively descending into all of those Groups
 // until the whole tree has been found.
-func (l *Loader) AllGroups(logger *log.Logger, seed api.ContentsDefinition) (
-	[]api.Group, error,
-) {
+func (l *Loader) AllGroups(logger *log.Logger, seed api.ContentsDefinition) ([]api.Group, error) {
 	groups, err := l.Groups(logger, seed.GroupKeys)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading groups recursively")

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/glynternet/packing/internal/load"
 	"github.com/glynternet/packing/internal/service"
@@ -22,7 +24,7 @@ func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	viper.SetEnvPrefix("packing")
 
 	const (
-		keyPackingGroups = "packing-groups-dir"
+		keyPackingGroups = "groups-dir"
 		keyPort          = "port"
 	)
 
@@ -30,11 +32,16 @@ func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		Use:  "serve",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			groupsDir := strings.TrimSpace(viper.GetString(keyPackingGroups))
+			if groupsDir == "" {
+				return fmt.Errorf("%s arg cannot be empty", keyPackingGroups)
+			}
+			logger.Printf("%s set to %s", keyPackingGroups, groupsDir)
 			s := service.GroupsService{
 				Logger: logger,
 				Loader: load.Loader{
 					ContentsDefinitionGetter: storage.ContentsDefinitionGetter{
-						GetReadCloser: file.ReadCloserGetter(viper.GetString(keyPackingGroups)),
+						GetReadCloser: file.ReadCloserGetter(groupsDir),
 						Logger:        logger,
 					},
 				}}
