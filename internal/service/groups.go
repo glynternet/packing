@@ -18,11 +18,16 @@ type GroupsService struct {
 func (s *GroupsService) GetGroups(seed *api.ContentsDefinition, srv api.GroupsService_GetGroupsServer) error {
 	gs, err := s.AllGroups(s.Logger, *seed)
 	if err != nil {
-		return errors.Wrap(err, "getting AllGroups for seed")
+		err := errors.Wrap(err, "getting AllGroups for seed")
+		// TODO(glynternet): is this the best thing to do here or should we send a user facing error back?
+		log.Println(err)
+		return err
 	}
 	for _, g := range gs {
 		if err := srv.Send(&g); err != nil {
-			return errors.Wrapf(err, "sending group %q", g)
+			err := errors.Wrapf(err, "sending group %q", g)
+			log.Println(err)
+			return err
 		}
 	}
 	return nil
