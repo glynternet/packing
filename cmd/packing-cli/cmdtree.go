@@ -10,6 +10,7 @@ import (
 	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/client"
 	"github.com/glynternet/packing/pkg/cmd"
+	"github.com/glynternet/packing/pkg/graph"
 	"github.com/glynternet/packing/pkg/grpc"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/pkg/render"
@@ -48,12 +49,12 @@ func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
 				return errors.Wrapf(err, "getting new GRPC connection for %q", addr)
 			}
 
-			gs, err := client.GetGraph(context.Background(), conn, seed)
+			gs, err := client.GetGroups(context.Background(), conn, seed)
 			if err != nil {
 				return errors.Wrap(err, "getting graph")
 			}
 
-			return errors.Wrap(render.SortedMarkdownRenderer{Writer: w}.Render(gs), "rendering graph")
+			return errors.Wrap(render.SortedMarkdownRenderer{Writer: w}.Render(graph.From(gs)), "rendering graph")
 		},
 	}
 
