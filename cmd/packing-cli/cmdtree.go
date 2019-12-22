@@ -36,7 +36,7 @@ func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
 			if err != nil {
 				return errors.Wrapf(err, "opening file at path:%q", trip)
 			}
-			seed, err := getContentsDefinitionSeed(logger, f)
+			seed, err := getContentsDefinitionSeed(f)
 			if err != nil {
 				return errors.Wrap(err, "getting contents definition seed")
 			}
@@ -63,7 +63,7 @@ func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(trip)
 }
 
-func getContentsDefinitionSeed(logger *log.Logger, rc io.ReadCloser) (api.ContentsDefinition, error) {
+func getContentsDefinitionSeed(rc io.ReadCloser) (api.ContentsDefinition, error) {
 	root, err := list.ParseContentsDefinition(rc)
 	if err != nil {
 		return api.ContentsDefinition{}, errors.Wrap(err, "parsing contents definition")
