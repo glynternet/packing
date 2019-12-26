@@ -1,7 +1,6 @@
-# dubplate version: v1.0.0-2-g61f3327 (manually edited)
+# dubplate version: v0.4.4
 
-BUILD_DIR ?= ./bin
-OUTBIN ?= $(BUILD_DIR)/$(APP_NAME)-$(VERSION)
+OUTBIN ?= $(BUILD_DIR)/$(APP_NAME)
 
 VERSION_VAR ?= main.version
 LDFLAGS = -ldflags "-w -X $(VERSION_VAR)=$(VERSION)"
@@ -9,19 +8,8 @@ GOBUILD_FLAGS ?= -installsuffix cgo -a $(LDFLAGS) -o $(OUTBIN)
 GOBUILD_ENVVARS ?= CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH)
 GOBUILD_CMD ?= $(GOBUILD_ENVVARS) go build $(GOBUILD_FLAGS)
 
-OS ?= linux
-ARCH ?= amd64
-
 dummy:
 	@echo No default rule set yet
-
-clean:
-	rm $(BUILD_DIR)/*
-
-$(BUILD_DIR):
-	mkdir -p $@
-
-cmd-all: binary test-binary-version-output
 
 binary: $(BUILD_DIR)
 	$(GOBUILD_CMD) ./cmd/$(APP_NAME)

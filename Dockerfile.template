@@ -1,0 +1,7 @@
+# dubplate version: v0.4.4
+
+FROM scratch
+
+COPY ./{{APP_NAME}} /{{APP_NAME}}
+
+ENTRYPOINT [ "/{{APP_NAME}}" ]
