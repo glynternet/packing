@@ -1,4 +1,4 @@
-# dubplate version: v0.4.4
+# dubplate version: v0.5.0
 
 dockerfile:
 	$(MAKE) Dockerfile.$(APP_NAME)

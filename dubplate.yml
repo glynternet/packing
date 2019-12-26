@@ -1,0 +1,4 @@
+repo: github.com/glynternet/packing
+apps:
+  - packing-cli
+  - packing-server
