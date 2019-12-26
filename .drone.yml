@@ -1,9 +1,10 @@
-# dubplate version: v1.0.0-2-g61f3327 (manually edited)
+# dubplate version: v0.4.4 (manually edited)
 
 workspace:
 
-  base: /go/src/github.com/glynternet
-  path: packing
+  base: /go/src
+  path: github.com/glynternet/packing
+
 
 pipeline:
   generate-proto-go:
@@ -21,9 +22,12 @@ pipeline:
   run-linters:
     image: glynhanmer/go-linters:1.10.3-alpine3.7-v0.2.0
     environment:
-      - CONCURRENCY=1
+      - CONCURRENCY=4
 
   build-binaries:
     image: golang:1.10.4
     commands:
       - make binaries
+    # set DOCKER_USERNAME if using docker.Makefile
+    # environment:
+      # - DOCKER_USERNAME=
