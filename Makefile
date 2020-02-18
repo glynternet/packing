@@ -1,4 +1,4 @@
-BINARIES ?= packing-cli packing-server
+COMPONENTS ?= packing-cli packing-server
 DOCKER_USERNAME ?= glynhanmer
 
 include ./dubplate.Makefile
