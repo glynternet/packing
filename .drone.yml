@@ -29,5 +29,5 @@ pipeline:
     commands:
       - make binaries
     # set DOCKER_USERNAME if using docker.Makefile
-    # environment:
-      # - DOCKER_USERNAME=
+    environment:
+      - DOCKER_USERNAME=glynhanmer
