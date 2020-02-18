@@ -1,8 +1,6 @@
-BINARIES ?= packing-cli packing-server
+COMPONENTS ?= packing-cli packing-server
+DOCKER_USERNAME ?= glynhanmer
 
 include ./dubplate.Makefile
 include ./go.Makefile
-
-packing:
-	$(MAKE) cmd-all \
-		APP_NAME=$@
+include ./docker.Makefile
