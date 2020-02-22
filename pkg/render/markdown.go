@@ -82,7 +82,7 @@ func (r SortedMarkdownRenderer) includes(is []string) error {
 	}
 	sorted := make([]string, len(is))
 	copy(sorted, is)
-	sort.Sort(sort.StringSlice(sorted))
+	sort.Strings(sorted)
 	_, err := fmt.Fprintf(r.Writer, "_Includes groups: %s_  \n", escaped(strings.Join(sorted, ", ")))
 	return err
 }
@@ -93,7 +93,7 @@ func (r SortedMarkdownRenderer) includedIns(is []string) error {
 	}
 	sorted := make([]string, len(is))
 	copy(sorted, is)
-	sort.Sort(sort.StringSlice(sorted))
+	sort.Strings(sorted)
 	_, err := fmt.Fprintf(r.Writer, "_Included in: %s_  \n", escaped(strings.Join(sorted, ", ")))
 	return err
 }
