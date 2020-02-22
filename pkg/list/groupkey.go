@@ -17,3 +17,11 @@ func (gks GroupKeys) Contains(k api.GroupKey) bool {
 	}
 	return false
 }
+
+func (gks GroupKeys) Strings() []string {
+	var ss []string
+	for _, gk := range gks {
+		ss = append(ss, gk.GetKey())
+	}
+	return ss
+}
