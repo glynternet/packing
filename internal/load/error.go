@@ -1,10 +1,9 @@
 package load
 
-// GroupSelfReferenceErr is returned whenever a group references itself
-const GroupSelfReferenceErr = loadError("group cannot contain reference to self")
+import "fmt"
 
-type loadError string
+type SelfReferenceError string
 
-func (sre loadError) Error() string {
-	return string(sre)
+func (sre SelfReferenceError) Error() string {
+	return fmt.Sprintf("group cannot contain reference to self: %s", string(sre))
 }

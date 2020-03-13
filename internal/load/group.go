@@ -55,7 +55,7 @@ func recursiveGroupsLoad(
 		}
 
 		if cs.GroupKeys != nil && list.GroupKeys(cs.GroupKeys).Contains(*key) {
-			return GroupSelfReferenceErr
+			return SelfReferenceError(key.GetKey())
 		}
 
 		loaded[key.Key] = *cs
