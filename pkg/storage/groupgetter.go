@@ -2,17 +2,17 @@ package storage
 
 import (
 	"io"
-	"log"
 
 	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/list"
+	"github.com/glynternet/pkg/log"
 	"github.com/pkg/errors"
 )
 
 // ContentsDefinitionGetter gets a api.ContentsDefinition
 type ContentsDefinitionGetter struct {
 	GetReadCloser ReadCloserGetter
-	*log.Logger
+	log.Logger
 }
 
 // ReadCloserGetter gets an io.ReadCloser for a given api.GroupKey
@@ -34,7 +34,10 @@ func (gg ContentsDefinitionGetter) GetContentsDefinition(key api.GroupKey) (*api
 			err = cErr
 			return
 		}
-		gg.Logger.Println(errors.Wrap(cErr, "closing group ReadCloser"))
+		_ = gg.Logger.Log(
+			log.Message("Error closing group ReadCloser"),
+			log.Error(cErr),
+		)
 	}()
 
 	def, err := list.ParseContentsDefinition(rc)

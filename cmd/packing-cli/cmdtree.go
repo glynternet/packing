@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"io"
-	"log"
 	"os"
 	"strconv"
 
@@ -14,12 +13,13 @@ import (
 	"github.com/glynternet/packing/pkg/grpc"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/pkg/render"
+	"github.com/glynternet/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
+func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	viper.SetEnvPrefix("packing")
 
 	const (
