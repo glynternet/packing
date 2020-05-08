@@ -1,4 +1,4 @@
-# dubplate version: v0.7.0
+# dubplate version: v0.8.0
 
 ROOT_DIR ?= $(shell git rev-parse --show-toplevel)
 UNTRACKED ?= $(shell test -z "$(shell git ls-files --others --exclude-standard "$(ROOT_DIR)")" || echo -untracked)
@@ -24,3 +24,5 @@ component-all: binary test-binary-version-output image
 
 image:
 	@echo skipping image build...
+
+images: ;

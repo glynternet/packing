@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -14,13 +13,14 @@ import (
 	"github.com/glynternet/packing/pkg/cmd"
 	"github.com/glynternet/packing/pkg/storage"
 	"github.com/glynternet/packing/pkg/storage/file"
+	"github.com/glynternet/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 )
 
-func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
+func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	viper.SetEnvPrefix("packing")
 
 	const (
@@ -36,7 +36,15 @@ func buildCmdTree(logger *log.Logger, w io.Writer, rootCmd *cobra.Command) {
 			if groupsDir == "" {
 				return fmt.Errorf("%s arg cannot be empty", keyPackingGroups)
 			}
-			logger.Printf("%s set to %s", keyPackingGroups, groupsDir)
+			if err := logger.Log(log.KV{
+				K: "message",
+				V: keyPackingGroups + " has been set",
+			}, log.KV{
+				K: "groupsDir",
+				V: groupsDir,
+			}); err != nil {
+				return errors.Wrap(err, "logging")
+			}
 			s := service.GroupsService{
 				Logger: logger,
 				Loader: load.Loader{
@@ -63,19 +71,25 @@ func newServer(gss api.GroupsServiceServer) *grpc.Server {
 	return srv
 }
 
-func serve(logger *log.Logger, server api.GroupsServiceServer, addr string) error {
+func serve(logger log.Logger, server api.GroupsServiceServer, addr string) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return errors.Wrapf(err, "failed to listen at %q", addr)
 	}
-	logger.Printf("Starting server at %q", addr)
+	if err := logger.Log(
+		log.KV{K: "message", V: "Starting server"},
+		log.KV{K: "address", V: addr}); err != nil {
+		return errors.Wrap(err, "logging")
+	}
 	sErr := errors.Wrap(newServer(server).Serve(lis), "serving groups service")
 	cErr := errors.Wrap(lis.Close(), "closing listener")
 	if sErr == nil {
 		return cErr
 	}
 	if cErr != nil {
-		logger.Println(cErr)
+		_ = logger.Log(
+			log.Message("Error closing listener"),
+			log.Error(err))
 	}
 	return sErr
 }

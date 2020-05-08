@@ -1,13 +1,12 @@
 package load_test
 
 import (
-	"log"
-	"os"
 	"testing"
 
 	"github.com/glynternet/packing/internal/load"
 	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/list"
+	"github.com/glynternet/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,10 +18,9 @@ func TestGroups(t *testing.T) {
 		assert.Nil(t, actual)
 	})
 
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := log.NewLogger()
 
 	t.Run("single key missing in getter", func(t *testing.T) {
-		logger := log.New(os.Stdout, "", log.LstdFlags)
 		keys := list.GroupKeys{{Key: "foo"}}
 		store := mockContentsGetter{}
 		var expected []api.Group

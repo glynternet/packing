@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -54,6 +55,145 @@ Ystrlist = ["Howdy","Hey There"]
 [[Wsublist]]
   String2 = "Three"
 `)
+
+var marshalTestToml = []byte(`title = "TOML Marshal Testing"
+
+[basic]
+  bool = true
+  date = 1979-05-27T07:32:00Z
+  float = 123.4
+  float64 = 123.456782132399
+  int = 5000
+  string = "Bite me"
+  uint = 5001
+
+[basic_lists]
+  bools = [true,false,true]
+  dates = [1979-05-27T07:32:00Z,1980-05-27T07:32:00Z]
+  floats = [12.3,45.6,78.9]
+  ints = [8001,8001,8002]
+  strings = ["One","Two","Three"]
+  uints = [5002,5003]
+
+[basic_map]
+  one = "one"
+  two = "two"
+
+[subdoc]
+
+  [subdoc.first]
+    name = "First"
+
+  [subdoc.second]
+    name = "Second"
+
+[[subdoclist]]
+  name = "List.First"
+
+[[subdoclist]]
+  name = "List.Second"
+
+[[subdocptrs]]
+  name = "Second"
+`)
+
+var marshalOrderPreserveToml = []byte(`title = "TOML Marshal Testing"
+
+[basic_lists]
+  floats = [12.3,45.6,78.9]
+  bools = [true,false,true]
+  dates = [1979-05-27T07:32:00Z,1980-05-27T07:32:00Z]
+  ints = [8001,8001,8002]
+  uints = [5002,5003]
+  strings = ["One","Two","Three"]
+
+[[subdocptrs]]
+  name = "Second"
+
+[basic_map]
+  one = "one"
+  two = "two"
+
+[subdoc]
+
+  [subdoc.second]
+    name = "Second"
+
+  [subdoc.first]
+    name = "First"
+
+[basic]
+  uint = 5001
+  bool = true
+  float = 123.4
+  float64 = 123.456782132399
+  int = 5000
+  string = "Bite me"
+  date = 1979-05-27T07:32:00Z
+
+[[subdoclist]]
+  name = "List.First"
+
+[[subdoclist]]
+  name = "List.Second"
+`)
+
+var mashalOrderPreserveMapToml = []byte(`title = "TOML Marshal Testing"
+
+[basic_map]
+  one = "one"
+  two = "two"
+
+[long_map]
+  a7 = "1"
+  b3 = "2"
+  c8 = "3"
+  d4 = "4"
+  e6 = "5"
+  f5 = "6"
+  g10 = "7"
+  h1 = "8"
+  i2 = "9"
+  j9 = "10"
+`)
+
+type Conf struct {
+	Name  string
+	Age   int
+	Inter interface{}
+}
+
+type NestedStruct struct {
+	FirstName string
+	LastName  string
+	Age       int
+}
+
+var doc = []byte(`Name = "rui"
+Age = 18
+
+[Inter]
+  FirstName = "wang"
+  LastName = "jl"
+  Age = 100`)
+
+func TestInterface(t *testing.T) {
+	var config Conf
+	config.Inter = &NestedStruct{}
+	err := Unmarshal(doc, &config)
+	expected := Conf{
+		Name: "rui",
+		Age:  18,
+		Inter: &NestedStruct{
+			FirstName: "wang",
+			LastName:  "jl",
+			Age:       100,
+		},
+	}
+	if err != nil || !reflect.DeepEqual(config, expected) {
+		t.Errorf("Bad unmarshal: expected %v, got %v", expected, config)
+	}
+}
 
 func TestBasicMarshal(t *testing.T) {
 	result, err := Marshal(basicTestData)
@@ -135,7 +275,8 @@ type testMapDoc struct {
 type testDocBasics struct {
 	Uint       uint      `toml:"uint"`
 	Bool       bool      `toml:"bool"`
-	Float      float32   `toml:"float"`
+	Float32    float32   `toml:"float"`
+	Float64    float64   `toml:"float64"`
 	Int        int       `toml:"int"`
 	String     *string   `toml:"string"`
 	Date       time.Time `toml:"date"`
@@ -174,7 +315,8 @@ var docData = testDoc{
 	Basics: testDocBasics{
 		Bool:       true,
 		Date:       time.Date(1979, 5, 27, 7, 32, 0, 0, time.UTC),
-		Float:      123.4,
+		Float32:    123.4,
+		Float64:    123.456782132399,
 		Int:        5000,
 		Uint:       5001,
 		String:     &biteMe,
@@ -231,9 +373,8 @@ func TestDocMarshal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected, _ := ioutil.ReadFile("marshal_test.toml")
-	if !bytes.Equal(result, expected) {
-		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", expected, result)
+	if !bytes.Equal(result, marshalTestToml) {
+		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", marshalTestToml, result)
 	}
 }
 
@@ -243,9 +384,8 @@ func TestDocMarshalOrdered(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected, _ := ioutil.ReadFile("marshal_OrderPreserve_test.toml")
-	if !bytes.Equal(result.Bytes(), expected) {
-		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", expected, result.Bytes())
+	if !bytes.Equal(result.Bytes(), marshalOrderPreserveToml) {
+		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", marshalOrderPreserveToml, result.Bytes())
 	}
 }
 
@@ -254,9 +394,8 @@ func TestDocMarshalMaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected, _ := ioutil.ReadFile("marshal_OrderPreserve_Map_test.toml")
-	if !bytes.Equal(result, expected) {
-		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", expected, result)
+	if !bytes.Equal(result, mashalOrderPreserveMapToml) {
+		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", mashalOrderPreserveMapToml, result)
 	}
 }
 
@@ -266,9 +405,8 @@ func TestDocMarshalOrderedMaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected, _ := ioutil.ReadFile("marshal_OrderPreserve_Map_test.toml")
-	if !bytes.Equal(result.Bytes(), expected) {
-		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", expected, result.Bytes())
+	if !bytes.Equal(result.Bytes(), mashalOrderPreserveMapToml) {
+		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", mashalOrderPreserveMapToml, result.Bytes())
 	}
 }
 
@@ -277,16 +415,15 @@ func TestDocMarshalPointer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected, _ := ioutil.ReadFile("marshal_test.toml")
-	if !bytes.Equal(result, expected) {
-		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", expected, result)
+
+	if !bytes.Equal(result, marshalTestToml) {
+		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", marshalTestToml, result)
 	}
 }
 
 func TestDocUnmarshal(t *testing.T) {
 	result := testDoc{}
-	tomlData, _ := ioutil.ReadFile("marshal_test.toml")
-	err := Unmarshal(tomlData, &result)
+	err := Unmarshal(marshalTestToml, &result)
 	expected := docData
 	if err != nil {
 		t.Fatal(err)
@@ -299,11 +436,22 @@ func TestDocUnmarshal(t *testing.T) {
 }
 
 func TestDocPartialUnmarshal(t *testing.T) {
-	result := testDocSubs{}
+	file, err := ioutil.TempFile("", "test-*.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
 
-	tree, _ := LoadFile("marshal_test.toml")
+	err = ioutil.WriteFile(file.Name(), marshalTestToml, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tree, _ := LoadFile(file.Name())
 	subTree := tree.Get("subdoc").(*Tree)
-	err := subTree.Unmarshal(&result)
+
+	result := testDocSubs{}
+	err = subTree.Unmarshal(&result)
 	expected := docData.Subdocs
 	if err != nil {
 		t.Fatal(err)
@@ -323,12 +471,36 @@ type tomlTypeCheckTest struct {
 
 func TestTypeChecks(t *testing.T) {
 	tests := []tomlTypeCheckTest{
-		{"integer", 2, 0},
+		{"bool", true, 0},
+		{"bool", false, 0},
+		{"int", int(2), 0},
+		{"int8", int8(2), 0},
+		{"int16", int16(2), 0},
+		{"int32", int32(2), 0},
+		{"int64", int64(2), 0},
+		{"uint", uint(2), 0},
+		{"uint8", uint8(2), 0},
+		{"uint16", uint16(2), 0},
+		{"uint32", uint32(2), 0},
+		{"uint64", uint64(2), 0},
+		{"float32", float32(3.14), 0},
+		{"float64", float64(3.14), 0},
+		{"string", "lorem ipsum", 0},
 		{"time", time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC), 0},
 		{"stringlist", []string{"hello", "hi"}, 1},
+		{"stringlistptr", &[]string{"hello", "hi"}, 1},
+		{"stringarray", [2]string{"hello", "hi"}, 1},
+		{"stringarrayptr", &[2]string{"hello", "hi"}, 1},
 		{"timelist", []time.Time{time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)}, 1},
+		{"timelistptr", &[]time.Time{time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)}, 1},
+		{"timearray", [1]time.Time{time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)}, 1},
+		{"timearrayptr", &[1]time.Time{time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)}, 1},
 		{"objectlist", []tomlTypeCheckTest{}, 2},
+		{"objectlistptr", &[]tomlTypeCheckTest{}, 2},
+		{"objectarray", [2]tomlTypeCheckTest{{}, {}}, 2},
+		{"objectlistptr", &[2]tomlTypeCheckTest{{}, {}}, 2},
 		{"object", tomlTypeCheckTest{}, 3},
+		{"objectptr", &tomlTypeCheckTest{}, 3},
 	}
 
 	for _, test := range tests {
@@ -336,8 +508,8 @@ func TestTypeChecks(t *testing.T) {
 		expected[test.typ] = true
 		result := []bool{
 			isPrimitive(reflect.TypeOf(test.item)),
-			isOtherSlice(reflect.TypeOf(test.item)),
-			isTreeSlice(reflect.TypeOf(test.item)),
+			isOtherSequence(reflect.TypeOf(test.item)),
+			isTreeSequence(reflect.TypeOf(test.item)),
 			isTree(reflect.TypeOf(test.item)),
 		}
 		if !reflect.DeepEqual(expected, result) {
@@ -779,6 +951,213 @@ func TestMarshalComment(t *testing.T) {
 	}
 }
 
+func TestMarshalMultilineCommented(t *testing.T) {
+	expectedToml := []byte(`# MultilineArray = [
+  # 100,
+  # 200,
+  # 300,
+# ]
+# MultilineNestedArray = [
+  # [
+  # "a",
+  # "b",
+  # "c",
+# ],
+  # [
+  # "d",
+  # "e",
+  # "f",
+# ],
+# ]
+# MultilineString = """
+# I
+# am
+# Allen"""
+NonCommented = "Not commented line"
+`)
+	type StructWithMultiline struct {
+		NonCommented         string
+		MultilineString      string     `commented:"true" multiline:"true"`
+		MultilineArray       []int      `commented:"true"`
+		MultilineNestedArray [][]string `commented:"true"`
+	}
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	if err := enc.ArraysWithOneElementPerLine(true).Encode(StructWithMultiline{
+		NonCommented:    "Not commented line",
+		MultilineString: "I\nam\nAllen",
+		MultilineArray:  []int{100, 200, 300},
+		MultilineNestedArray: [][]string{
+			{"a", "b", "c"},
+			{"d", "e", "f"},
+		},
+	}); err == nil {
+		result := buf.Bytes()
+		if !bytes.Equal(result, expectedToml) {
+			t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", expectedToml, result)
+		}
+	} else {
+		t.Fatal(err)
+	}
+}
+
+func TestMarshalNonPrimitiveTypeCommented(t *testing.T) {
+	expectedToml := []byte(`
+# [CommentedMapField]
+
+  # [CommentedMapField.CommentedMapField1]
+    # SingleLineString = "This line should be commented out"
+
+  # [CommentedMapField.CommentedMapField2]
+    # SingleLineString = "This line should be commented out"
+
+# [CommentedStructField]
+
+  # [CommentedStructField.CommentedStructField]
+    # MultilineArray = [
+      # 1,
+      # 2,
+    # ]
+    # MultilineNestedArray = [
+      # [
+      # 10,
+      # 20,
+    # ],
+      # [
+      # 100,
+      # 200,
+    # ],
+    # ]
+    # MultilineString = """
+# This line
+# should be
+# commented out"""
+
+  # [CommentedStructField.NotCommentedStructField]
+    # MultilineArray = [
+      # 1,
+      # 2,
+    # ]
+    # MultilineNestedArray = [
+      # [
+      # 10,
+      # 20,
+    # ],
+      # [
+      # 100,
+      # 200,
+    # ],
+    # ]
+    # MultilineString = """
+# This line
+# should be
+# commented out"""
+
+[NotCommentedStructField]
+
+  # [NotCommentedStructField.CommentedStructField]
+    # MultilineArray = [
+      # 1,
+      # 2,
+    # ]
+    # MultilineNestedArray = [
+      # [
+      # 10,
+      # 20,
+    # ],
+      # [
+      # 100,
+      # 200,
+    # ],
+    # ]
+    # MultilineString = """
+# This line
+# should be
+# commented out"""
+
+  [NotCommentedStructField.NotCommentedStructField]
+    MultilineArray = [
+      3,
+      4,
+    ]
+    MultilineNestedArray = [
+      [
+      30,
+      40,
+    ],
+      [
+      300,
+      400,
+    ],
+    ]
+    MultilineString = """
+This line
+should NOT be
+commented out"""
+`)
+	type InnerStruct struct {
+		MultilineString      string `multiline:"true"`
+		MultilineArray       []int
+		MultilineNestedArray [][]int
+	}
+	type MiddleStruct struct {
+		NotCommentedStructField InnerStruct
+		CommentedStructField    InnerStruct `commented:"true"`
+	}
+	type OuterStruct struct {
+		CommentedStructField    MiddleStruct `commented:"true"`
+		NotCommentedStructField MiddleStruct
+		CommentedMapField       map[string]struct{ SingleLineString string } `commented:"true"`
+	}
+
+	commentedTestStruct := OuterStruct{
+		CommentedStructField: MiddleStruct{
+			NotCommentedStructField: InnerStruct{
+				MultilineString:      "This line\nshould be\ncommented out",
+				MultilineArray:       []int{1, 2},
+				MultilineNestedArray: [][]int{{10, 20}, {100, 200}},
+			},
+			CommentedStructField: InnerStruct{
+				MultilineString:      "This line\nshould be\ncommented out",
+				MultilineArray:       []int{1, 2},
+				MultilineNestedArray: [][]int{{10, 20}, {100, 200}},
+			},
+		},
+		NotCommentedStructField: MiddleStruct{
+			NotCommentedStructField: InnerStruct{
+				MultilineString:      "This line\nshould NOT be\ncommented out",
+				MultilineArray:       []int{3, 4},
+				MultilineNestedArray: [][]int{{30, 40}, {300, 400}},
+			},
+			CommentedStructField: InnerStruct{
+				MultilineString:      "This line\nshould be\ncommented out",
+				MultilineArray:       []int{1, 2},
+				MultilineNestedArray: [][]int{{10, 20}, {100, 200}},
+			},
+		},
+		CommentedMapField: map[string]struct{ SingleLineString string }{
+			"CommentedMapField1": {
+				SingleLineString: "This line should be commented out",
+			},
+			"CommentedMapField2": {
+				SingleLineString: "This line should be commented out",
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	if err := enc.ArraysWithOneElementPerLine(true).Encode(commentedTestStruct); err == nil {
+		result := buf.Bytes()
+		if !bytes.Equal(result, expectedToml) {
+			t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", expectedToml, result)
+		}
+	} else {
+		t.Fatal(err)
+	}
+}
+
 type mapsTestStruct struct {
 	Simple map[string]string
 	Paths  map[string]string
@@ -1025,6 +1404,21 @@ func TestMarshalCustomCommented(t *testing.T) {
 	}
 }
 
+func TestMarshalDirectMultilineString(t *testing.T) {
+	tree := newTree()
+	tree.SetWithOptions("mykey", SetOptions{
+		Multiline: true,
+	}, "my\x11multiline\nstring\ba\tb\fc\rd\"e\\!")
+	result, err := tree.Marshal()
+	if err != nil {
+		t.Fatal("marshal should not error:", err)
+	}
+	expected := []byte("mykey = \"\"\"\nmy\\u0011multiline\nstring\\ba\tb\\fc\rd\"e\\!\"\"\"\n")
+	if !bytes.Equal(result, expected) {
+		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", expected, result)
+	}
+}
+
 var customMultilineTagTestToml = []byte(`int_slice = [
   1,
   2,
@@ -1047,6 +1441,54 @@ func TestMarshalCustomMultiline(t *testing.T) {
 	result := buf.Bytes()
 	if !bytes.Equal(result, expected) {
 		t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", expected, result)
+	}
+}
+
+func TestMarshalEmbedTree(t *testing.T) {
+	expected := []byte(`OuterField1 = "Out"
+OuterField2 = 1024
+
+[TreeField]
+  InnerField1 = "In"
+  InnerField2 = 2048
+
+  [TreeField.EmbedStruct]
+    EmbedField = "Embed"
+`)
+	type InnerStruct struct {
+		InnerField1 string
+		InnerField2 int
+		EmbedStruct struct{
+			EmbedField string
+		}
+	}
+
+	type OuterStruct struct {
+		OuterField1 string
+		OuterField2 int
+		TreeField *Tree
+	}
+
+	tree, err := Load(`
+InnerField1 = "In"
+InnerField2 = 2048
+
+[EmbedStruct]
+	EmbedField = "Embed"
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out := OuterStruct{
+		"Out",
+		1024,
+		tree,
+	}
+	actual, _ := Marshal(out)
+
+	if !bytes.Equal(actual, expected){
+		t.Errorf("Bad marshal: expected %s, got %s", expected, actual)
 	}
 }
 
@@ -1334,12 +1776,20 @@ func TestUnmarshalCamelCaseKey(t *testing.T) {
 }
 
 func TestUnmarshalDefault(t *testing.T) {
+	type EmbeddedStruct struct {
+		StringField string `default:"c"`
+	}
+
 	var doc struct {
-		StringField  string  `default:"a"`
-		BoolField    bool    `default:"true"`
-		IntField     int     `default:"1"`
-		Int64Field   int64   `default:"2"`
-		Float64Field float64 `default:"3.1"`
+		StringField       string  `default:"a"`
+		BoolField         bool    `default:"true"`
+		IntField          int     `default:"1"`
+		Int64Field        int64   `default:"2"`
+		Float64Field      float64 `default:"3.1"`
+		NonEmbeddedStruct struct {
+			StringField string `default:"b"`
+		}
+		EmbeddedStruct
 	}
 
 	err := Unmarshal([]byte(``), &doc)
@@ -1360,6 +1810,12 @@ func TestUnmarshalDefault(t *testing.T) {
 	}
 	if doc.Float64Field != 3.1 {
 		t.Errorf("Float64Field should be 3.1, not %f", doc.Float64Field)
+	}
+	if doc.NonEmbeddedStruct.StringField != "b" {
+		t.Errorf("StringField should be \"b\", not %s", doc.NonEmbeddedStruct.StringField)
+	}
+	if doc.EmbeddedStruct.StringField != "c" {
+		t.Errorf("StringField should be \"c\", not %s", doc.EmbeddedStruct.StringField)
 	}
 }
 
@@ -1415,5 +1871,904 @@ func TestUnmarshalDefaultFailureUnsupported(t *testing.T) {
 	err := Unmarshal([]byte(``), &doc)
 	if err == nil {
 		t.Fatal("should error")
+	}
+}
+
+func TestUnmarshalNestedAnonymousStructs(t *testing.T) {
+	type Nested struct {
+		Value string `toml:"nested_field"`
+	}
+	type Deep struct {
+		Nested
+	}
+	type Document struct {
+		Deep
+		Value string `toml:"own_field"`
+	}
+
+	var doc Document
+
+	err := Unmarshal([]byte(`nested_field = "nested value"`+"\n"+`own_field = "own value"`), &doc)
+	if err != nil {
+		t.Fatal("should not error")
+	}
+	if doc.Value != "own value" || doc.Nested.Value != "nested value" {
+		t.Fatal("unexpected values")
+	}
+}
+
+func TestUnmarshalNestedAnonymousStructs_Controversial(t *testing.T) {
+	type Nested struct {
+		Value string `toml:"nested"`
+	}
+	type Deep struct {
+		Nested
+	}
+	type Document struct {
+		Deep
+		Value string `toml:"own"`
+	}
+
+	var doc Document
+
+	err := Unmarshal([]byte(`nested = "nested value"`+"\n"+`own = "own value"`), &doc)
+	if err == nil {
+		t.Fatal("should error")
+	}
+}
+
+type unexportedFieldPreservationTest struct {
+	Exported   string `toml:"exported"`
+	unexported string
+	Nested1    unexportedFieldPreservationTestNested    `toml:"nested1"`
+	Nested2    *unexportedFieldPreservationTestNested   `toml:"nested2"`
+	Nested3    *unexportedFieldPreservationTestNested   `toml:"nested3"`
+	Slice1     []unexportedFieldPreservationTestNested  `toml:"slice1"`
+	Slice2     []*unexportedFieldPreservationTestNested `toml:"slice2"`
+}
+
+type unexportedFieldPreservationTestNested struct {
+	Exported1   string `toml:"exported1"`
+	unexported1 string
+}
+
+func TestUnmarshalPreservesUnexportedFields(t *testing.T) {
+	toml := `
+	exported = "visible"
+	unexported = "ignored"
+
+	[nested1]
+	exported1 = "visible1"
+	unexported1 = "ignored1"
+
+	[nested2]
+	exported1 = "visible2"
+	unexported1 = "ignored2"
+
+	[nested3]
+	exported1 = "visible3"
+	unexported1 = "ignored3"
+
+	[[slice1]]
+	exported1 = "visible3"
+	
+	[[slice1]]
+	exported1 = "visible4"
+
+	[[slice2]]
+	exported1 = "visible5"
+	`
+
+	t.Run("unexported field should not be set from toml", func(t *testing.T) {
+		var actual unexportedFieldPreservationTest
+		err := Unmarshal([]byte(toml), &actual)
+
+		if err != nil {
+			t.Fatal("did not expect an error")
+		}
+
+		expect := unexportedFieldPreservationTest{
+			Exported:   "visible",
+			unexported: "",
+			Nested1:    unexportedFieldPreservationTestNested{"visible1", ""},
+			Nested2:    &unexportedFieldPreservationTestNested{"visible2", ""},
+			Nested3:    &unexportedFieldPreservationTestNested{"visible3", ""},
+			Slice1: []unexportedFieldPreservationTestNested{
+				{Exported1: "visible3"},
+				{Exported1: "visible4"},
+			},
+			Slice2: []*unexportedFieldPreservationTestNested{
+				{Exported1: "visible5"},
+			},
+		}
+
+		if !reflect.DeepEqual(actual, expect) {
+			t.Fatalf("%+v did not equal %+v", actual, expect)
+		}
+	})
+
+	t.Run("unexported field should be preserved", func(t *testing.T) {
+		actual := unexportedFieldPreservationTest{
+			Exported:   "foo",
+			unexported: "bar",
+			Nested1:    unexportedFieldPreservationTestNested{"baz", "bax"},
+			Nested2:    nil,
+			Nested3:    &unexportedFieldPreservationTestNested{"baz", "bax"},
+		}
+		err := Unmarshal([]byte(toml), &actual)
+
+		if err != nil {
+			t.Fatal("did not expect an error")
+		}
+
+		expect := unexportedFieldPreservationTest{
+			Exported:   "visible",
+			unexported: "bar",
+			Nested1:    unexportedFieldPreservationTestNested{"visible1", "bax"},
+			Nested2:    &unexportedFieldPreservationTestNested{"visible2", ""},
+			Nested3:    &unexportedFieldPreservationTestNested{"visible3", "bax"},
+			Slice1: []unexportedFieldPreservationTestNested{
+				{Exported1: "visible3"},
+				{Exported1: "visible4"},
+			},
+			Slice2: []*unexportedFieldPreservationTestNested{
+				{Exported1: "visible5"},
+			},
+		}
+
+		if !reflect.DeepEqual(actual, expect) {
+			t.Fatalf("%+v did not equal %+v", actual, expect)
+		}
+	})
+}
+
+func TestTreeMarshal(t *testing.T) {
+	cases := [][]byte{
+		basicTestToml,
+		marshalTestToml,
+		emptyTestToml,
+		pointerTestToml,
+	}
+	for _, expected := range cases {
+		t.Run("", func(t *testing.T) {
+			tree, err := LoadBytes(expected)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := tree.Marshal()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(result, expected) {
+				t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", expected, result)
+			}
+		})
+	}
+}
+
+func TestMarshalArrays(t *testing.T) {
+	cases := []struct {
+		Data     interface{}
+		Expected string
+	}{
+		{
+			Data: struct {
+				XY [2]int
+			}{
+				XY: [2]int{1, 2},
+			},
+			Expected: `XY = [1,2]
+`,
+		},
+		{
+			Data: struct {
+				XY [1][2]int
+			}{
+				XY: [1][2]int{{1, 2}},
+			},
+			Expected: `XY = [[1,2]]
+`,
+		},
+		{
+			Data: struct {
+				XY [1][]int
+			}{
+				XY: [1][]int{{1, 2}},
+			},
+			Expected: `XY = [[1,2]]
+`,
+		},
+		{
+			Data: struct {
+				XY [][2]int
+			}{
+				XY: [][2]int{{1, 2}},
+			},
+			Expected: `XY = [[1,2]]
+`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run("", func(t *testing.T) {
+			result, err := Marshal(tc.Data)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(result, []byte(tc.Expected)) {
+				t.Errorf("Bad marshal: expected\n-----\n%s\n-----\ngot\n-----\n%s\n-----\n", []byte(tc.Expected), result)
+			}
+		})
+	}
+}
+
+func TestUnmarshalLocalDate(t *testing.T) {
+	t.Run("ToLocalDate", func(t *testing.T) {
+		type dateStruct struct {
+			Date LocalDate
+		}
+
+		toml := `date = 1979-05-27`
+
+		var obj dateStruct
+
+		err := Unmarshal([]byte(toml), &obj)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if obj.Date.Year != 1979 {
+			t.Errorf("expected year 1979, got %d", obj.Date.Year)
+		}
+		if obj.Date.Month != 5 {
+			t.Errorf("expected month 5, got %d", obj.Date.Month)
+		}
+		if obj.Date.Day != 27 {
+			t.Errorf("expected day 27, got %d", obj.Date.Day)
+		}
+	})
+
+	t.Run("ToLocalDate", func(t *testing.T) {
+		type dateStruct struct {
+			Date time.Time
+		}
+
+		toml := `date = 1979-05-27`
+
+		var obj dateStruct
+
+		err := Unmarshal([]byte(toml), &obj)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if obj.Date.Year() != 1979 {
+			t.Errorf("expected year 1979, got %d", obj.Date.Year())
+		}
+		if obj.Date.Month() != 5 {
+			t.Errorf("expected month 5, got %d", obj.Date.Month())
+		}
+		if obj.Date.Day() != 27 {
+			t.Errorf("expected day 27, got %d", obj.Date.Day())
+		}
+	})
+}
+
+func TestMarshalLocalDate(t *testing.T) {
+	type dateStruct struct {
+		Date LocalDate
+	}
+
+	obj := dateStruct{Date: LocalDate{
+		Year:  1979,
+		Month: 5,
+		Day:   27,
+	}}
+
+	b, err := Marshal(obj)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got := string(b)
+	expected := `Date = 1979-05-27
+`
+
+	if got != expected {
+		t.Errorf("expected '%s', got '%s'", expected, got)
+	}
+}
+
+func TestUnmarshalLocalDateTime(t *testing.T) {
+	examples := []struct {
+		name string
+		in   string
+		out  LocalDateTime
+	}{
+		{
+			name: "normal",
+			in:   "1979-05-27T07:32:00",
+			out: LocalDateTime{
+				Date: LocalDate{
+					Year:  1979,
+					Month: 5,
+					Day:   27,
+				},
+				Time: LocalTime{
+					Hour:       7,
+					Minute:     32,
+					Second:     0,
+					Nanosecond: 0,
+				},
+			}},
+		{
+			name: "with nanoseconds",
+			in:   "1979-05-27T00:32:00.999999",
+			out: LocalDateTime{
+				Date: LocalDate{
+					Year:  1979,
+					Month: 5,
+					Day:   27,
+				},
+				Time: LocalTime{
+					Hour:       0,
+					Minute:     32,
+					Second:     0,
+					Nanosecond: 999999000,
+				},
+			},
+		},
+	}
+
+	for i, example := range examples {
+		toml := fmt.Sprintf(`date = %s`, example.in)
+
+		t.Run(fmt.Sprintf("ToLocalDateTime_%d_%s", i, example.name), func(t *testing.T) {
+			type dateStruct struct {
+				Date LocalDateTime
+			}
+
+			var obj dateStruct
+
+			err := Unmarshal([]byte(toml), &obj)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if obj.Date != example.out {
+				t.Errorf("expected '%s', got '%s'", example.out, obj.Date)
+			}
+		})
+
+		t.Run(fmt.Sprintf("ToTime_%d_%s", i, example.name), func(t *testing.T) {
+			type dateStruct struct {
+				Date time.Time
+			}
+
+			var obj dateStruct
+
+			err := Unmarshal([]byte(toml), &obj)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if obj.Date.Year() != example.out.Date.Year {
+				t.Errorf("expected year %d, got %d", example.out.Date.Year, obj.Date.Year())
+			}
+			if obj.Date.Month() != example.out.Date.Month {
+				t.Errorf("expected month %d, got %d", example.out.Date.Month, obj.Date.Month())
+			}
+			if obj.Date.Day() != example.out.Date.Day {
+				t.Errorf("expected day %d, got %d", example.out.Date.Day, obj.Date.Day())
+			}
+			if obj.Date.Hour() != example.out.Time.Hour {
+				t.Errorf("expected hour %d, got %d", example.out.Time.Hour, obj.Date.Hour())
+			}
+			if obj.Date.Minute() != example.out.Time.Minute {
+				t.Errorf("expected minute %d, got %d", example.out.Time.Minute, obj.Date.Minute())
+			}
+			if obj.Date.Second() != example.out.Time.Second {
+				t.Errorf("expected second %d, got %d", example.out.Time.Second, obj.Date.Second())
+			}
+			if obj.Date.Nanosecond() != example.out.Time.Nanosecond {
+				t.Errorf("expected nanoseconds %d, got %d", example.out.Time.Nanosecond, obj.Date.Nanosecond())
+			}
+		})
+	}
+}
+
+func TestMarshalLocalDateTime(t *testing.T) {
+	type dateStruct struct {
+		DateTime LocalDateTime
+	}
+
+	examples := []struct {
+		name string
+		in   LocalDateTime
+		out  string
+	}{
+		{
+			name: "normal",
+			out:  "DateTime = 1979-05-27T07:32:00\n",
+			in: LocalDateTime{
+				Date: LocalDate{
+					Year:  1979,
+					Month: 5,
+					Day:   27,
+				},
+				Time: LocalTime{
+					Hour:       7,
+					Minute:     32,
+					Second:     0,
+					Nanosecond: 0,
+				},
+			}},
+		{
+			name: "with nanoseconds",
+			out:  "DateTime = 1979-05-27T00:32:00.999999000\n",
+			in: LocalDateTime{
+				Date: LocalDate{
+					Year:  1979,
+					Month: 5,
+					Day:   27,
+				},
+				Time: LocalTime{
+					Hour:       0,
+					Minute:     32,
+					Second:     0,
+					Nanosecond: 999999000,
+				},
+			},
+		},
+	}
+
+	for i, example := range examples {
+		t.Run(fmt.Sprintf("%d_%s", i, example.name), func(t *testing.T) {
+			obj := dateStruct{
+				DateTime: example.in,
+			}
+			b, err := Marshal(obj)
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			got := string(b)
+
+			if got != example.out {
+				t.Errorf("expected '%s', got '%s'", example.out, got)
+			}
+		})
+	}
+}
+
+func TestUnmarshalLocalTime(t *testing.T) {
+	examples := []struct {
+		name string
+		in   string
+		out  LocalTime
+	}{
+		{
+			name: "normal",
+			in:   "07:32:00",
+			out: LocalTime{
+				Hour:       7,
+				Minute:     32,
+				Second:     0,
+				Nanosecond: 0,
+			},
+		},
+		{
+			name: "with nanoseconds",
+			in:   "00:32:00.999999",
+			out: LocalTime{
+				Hour:       0,
+				Minute:     32,
+				Second:     0,
+				Nanosecond: 999999000,
+			},
+		},
+	}
+
+	for i, example := range examples {
+		toml := fmt.Sprintf(`Time = %s`, example.in)
+
+		t.Run(fmt.Sprintf("ToLocalTime_%d_%s", i, example.name), func(t *testing.T) {
+			type dateStruct struct {
+				Time LocalTime
+			}
+
+			var obj dateStruct
+
+			err := Unmarshal([]byte(toml), &obj)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if obj.Time != example.out {
+				t.Errorf("expected '%s', got '%s'", example.out, obj.Time)
+			}
+		})
+	}
+}
+
+func TestMarshalLocalTime(t *testing.T) {
+	type timeStruct struct {
+		Time LocalTime
+	}
+
+	examples := []struct {
+		name string
+		in   LocalTime
+		out  string
+	}{
+		{
+			name: "normal",
+			out:  "Time = 07:32:00\n",
+			in: LocalTime{
+				Hour:       7,
+				Minute:     32,
+				Second:     0,
+				Nanosecond: 0,
+			}},
+		{
+			name: "with nanoseconds",
+			out:  "Time = 00:32:00.999999000\n",
+			in: LocalTime{
+				Hour:       0,
+				Minute:     32,
+				Second:     0,
+				Nanosecond: 999999000,
+			},
+		},
+	}
+
+	for i, example := range examples {
+		t.Run(fmt.Sprintf("%d_%s", i, example.name), func(t *testing.T) {
+			obj := timeStruct{
+				Time: example.in,
+			}
+			b, err := Marshal(obj)
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			got := string(b)
+
+			if got != example.out {
+				t.Errorf("expected '%s', got '%s'", example.out, got)
+			}
+		})
+	}
+}
+
+// test case for issue #339
+func TestUnmarshalSameInnerField(t *testing.T) {
+	type InterStruct2 struct {
+		Test string
+		Name string
+		Age  int
+	}
+	type Inter2 struct {
+		Name         string
+		Age          int
+		InterStruct2 InterStruct2
+	}
+	type Server struct {
+		Name   string `toml:"name"`
+		Inter2 Inter2 `toml:"inter2"`
+	}
+
+	var server Server
+
+	if err := Unmarshal([]byte(`name = "123"
+[inter2]
+name = "inter2"
+age = 222`), &server); err == nil {
+		expected := Server{
+			Name: "123",
+			Inter2: Inter2{
+				Name: "inter2",
+				Age:  222,
+			},
+		}
+		if !reflect.DeepEqual(server, expected) {
+			t.Errorf("Bad unmarshal: expected %v, got %v", expected, server)
+		}
+	} else {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestMarshalInterface(t *testing.T) {
+	type InnerStruct struct {
+		InnerField string
+	}
+
+	type OuterStruct struct {
+		PrimitiveField        interface{}
+		ArrayField            interface{}
+		StructArrayField      interface{}
+		MapField              map[string]interface{}
+		StructField           interface{}
+		PointerField          interface{}
+		NilField              interface{}
+		InterfacePointerField *interface{}
+	}
+
+	type ShouldNotSupportStruct struct {
+		InterfaceArray []interface{}
+	}
+
+	expected := []byte(`ArrayField = [1,2,3]
+InterfacePointerField = "hello world"
+PrimitiveField = "string"
+
+[MapField]
+  key1 = "value1"
+  key2 = false
+
+  [MapField.key3]
+    InnerField = "value3"
+
+[PointerField]
+  InnerField = "yyy"
+
+[[StructArrayField]]
+  InnerField = "s1"
+
+[[StructArrayField]]
+  InnerField = "s2"
+
+[StructField]
+  InnerField = "xxx"
+`)
+
+	var h interface{} = "hello world"
+	if result, err := Marshal(OuterStruct{
+		"string",
+		[]int{1, 2, 3},
+		[]InnerStruct{{"s1"}, {"s2"}},
+		map[string]interface{}{
+			"key1":      "value1",
+			"key2":      false,
+			"key3":      InnerStruct{"value3"},
+			"nil value": nil,
+		},
+		InnerStruct{
+			"xxx",
+		},
+		&InnerStruct{
+			"yyy",
+		},
+		nil,
+		&h,
+	}); err == nil {
+		if !bytes.Equal(result, expected) {
+			t.Errorf("Bad marshal: expected\n----\n%s\n----\ngot\n----\n%s\n----\n", expected, result)
+		}
+	} else {
+		t.Fatal(err)
+	}
+
+	// according to the toml standard, data types of array may not be mixed
+	if _, err := Marshal(ShouldNotSupportStruct{[]interface{}{1, "a", true}}); err == nil {
+		t.Errorf("Should not support []interface{} marshaling")
+	}
+}
+
+func TestUnmarshalToNilInterface(t *testing.T) {
+	toml := []byte(`
+PrimitiveField = "Hello"
+ArrayField = [1,2,3]
+InterfacePointerField = "World"
+
+[StructField]
+Field1 = 123
+Field2 = "Field2"
+
+[MapField]
+MapField1 = [4,5,6]
+MapField2 = {A = "A"}
+MapField3 = false
+
+[[StructArrayField]]
+Name = "Allen"
+Age = 20
+
+[[StructArrayField]]
+Name = "Jack"
+Age = 23
+`)
+
+	type OuterStruct struct {
+		PrimitiveField        interface{}
+		ArrayField            interface{}
+		StructArrayField      interface{}
+		MapField              map[string]interface{}
+		StructField           interface{}
+		NilField              interface{}
+		InterfacePointerField *interface{}
+	}
+
+	var s interface{} = "World"
+	expected := OuterStruct{
+		PrimitiveField: "Hello",
+		ArrayField:     []interface{}{int64(1), int64(2), int64(3)},
+		StructField: map[string]interface{}{
+			"Field1": int64(123),
+			"Field2": "Field2",
+		},
+		MapField: map[string]interface{}{
+			"MapField1": []interface{}{int64(4), int64(5), int64(6)},
+			"MapField2": map[string]interface{}{
+				"A": "A",
+			},
+			"MapField3": false,
+		},
+		NilField:              nil,
+		InterfacePointerField: &s,
+		StructArrayField: []map[string]interface{}{
+			{
+				"Name": "Allen",
+				"Age":  int64(20),
+			},
+			{
+				"Name": "Jack",
+				"Age":  int64(23),
+			},
+		},
+	}
+	actual := OuterStruct{}
+	if err := Unmarshal(toml, &actual); err == nil {
+		if !reflect.DeepEqual(actual, expected) {
+			t.Errorf("Bad unmarshal: expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Fatal(err)
+	}
+}
+
+func TestUnmarshalToNonNilInterface(t *testing.T) {
+	toml := []byte(`
+PrimitiveField = "Allen"
+ArrayField = [1,2,3]
+
+[StructField]
+InnerField = "After1"
+
+[PointerField]
+InnerField = "After2"
+
+[InterfacePointerField]
+InnerField = "After"
+
+[MapField]
+MapField1 = [4,5,6]
+MapField2 = {A = "A"}
+MapField3 = false
+
+[[StructArrayField]]
+InnerField = "After3"
+
+[[StructArrayField]]
+InnerField = "After4"
+`)
+	type InnerStruct struct {
+		InnerField interface{}
+	}
+
+	type OuterStruct struct {
+		PrimitiveField        interface{}
+		ArrayField            interface{}
+		StructArrayField      interface{}
+		MapField              map[string]interface{}
+		StructField           interface{}
+		PointerField          interface{}
+		NilField              interface{}
+		InterfacePointerField *interface{}
+	}
+
+	var s interface{} = InnerStruct{"After"}
+	expected := OuterStruct{
+		PrimitiveField: "Allen",
+		ArrayField:     []int{1, 2, 3},
+		StructField:    InnerStruct{InnerField: "After1"},
+		MapField: map[string]interface{}{
+			"MapField1": []interface{}{int64(4), int64(5), int64(6)},
+			"MapField2": map[string]interface{}{
+				"A": "A",
+			},
+			"MapField3": false,
+		},
+		PointerField:          &InnerStruct{InnerField: "After2"},
+		NilField:              nil,
+		InterfacePointerField: &s,
+		StructArrayField: []InnerStruct{
+			{InnerField: "After3"},
+			{InnerField: "After4"},
+		},
+	}
+	actual := OuterStruct{
+		PrimitiveField: "aaa",
+		ArrayField:     []int{100, 200, 300, 400},
+		StructField:    InnerStruct{InnerField: "Before1"},
+		MapField: map[string]interface{}{
+			"MapField1": []int{4, 5, 6},
+			"MapField2": map[string]string{
+				"B": "BBB",
+			},
+			"MapField3": true,
+		},
+		PointerField:          &InnerStruct{InnerField: "Before2"},
+		NilField:              nil,
+		InterfacePointerField: &s,
+		StructArrayField: []InnerStruct{
+			{InnerField: "Before3"},
+			{InnerField: "Before4"},
+		},
+	}
+	if err := Unmarshal(toml, &actual); err == nil {
+		if !reflect.DeepEqual(actual, expected) {
+			t.Errorf("Bad unmarshal: expected %v, got %v", expected, actual)
+		}
+	} else {
+		t.Fatal(err)
+	}
+}
+
+func TestUnmarshalEmbedTree(t *testing.T) {
+	toml := []byte(`
+OuterField1 = "Out"
+OuterField2 = 1024
+
+[TreeField]
+InnerField1 = "In"
+InnerField2 = 2048
+
+	[TreeField.EmbedStruct]
+		EmbedField = "Embed"
+
+`)
+	type InnerStruct struct {
+		InnerField1 string
+		InnerField2 int
+		EmbedStruct struct{
+			EmbedField string
+		}
+	}
+
+	type OuterStruct struct {
+		OuterField1 string
+		OuterField2 int
+		TreeField *Tree
+	}
+
+	out := OuterStruct{}
+	actual := InnerStruct{}
+	expected := InnerStruct{
+		"In",
+		2048,
+		struct{
+			EmbedField string
+		}{
+			EmbedField:"Embed",
+		},
+	}
+	if err := Unmarshal(toml, &out); err != nil {
+		t.Fatal(err)
+	}
+	if err := out.TreeField.Unmarshal(&actual); err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(actual, expected){
+		t.Errorf("Bad unmarshal: expected %v, got %v", expected, actual)
 	}
 }
