@@ -67,7 +67,7 @@ func TestGroups(t *testing.T) {
 			},
 		}
 		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
-		assert.Equal(t, load.GroupSelfReferenceErr, err)
+		assert.Equal(t, load.SelfReferenceError("foo"), err)
 		assert.Nil(t, actual)
 	})
 }
