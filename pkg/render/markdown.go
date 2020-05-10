@@ -24,7 +24,7 @@ func (r SortedMarkdownRenderer) Render(gs []graph.Group) error {
 	})
 
 	for _, g := range gs {
-		if len(g.Contents.Items) == 0 {
+		if !g.HasContents() {
 			continue
 		}
 		if err := r.group(g); err != nil {
