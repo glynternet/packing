@@ -61,7 +61,7 @@ func (r SortedMarkdownRenderer) group(g graph.Group) error {
 }
 
 func (r SortedMarkdownRenderer) title(title string) error {
-	_, err := fmt.Fprintln(r.Writer, "## "+strings.ToUpper(title))
+	_, err := fmt.Fprintln(r.Writer, "## "+escaped(strings.ToUpper(title)))
 	return err
 }
 
@@ -72,7 +72,7 @@ func (r SortedMarkdownRenderer) groupBreak() error {
 }
 
 func (r SortedMarkdownRenderer) item(i api.Item) error {
-	_, err := fmt.Fprintln(r.Writer, "- "+i.Name)
+	_, err := fmt.Fprintln(r.Writer, "- "+escaped(i.Name))
 	return err
 }
 
