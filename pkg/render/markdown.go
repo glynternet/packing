@@ -83,7 +83,7 @@ func (r SortedMarkdownRenderer) includes(is []string) error {
 	sorted := make([]string, len(is))
 	copy(sorted, is)
 	sort.Strings(sorted)
-	_, err := fmt.Fprintf(r.Writer, "_Includes groups: %s_  \n", escaped(strings.Join(sorted, ", ")))
+	_, err := fmt.Fprintf(r.Writer, "_Includes groups: %s_  \n\n", escaped(strings.Join(sorted, ", ")))
 	return err
 }
 
