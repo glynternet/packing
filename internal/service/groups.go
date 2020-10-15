@@ -2,7 +2,7 @@ package service
 
 import (
 	"github.com/glynternet/packing/internal/load"
-	"github.com/glynternet/packing/pkg/api/build"
+	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/pkg/log"
 	"github.com/pkg/errors"
 )
@@ -27,7 +27,7 @@ func (s *GroupsService) GetGroups(seed *api.ContentsDefinition, srv api.GroupsSe
 	}
 	for _, g := range gs {
 		if err := srv.Send(&g); err != nil {
-			err := errors.Wrapf(err, "sending group %q", g)
+			err := errors.Wrapf(err, "sending group %v", g)
 			_ = s.Logger.Log(
 				log.Message("error getting AllGroups for seed"),
 				log.Error(err))

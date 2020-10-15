@@ -22,7 +22,7 @@ type ReadCloserGetter func(key api.GroupKey) (io.ReadCloser, error)
 func (gg ContentsDefinitionGetter) GetContentsDefinition(key api.GroupKey) (*api.ContentsDefinition, error) {
 	rc, err := gg.GetReadCloser(key)
 	if err != nil {
-		return nil, errors.Wrapf(err, "getting ReadCloser for key:%q", key)
+		return nil, errors.Wrapf(err, "getting ReadCloser for key:%v", key)
 	}
 
 	defer func() {
@@ -41,6 +41,6 @@ func (gg ContentsDefinitionGetter) GetContentsDefinition(key api.GroupKey) (*api
 	}()
 
 	def, err := list.ParseContentsDefinition(rc)
-	err = errors.Wrapf(err, "loading group for key:%q", key)
+	err = errors.Wrapf(err, "loading group for key:%v", key)
 	return &def, err
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/glynternet/packing/pkg/api/build"
+	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )

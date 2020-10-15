@@ -1,9 +1,0 @@
-syntax = "proto3";
-package api;
-
-import "contentsdefinition.proto";
-import "group.proto";
-
-service GroupsService {
-    rpc GetGroups(ContentsDefinition) returns (stream Group) {}
-}

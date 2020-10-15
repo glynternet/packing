@@ -1,0 +1,10 @@
+syntax = "proto3";
+package api;
+option go_package = "api/build";
+
+import "contentsdefinition.proto";
+import "group.proto";
+
+service GroupsService {
+    rpc GetGroups(ContentsDefinition) returns (stream Group) {}
+}

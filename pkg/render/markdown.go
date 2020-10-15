@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/glynternet/packing/pkg/api/build"
+	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/graph"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/pkg/errors"
@@ -28,10 +28,10 @@ func (r SortedMarkdownRenderer) Render(gs []graph.Group) error {
 			continue
 		}
 		if err := r.group(g); err != nil {
-			return errors.Wrapf(err, "writing Group %q to writer", g)
+			return errors.Wrapf(err, "writing Group %v to writer", g)
 		}
 		if err := r.groupBreak(); err != nil {
-			return errors.Wrapf(err, "writing GroupBreak %q to writer", g)
+			return errors.Wrapf(err, "writing GroupBreak %v to writer", g)
 		}
 	}
 	return nil
@@ -54,7 +54,7 @@ func (r SortedMarkdownRenderer) group(g graph.Group) error {
 	}
 	for _, item := range g.Contents.Items {
 		if err := r.item(*item); err != nil {
-			return errors.Wrapf(err, "writing Item %q to writer", *item)
+			return errors.Wrapf(err, "writing Item %v to writer", *item)
 		}
 	}
 	return nil
