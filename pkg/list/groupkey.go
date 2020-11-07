@@ -2,7 +2,7 @@ package list
 
 import (
 	api "github.com/glynternet/packing/pkg/api/build"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // GroupKeys is a set of api.GroupKey
