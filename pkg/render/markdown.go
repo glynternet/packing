@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	api "github.com/glynternet/packing/pkg/api/build"
 	"github.com/glynternet/packing/pkg/graph"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/pkg/errors"
@@ -20,7 +19,7 @@ type SortedMarkdownRenderer struct {
 // Render renders a graph to the SortedMarkdownRenderer's writer sorted by group name
 func (r SortedMarkdownRenderer) Render(gs []graph.Group) error {
 	sort.Slice(gs, func(i, j int) bool {
-		return gs[i].Name < gs[j].Name
+		return gs[i].Group.Name < gs[j].Group.Name
 	})
 
 	for _, g := range gs {
@@ -38,7 +37,7 @@ func (r SortedMarkdownRenderer) Render(gs []graph.Group) error {
 }
 
 func (r SortedMarkdownRenderer) group(g graph.Group) error {
-	name := strings.TrimSpace(g.Name)
+	name := strings.TrimSpace(g.Group.Name)
 	if name == "" {
 		name = "Unnamed"
 	}
@@ -48,13 +47,13 @@ func (r SortedMarkdownRenderer) group(g graph.Group) error {
 	if err := r.includedIns(g.ImportedBy); err != nil {
 		return errors.Wrapf(err, "writing ImportedBy %q to writer", g.ImportedBy)
 	}
-	includes := list.GroupKeys(g.GetContents().GetGroupKeys()).Strings()
+	includes := list.GroupKeys(g.Group.GetContents().GetGroupKeys()).Strings()
 	if err := r.includes(includes); err != nil {
 		return errors.Wrapf(err, "writing includes %q to writer", includes)
 	}
-	for _, item := range g.Contents.Items {
-		if err := r.item(*item); err != nil {
-			return errors.Wrapf(err, "writing Item %v to writer", *item)
+	for _, item := range g.Group.Contents.Items {
+		if err := r.item(item.Name); err != nil {
+			return errors.Wrapf(err, "writing Item %v to writer", item)
 		}
 	}
 	return nil
@@ -71,8 +70,8 @@ func (r SortedMarkdownRenderer) groupBreak() error {
 	return err
 }
 
-func (r SortedMarkdownRenderer) item(i api.Item) error {
-	_, err := fmt.Fprintln(r.Writer, "- "+escaped(i.Name))
+func (r SortedMarkdownRenderer) item(name string) error {
+	_, err := fmt.Fprintln(r.Writer, "- "+escaped(name))
 	return err
 }
 

@@ -6,5 +6,5 @@ import (
 
 // ContentsDefinitionGetter gets the ContentsDefinition for a single group from a given key
 type ContentsDefinitionGetter interface {
-	GetContentsDefinition(api.GroupKey) (*api.ContentsDefinition, error)
+	GetContentsDefinition(*api.GroupKey) (*api.ContentsDefinition, error)
 }

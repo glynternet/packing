@@ -11,15 +11,15 @@ import (
 )
 
 // ParseContentsDefinition loads the ContentsDefinition of a single list from a Reader
-func ParseContentsDefinition(r io.Reader) (api.ContentsDefinition, error) {
+func ParseContentsDefinition(r io.Reader) (*api.ContentsDefinition, error) {
 	lines, err := readAllLines(r)
 	if err != nil {
-		return api.ContentsDefinition{}, errors.Wrap(err, "reading lines")
+		return &api.ContentsDefinition{}, errors.Wrap(err, "reading lines")
 	}
 
 	cs, err := processLines(lines)
 	err = errors.Wrap(err, "processing lines")
-	return cs, err
+	return &cs, err
 }
 
 func readAllLines(r io.Reader) ([]string, error) {
