@@ -8,8 +8,12 @@ workspace:
 
 pipeline:
   generate-proto-go:
-    image: grpc/go:1.0
+    image: golang:1.15.4
     commands:
+      - go get -u github.com/golang/protobuf/proto
+      - go get -u github.com/golang/protobuf/protoc-gen-go
+      - go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
+      - go get -u google.golang.org/grpc
       - go generate -v ./...
 
   run-unit-tests:
