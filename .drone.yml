@@ -10,6 +10,8 @@ pipeline:
   generate-proto-go:
     image: golang:1.15.4
     commands:
+      - apt update
+      - apt install -y protobuf-compiler
       - go get -u github.com/golang/protobuf/proto
       - go get -u github.com/golang/protobuf/protoc-gen-go
       - go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
