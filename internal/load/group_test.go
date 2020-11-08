@@ -23,7 +23,7 @@ func TestGroups(t *testing.T) {
 	t.Run("single key missing in getter", func(t *testing.T) {
 		keys := list.GroupKeys{{Key: "foo"}}
 		store := mockContentsGetter{}
-		var expected []api.Group
+		var expected []*api.Group
 		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
 		assert.NoError(t, err)
 		assert.Equal(t, expected, actual)
@@ -33,7 +33,7 @@ func TestGroups(t *testing.T) {
 		keys := list.GroupKeys{{Key: "foo"}}
 		expectedErr := errors.New("test error")
 		store := mockContentsGetter{error: expectedErr}
-		var expected []api.Group
+		var expected []*api.Group
 		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
 		assert.Equal(t, expectedErr, errors.Cause(err))
 		assert.Equal(t, expected, actual)
@@ -47,7 +47,7 @@ func TestGroups(t *testing.T) {
 				"bar": {Items: list.Items{{Name: "barItem"}}},
 			},
 		}
-		expected := []api.Group{{
+		expected := []*api.Group{{
 			Name:     "foo",
 			Contents: &api.ContentsDefinition{Items: list.Items{{Name: "fooItem"}}}},
 		}
@@ -75,7 +75,7 @@ type mockContentsGetter struct {
 	error
 }
 
-func (mgg mockContentsGetter) GetContentsDefinition(key api.GroupKey) (*api.ContentsDefinition, error) {
+func (mgg mockContentsGetter) GetContentsDefinition(key *api.GroupKey) (*api.ContentsDefinition, error) {
 	g, ok := mgg.groups[key.Key]
 	if !ok {
 		return nil, mgg.error
