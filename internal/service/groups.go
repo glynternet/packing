@@ -11,6 +11,7 @@ import (
 type GroupsService struct {
 	load.Loader
 	Logger log.Logger
+	api.UnimplementedGroupsServiceServer
 }
 
 // GetGroups sends the groups for the seed to the GetGroupsServer

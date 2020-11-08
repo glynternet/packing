@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
+func buildCmdTree(logger log.Logger, _ io.Writer, rootCmd *cobra.Command) {
 	viper.SetEnvPrefix("packing")
 
 	const (
