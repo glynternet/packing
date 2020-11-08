@@ -12,7 +12,7 @@ import (
 func TestParseContentsDefinition(t *testing.T) {
 	t.Run("empty file", func(t *testing.T) {
 		input := ``
-		expected := api.ContentsDefinition{}
+		expected := &api.ContentsDefinition{}
 		actual, err := list.ParseContentsDefinition(strings.NewReader(input))
 		assert.NoError(t, err)
 		assert.Equal(t, expected, actual)
@@ -20,7 +20,7 @@ func TestParseContentsDefinition(t *testing.T) {
 
 	t.Run("single item", func(t *testing.T) {
 		input := `foo`
-		expected := api.ContentsDefinition{
+		expected := &api.ContentsDefinition{
 			Items: list.Items{{Name: "foo"}},
 		}
 		actual, err := list.ParseContentsDefinition(strings.NewReader(input))
@@ -30,7 +30,7 @@ func TestParseContentsDefinition(t *testing.T) {
 
 	t.Run("multiple items", func(t *testing.T) {
 		input := "foo\nbar"
-		expected := api.ContentsDefinition{
+		expected := &api.ContentsDefinition{
 			Items: list.Items{{Name: "foo"}, {Name: "bar"}},
 		}
 		actual, err := list.ParseContentsDefinition(strings.NewReader(input))
@@ -40,7 +40,7 @@ func TestParseContentsDefinition(t *testing.T) {
 
 	t.Run("single group", func(t *testing.T) {
 		input := "group:foo"
-		expected := api.ContentsDefinition{
+		expected := &api.ContentsDefinition{
 			GroupKeys: list.GroupKeys{{Key: "foo"}},
 		}
 		actual, err := list.ParseContentsDefinition(strings.NewReader(input))
@@ -50,7 +50,7 @@ func TestParseContentsDefinition(t *testing.T) {
 
 	t.Run("multiple groups", func(t *testing.T) {
 		input := "group:foo\ngroup:bar"
-		expected := api.ContentsDefinition{
+		expected := &api.ContentsDefinition{
 			GroupKeys: list.GroupKeys{{Key: "foo"}, {Key: "bar"}},
 		}
 		actual, err := list.ParseContentsDefinition(strings.NewReader(input))
@@ -60,7 +60,7 @@ func TestParseContentsDefinition(t *testing.T) {
 
 	t.Run("items and groups", func(t *testing.T) {
 		input := "foo\ngroup:foo\nbar\ngroup:bar"
-		expected := api.ContentsDefinition{
+		expected := &api.ContentsDefinition{
 			Items:     list.Items{{Name: "foo"}, {Name: "bar"}},
 			GroupKeys: list.GroupKeys{{Key: "foo"}, {Key: "bar"}},
 		}
@@ -71,7 +71,7 @@ func TestParseContentsDefinition(t *testing.T) {
 
 	t.Run("items and groups with whitespace", func(t *testing.T) {
 		input := "\n  foo\n\tgroup:foo\nbar\ngroup:bar"
-		expected := api.ContentsDefinition{
+		expected := &api.ContentsDefinition{
 			Items:     list.Items{{Name: "foo"}, {Name: "bar"}},
 			GroupKeys: list.GroupKeys{{Key: "foo"}, {Key: "bar"}},
 		}
@@ -82,7 +82,7 @@ func TestParseContentsDefinition(t *testing.T) {
 
 	t.Run("items and groups with comment at start of line", func(t *testing.T) {
 		input := "# some comment\nfoo\ngroup:foo\nbar\ngroup:bar"
-		expected := api.ContentsDefinition{
+		expected := &api.ContentsDefinition{
 			Items:     list.Items{{Name: "foo"}, {Name: "bar"}},
 			GroupKeys: list.GroupKeys{{Key: "foo"}, {Key: "bar"}},
 		}

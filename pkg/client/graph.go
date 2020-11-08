@@ -10,12 +10,12 @@ import (
 )
 
 // GetGroups fetches the graph for the given seed
-func GetGroups(ctx context.Context, conn *grpc.ClientConn, seed api.ContentsDefinition) ([]api.Group, error) {
-	groups, err := api.NewGroupsServiceClient(conn).GetGroups(ctx, &seed)
+func GetGroups(ctx context.Context, conn *grpc.ClientConn, seed *api.ContentsDefinition) ([]*api.Group, error) {
+	groups, err := api.NewGroupsServiceClient(conn).GetGroups(ctx, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting groups")
 	}
-	var gs []api.Group
+	var gs []*api.Group
 	for {
 		group, err := groups.Recv()
 		if err == io.EOF {
@@ -24,7 +24,7 @@ func GetGroups(ctx context.Context, conn *grpc.ClientConn, seed api.ContentsDefi
 		if err != nil {
 			return nil, errors.Wrap(err, "receiving group")
 		}
-		gs = append(gs, *group)
+		gs = append(gs, group)
 	}
 	return gs, nil
 }

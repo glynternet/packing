@@ -5,14 +5,14 @@ import (
 )
 
 type Group struct {
-	api.Group
+	Group      *api.Group
 	ImportedBy []string
 }
 
 func (g Group) HasContents() bool {
-	if len(g.Contents.Items) != 0 {
+	if len(g.Group.Contents.Items) != 0 {
 		return true
 	}
 
-	return len(g.Contents.GroupKeys) != 0
+	return len(g.Group.Contents.GroupKeys) != 0
 }

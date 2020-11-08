@@ -8,7 +8,7 @@ require (
 	github.com/glynternet/pkg v0.0.0-20200508163333-ba45570d30be
 	github.com/go-kit/kit v0.10.0
 	github.com/go-logfmt/logfmt v0.5.0
-	github.com/golang/protobuf v1.4.1
+	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/hcl v1.0.0
 	github.com/inconshreveable/mousetrap v1.0.0
 	github.com/magiconair/properties v1.8.1
@@ -24,12 +24,13 @@ require (
 	github.com/spf13/viper v1.6.3
 	github.com/stretchr/testify v1.5.1
 	github.com/subosito/gotenv v1.2.0
-	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f
-	golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3
-	golang.org/x/text v0.3.2
-	google.golang.org/genproto v0.0.0-20200507105951-43844f6eee31
-	google.golang.org/grpc v1.29.1
-	google.golang.org/protobuf v1.22.0
+	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
+	golang.org/x/sys v0.0.0-20201107080550-4d91cf3a1aaf
+	golang.org/x/text v0.3.4
+	google.golang.org/genproto v0.0.0-20201106154455-f9bfe239b0ba
+	google.golang.org/grpc v1.33.2
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.0.1 // indirect
+	google.golang.org/protobuf v1.25.0
 	gopkg.in/ini.v1 v1.55.0
 	gopkg.in/yaml.v2 v2.2.8
 )
