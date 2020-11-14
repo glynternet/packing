@@ -98,5 +98,5 @@ func (r SortedMarkdownRenderer) includedIns(is []string) error {
 }
 
 func escaped(in string) string {
-	return strings.ReplaceAll(in, "_", "\\_")
+	return strings.ReplaceAll(in, "_", `\_`)
 }
