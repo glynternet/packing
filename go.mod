@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/glynternet/pkg v0.0.0-20200508163333-ba45570d30be
+	github.com/glynternet/pkg v0.0.2
 	github.com/go-kit/kit v0.10.0
 	github.com/go-logfmt/logfmt v0.5.0
 	github.com/golang/protobuf v1.4.3

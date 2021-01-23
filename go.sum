@@ -70,6 +70,8 @@ github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/glynternet/pkg v0.0.0-20200508163333-ba45570d30be h1:cityu6EYxoztQB2S+tNoC/yioc/cCLQc2G753qTmGF4=
 github.com/glynternet/pkg v0.0.0-20200508163333-ba45570d30be/go.mod h1:jNStwa1i//QuPYkWtDq3fY75pufLYzj15eXKfOWiIsY=
+github.com/glynternet/pkg v0.0.2 h1:+yzphlwEp8KD6yMigk37uC1nbXCCic2W3S0GntUdxvw=
+github.com/glynternet/pkg v0.0.2/go.mod h1:jNStwa1i//QuPYkWtDq3fY75pufLYzj15eXKfOWiIsY=
 github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 github.com/go-kit/kit v0.10.0 h1:dXFJfIHVvUcpSgDOV+Ne6t7jXri8Tfv2uOLHUZ2XNuo=

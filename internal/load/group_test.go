@@ -1,6 +1,7 @@
 package load_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/glynternet/packing/internal/load"
@@ -18,7 +19,7 @@ func TestGroups(t *testing.T) {
 		assert.Nil(t, actual)
 	})
 
-	logger := log.NewLogger()
+	logger := log.NewLogger(&bytes.Buffer{})
 
 	t.Run("single key missing in getter", func(t *testing.T) {
 		keys := list.GroupKeys{{Key: "foo"}}

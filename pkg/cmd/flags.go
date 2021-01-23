@@ -12,7 +12,7 @@ func MustBindPFlags(logger log.Logger, cmd *cobra.Command) {
 	if err != nil {
 		_ = logger.Log(
 			log.Message("Error binding pflags"),
-			log.Error(err),
+			log.ErrorMessage(err),
 		)
 	}
 }
