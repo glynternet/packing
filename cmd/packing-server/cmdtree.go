@@ -89,7 +89,7 @@ func serve(logger log.Logger, server api.GroupsServiceServer, addr string) error
 	if cErr != nil {
 		_ = logger.Log(
 			log.Message("Error closing listener"),
-			log.Error(err))
+			log.ErrorMessage(err))
 	}
 	return sErr
 }

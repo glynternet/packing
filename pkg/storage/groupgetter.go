@@ -36,7 +36,7 @@ func (gg ContentsDefinitionGetter) GetContentsDefinition(key *api.GroupKey) (*ap
 		}
 		_ = gg.Logger.Log(
 			log.Message("Error closing group ReadCloser"),
-			log.Error(cErr),
+			log.ErrorMessage(cErr),
 		)
 	}()
 

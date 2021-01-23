@@ -25,7 +25,7 @@ func (s *GroupsService) GetGroups(seed *api.ContentsDefinition, srv api.GroupsSe
 		// TODO(glynternet): is this the best thing to do here or should we send a user facing error back?
 		_ = s.Logger.Log(
 			log.Message("error getting AllGroups for seed"),
-			log.Error(err),
+			log.ErrorMessage(err),
 		)
 		return err
 	}
@@ -34,7 +34,7 @@ func (s *GroupsService) GetGroups(seed *api.ContentsDefinition, srv api.GroupsSe
 			err := errors.Wrapf(err, "sending group %v", g)
 			_ = s.Logger.Log(
 				log.Message("error getting AllGroups for seed"),
-				log.Error(err))
+				log.ErrorMessage(err))
 			return err
 		}
 	}
