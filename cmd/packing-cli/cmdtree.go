@@ -27,7 +27,10 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		keyServerPort = "server-port"
 	)
 
-	var includeEmptyParentGroups bool
+	var (
+		includeEmptyParentGroups bool
+		includeGroupReferences bool
+	)
 
 	trip := &cobra.Command{
 		Use:  "trip",
@@ -58,6 +61,7 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 
 			return errors.Wrap(render.SortedMarkdownRenderer{
 				IncludeEmptyParentGroups:includeEmptyParentGroups,
+				IncludeGroupReferences:includeGroupReferences,
 				Writer: w,
 			}.Render(graph.From(gs)), "rendering graph")
 		},
@@ -67,6 +71,8 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	trip.Flags().Uint(keyServerPort, 3865, "packing server port")
 	trip.Flags().BoolVar(&includeEmptyParentGroups, "include-empty-parent-groups", false,
 		"Provide this flag to render groups that consist only of groups.")
+	trip.Flags().BoolVar(&includeGroupReferences, "include-group-references", false,
+		"Provide this flag to render references to groups that contain other groups.")
 	cmd.MustBindPFlags(logger, trip)
 	rootCmd.AddCommand(trip)
 }
