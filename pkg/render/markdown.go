@@ -15,6 +15,7 @@ import (
 // SortedMarkdownRenderer renders a graph to its writer sorted by group name
 type SortedMarkdownRenderer struct {
 	io.Writer
+	IncludeEmptyParentGroups bool
 }
 
 // Render renders a graph to the SortedMarkdownRenderer's writer sorted by group name
@@ -25,6 +26,9 @@ func (r SortedMarkdownRenderer) Render(gs []graph.Group) error {
 
 	for _, g := range gs {
 		if !g.HasContents() {
+			continue
+		}
+		if !r.IncludeEmptyParentGroups && !g.HasItems(){
 			continue
 		}
 		if err := r.group(g); err != nil {

@@ -10,9 +10,13 @@ type Group struct {
 }
 
 func (g Group) HasContents() bool {
-	if len(g.Contents.Items) != 0 {
+	if g.HasItems() {
 		return true
 	}
 
 	return len(g.Contents.GroupKeys) != 0
+}
+
+func (g Group) HasItems() bool {
+	return len(g.Contents.Items) > 0
 }
