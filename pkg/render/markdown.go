@@ -14,6 +14,8 @@ import (
 // SortedMarkdownRenderer renders a graph to its writer sorted by group name
 type SortedMarkdownRenderer struct {
 	io.Writer
+	IncludeEmptyParentGroups bool
+	IncludeGroupReferences   bool
 }
 
 // Render renders a graph to the SortedMarkdownRenderer's writer sorted by group name
@@ -44,12 +46,16 @@ func (r SortedMarkdownRenderer) group(g graph.Group) error {
 	if err := r.title(name); err != nil {
 		return errors.Wrapf(err, "writing Title %q to writer", name)
 	}
-	if err := r.includedIns(g.ImportedBy); err != nil {
-		return errors.Wrapf(err, "writing ImportedBy %q to writer", g.ImportedBy)
+	if r.IncludeGroupReferences {
+		if err := r.includedIns(g.ImportedBy); err != nil {
+			return errors.Wrapf(err, "writing ImportedBy %q to writer", g.ImportedBy)
+		}
 	}
-	includes := list.GroupKeys(g.Group.Contents.GroupKeys)
-	if err := r.includes(includes); err != nil {
-		return errors.Wrapf(err, "writing includes %q to writer", includes)
+	if r.IncludeGroupReferences {
+		includes := list.GroupKeys(g.Group.Contents.GroupKeys)
+		if err := r.includes(includes); err != nil {
+			return errors.Wrapf(err, "writing includes %q to writer", includes)
+		}
 	}
 	for _, item := range g.Group.Contents.Items {
 		if err := r.item(item); err != nil {
