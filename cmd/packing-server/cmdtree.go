@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -26,6 +25,8 @@ func buildCmdTree(logger log.Logger, _ io.Writer, rootCmd *cobra.Command) {
 	const (
 		keyPackingGroups = "groups-dir"
 		keyPort          = "port"
+
+		defaultGroupsDir = "."
 	)
 
 	serve := &cobra.Command{
@@ -34,15 +35,16 @@ func buildCmdTree(logger log.Logger, _ io.Writer, rootCmd *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			groupsDir := strings.TrimSpace(viper.GetString(keyPackingGroups))
 			if groupsDir == "" {
-				return fmt.Errorf("%s arg cannot be empty", keyPackingGroups)
+				groupsDir = defaultGroupsDir
+				if err := logger.Log(
+					log.Message(keyPackingGroups+" not set, using default"),
+					log.KV{K: "default", V: defaultGroupsDir}); err != nil {
+					return errors.Wrap(err, "logging")
+				}
 			}
-			if err := logger.Log(log.KV{
-				K: "message",
-				V: keyPackingGroups + " has been set",
-			}, log.KV{
-				K: "groupsDir",
-				V: groupsDir,
-			}); err != nil {
+			if err := logger.Log(
+				log.Message("Using groups directory"),
+				log.KV{K: "groupsDir", V: groupsDir}); err != nil {
 				return errors.Wrap(err, "logging")
 			}
 			s := service.GroupsService{

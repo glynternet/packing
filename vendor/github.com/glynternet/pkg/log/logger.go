@@ -1,18 +1,22 @@
 package log
 
 import (
-	"os"
+	"io"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 )
 
-func NewLogger() Logger {
+const levelKey = "level"
+
+func NewLogger(w io.Writer) Logger {
 	return logger{
 		Logger: log.With(
-			level.NewFilter(log.NewJSONLogger(os.Stderr), level.AllowDebug()),
+			level.NewFilter(
+				level.NewInjector(log.NewJSONLogger(w), level.InfoValue()),
+				level.AllowDebug()),
 			"ts", log.DefaultTimestampUTC,
-			"caller", log.DefaultCaller),
+			"caller", log.Caller(4)),
 	}
 }
 
@@ -26,6 +30,34 @@ type logger struct {
 
 func (l logger) Log(kvs ...KV) error {
 	return l.Logger.Log(kvsAsParams(kvs)...)
+}
+
+func Debug(logger Logger, kvs ...KV) error {
+	return logger.Log(append(
+		kvs,
+		KV{K: levelKey, V: "debug"},
+	)...)
+}
+
+func Info(logger Logger, kvs ...KV) error {
+	return logger.Log(append(
+		kvs,
+		KV{K: levelKey, V: "info"},
+	)...)
+}
+
+func Warn(logger Logger, kvs ...KV) error {
+	return logger.Log(append(
+		kvs,
+		KV{K: levelKey, V: "warn"},
+	)...)
+}
+
+func Error(logger Logger, kvs ...KV) error {
+	return logger.Log(append(
+		kvs,
+		KV{K: levelKey, V: "error"},
+	)...)
 }
 
 type KV struct {
@@ -50,7 +82,7 @@ func Message(msg string) KV {
 	}
 }
 
-func Error(err error) KV {
+func ErrorMessage(err error) KV {
 	return KV{
 		K: "error",
 		V: err,
