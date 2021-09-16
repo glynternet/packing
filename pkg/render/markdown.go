@@ -93,8 +93,16 @@ func (r SortedMarkdownRenderer) includedIns(is []string) error {
 	sorted := make([]string, len(is))
 	copy(sorted, is)
 	sort.Strings(sorted)
-	_, err := fmt.Fprintf(r.Writer, "_Included in: %s_  \n", escaped(strings.Join(sorted, ", ")))
+	var anchors []string
+	for _, group := range sorted {
+		anchors = append(anchors, anchor(escaped(group), group))
+	}
+	_, err := fmt.Fprintf(r.Writer, "_Included in: %s_  \n", strings.Join(anchors, ", "))
 	return err
+}
+
+func anchor(text, url string) string {
+	return fmt.Sprintf("[%s](#%s)", text, url)
 }
 
 func escaped(in string) string {
