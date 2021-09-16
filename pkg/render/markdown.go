@@ -103,7 +103,7 @@ func (r SortedMarkdownRenderer) includedIns(is []string) error {
 	for _, group := range sorted {
 		anchors = append(anchors, anchor(escaped(group), group))
 	}
-	_, err := fmt.Fprintf(r.Writer, "_Included in: %s_  \n", strings.Join(anchors, ", "))
+	_, err := fmt.Fprintf(r.Writer, "_Included in: %s_  \n\n", strings.Join(anchors, ", "))
 	return err
 }
 
