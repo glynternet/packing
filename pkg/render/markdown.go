@@ -88,7 +88,11 @@ func (r SortedMarkdownRenderer) includes(is []string) error {
 	sorted := make([]string, len(is))
 	copy(sorted, is)
 	sort.Strings(sorted)
-	_, err := fmt.Fprintf(r.Writer, "_Includes groups: %s_  \n\n", escaped(strings.Join(sorted, ", ")))
+	var anchors []string
+	for _, group := range sorted {
+		anchors = append(anchors, anchor(escaped(group), group))
+	}
+	_, err := fmt.Fprintf(r.Writer, "_Includes groups: %s_  \n\n", strings.Join(anchors, ", "))
 	return err
 }
 
