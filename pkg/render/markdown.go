@@ -13,13 +13,12 @@ import (
 
 // SortedMarkdownRenderer renders a graph to its writer sorted by group name
 type SortedMarkdownRenderer struct {
-	io.Writer
 	IncludeEmptyParentGroups bool
 	IncludeGroupReferences   bool
 }
 
 // Render renders a graph to the SortedMarkdownRenderer's writer sorted by group name
-func (r SortedMarkdownRenderer) Render(gs []graph.Group) error {
+func (r SortedMarkdownRenderer) Render(w io.Writer, gs []graph.Group) error {
 	sort.Slice(gs, func(i, j int) bool {
 		return gs[i].Group.Name < gs[j].Group.Name
 	})
@@ -28,60 +27,60 @@ func (r SortedMarkdownRenderer) Render(gs []graph.Group) error {
 		if !g.HasContents() {
 			continue
 		}
-		if err := r.group(g); err != nil {
+		if err := r.group(w, g); err != nil {
 			return errors.Wrapf(err, "writing Group %v to writer", g)
 		}
-		if err := r.groupBreak(); err != nil {
+		if err := groupBreak(w); err != nil {
 			return errors.Wrapf(err, "writing GroupBreak %v to writer", g)
 		}
 	}
 	return nil
 }
 
-func (r SortedMarkdownRenderer) group(g graph.Group) error {
+func (r SortedMarkdownRenderer) group(w io.Writer, g graph.Group) error {
 	name := strings.TrimSpace(g.Group.Name)
 	if name == "" {
 		name = "Unnamed"
 	}
-	if err := r.title(name); err != nil {
+	if err := title(w, name); err != nil {
 		return errors.Wrapf(err, "writing Title %q to writer", name)
 	}
 	if r.IncludeGroupReferences {
-		if err := r.includedIns(g.ImportedBy); err != nil {
+		if err := includedIns(w, g.ImportedBy); err != nil {
 			return errors.Wrapf(err, "writing ImportedBy %q to writer", g.ImportedBy)
 		}
 	}
 	if r.IncludeGroupReferences {
-		includes := list.GroupKeys(g.Group.Contents.GroupKeys)
-		if err := r.includes(includes); err != nil {
-			return errors.Wrapf(err, "writing includes %q to writer", includes)
+		includesGroups := list.GroupKeys(g.Group.Contents.GroupKeys)
+		if err := includes(w, includesGroups); err != nil {
+			return errors.Wrapf(err, "writing includes %q to writer", includesGroups)
 		}
 	}
-	for _, item := range g.Group.Contents.Items {
-		if err := r.item(item); err != nil {
+	for _, contentItem := range g.Group.Contents.Items {
+		if err := item(w, contentItem); err != nil {
 			return errors.Wrapf(err, "writing Item %v to writer", item)
 		}
 	}
 	return nil
 }
 
-func (r SortedMarkdownRenderer) title(title string) error {
-	_, err := fmt.Fprintln(r.Writer, "## "+escaped(strings.ToUpper(title)))
+func title(w io.Writer, title string) error {
+	_, err := fmt.Fprintln(w, "## "+escaped(strings.ToUpper(title)))
 	return err
 }
 
-func (r SortedMarkdownRenderer) groupBreak() error {
+func groupBreak(w io.Writer) error {
 	const groupBreak = "\n\n"
-	_, err := fmt.Fprint(r.Writer, groupBreak)
+	_, err := fmt.Fprint(w, groupBreak)
 	return err
 }
 
-func (r SortedMarkdownRenderer) item(name string) error {
-	_, err := fmt.Fprintln(r.Writer, "- "+escaped(name))
+func item(w io.Writer, name string) error {
+	_, err := fmt.Fprintln(w, "- "+escaped(name))
 	return err
 }
 
-func (r SortedMarkdownRenderer) includes(is []string) error {
+func includes(w io.Writer, is []string) error {
 	if len(is) == 0 {
 		return nil
 	}
@@ -90,13 +89,13 @@ func (r SortedMarkdownRenderer) includes(is []string) error {
 	sort.Strings(sorted)
 	var anchors []string
 	for _, group := range sorted {
-		anchors = append(anchors, anchor(escaped(group), group))
+		anchors = append(anchors, anchor(escaped(group), sanitisedHeaderURLID(group)))
 	}
-	_, err := fmt.Fprintf(r.Writer, "_Includes groups: %s_  \n\n", strings.Join(anchors, ", "))
+	_, err := fmt.Fprintf(w, "_Includes groups: %s_  \n\n", strings.Join(anchors, ", "))
 	return err
 }
 
-func (r SortedMarkdownRenderer) includedIns(is []string) error {
+func includedIns(w io.Writer, is []string) error {
 	if len(is) == 0 {
 		return nil
 	}
@@ -105,9 +104,9 @@ func (r SortedMarkdownRenderer) includedIns(is []string) error {
 	sort.Strings(sorted)
 	var anchors []string
 	for _, group := range sorted {
-		anchors = append(anchors, anchor(escaped(group), group))
+		anchors = append(anchors, anchor(escaped(group), sanitisedHeaderURLID(group)))
 	}
-	_, err := fmt.Fprintf(r.Writer, "_Included in: %s_  \n\n", strings.Join(anchors, ", "))
+	_, err := fmt.Fprintf(w, "_Included in: %s_  \n\n", strings.Join(anchors, ", "))
 	return err
 }
 
@@ -117,4 +116,9 @@ func anchor(text, url string) string {
 
 func escaped(in string) string {
 	return strings.ReplaceAll(in, "_", `\_`)
+}
+
+// this is annoyingly how the markdown to HTML renderer renders heading IDs for links
+func sanitisedHeaderURLID(v string) string {
+	return strings.ReplaceAll(v, "_", `-`)
 }
