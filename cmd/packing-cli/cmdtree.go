@@ -101,8 +101,20 @@ func getRenderer(renderer string, includeEmptyParentGroups, includeGroupReferenc
 			_, err := w.Write(markdown.ToHTML(md.Bytes(), parser.NewWithExtensions(extensions), nil))
 			return errors.Wrap(err, "writing html to writer")
 		}, nil
+	case "item-list":
+		return func(w io.Writer, groups []graph.Group) error {
+			for _, group := range groups {
+				groupPrefix := group.Group.GetName() + ":"
+				for _, item := range group.Group.GetContents().GetItems() {
+					if _, err := fmt.Fprintln(w, groupPrefix+item.GetName()); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}, nil
 	}
-	return nil, fmt.Errorf(`unsupported renderer:%q, supported renderers are "markdown" and "html"`, renderer)
+	return nil, fmt.Errorf(`unsupported renderer:%q, supported renderers are "markdown", "html" and "item-list"`, renderer)
 }
 
 func getContentsDefinitionSeed(rc io.ReadCloser) (api.Contents, error) {
