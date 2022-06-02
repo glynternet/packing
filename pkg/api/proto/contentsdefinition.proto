@@ -1,0 +1,11 @@
+syntax = "proto3";
+package api;
+option go_package = "api/build";
+
+import "item.proto";
+import "reference.proto";
+
+message ContentsDefinition {
+  repeated Reference references = 1;
+  repeated Item items = 2;
+}

@@ -10,16 +10,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-const groupNamePrefix = "ref:"
-
 // ParseContentsDefinition loads the ContentsDefinition of a single list from a Reader
 func ParseContentsDefinition(r io.Reader) (api.Contents, error) {
-	var groupNames GroupKeys
+	const referencePrefix = "ref:"
+	var refs []string
 	var itemNames Items
 	p := ProcessorGroup{
 		emptyStringCheck,
 		CommentProcessor(),
-		GroupKeysProcessor(&groupNames, groupNamePrefix),
+		ReferenceParser(&refs, referencePrefix),
 		ItemNamesProcessor(&itemNames),
 	}
 
@@ -37,8 +36,8 @@ func ParseContentsDefinition(r io.Reader) (api.Contents, error) {
 	}
 
 	return api.Contents{
-		GroupKeys: groupNames,
-		Items:     itemNames,
+		Refs:  refs,
+		Items: itemNames,
 	}, nil
 }
 

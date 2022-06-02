@@ -100,7 +100,7 @@ type Msg
 
 
 contentsDef =
-    { groupKeys =
+    { refs =
         [ "battery_pack"
         , "board_games"
         , "camera"
@@ -319,11 +319,11 @@ view model =
                                                          else
                                                             let
                                                                 groupDisplayContents =
-                                                                    (if List.isEmpty group.contents.groupKeys || not model.showGroups then
+                                                                    (if List.isEmpty group.contents.refs || not model.showGroups then
                                                                         []
 
                                                                      else
-                                                                        [ h4 [] [ text "groups" ] ] ++ (group.contents.groupKeys |> List.map (\key -> p [] [ text key ]))
+                                                                        [ h4 [] [ text "groups" ] ] ++ (group.contents.refs |> List.map (\key -> p [] [ text key ]))
                                                                     )
                                                                         ++ (if List.isEmpty items then
                                                                                 []
@@ -358,7 +358,7 @@ type alias Group =
 
 
 type alias ContentsDefinition =
-    { groupKeys : List String, items : List String }
+    { refs : List String, items : List String }
 
 
 encodeGroups : List Group -> Json.Encode.Value
@@ -375,7 +375,7 @@ encodeGroups =
 encodeContentsDefinition : ContentsDefinition -> Json.Encode.Value
 encodeContentsDefinition def =
     Json.Encode.object
-        [ ( "group_keys", Json.Encode.list Json.Encode.string def.groupKeys )
+        [ ( "refs", Json.Encode.list Json.Encode.string def.refs )
         , ( "items", Json.Encode.list Json.Encode.string def.items )
         ]
 
@@ -387,7 +387,7 @@ decodeGroups =
             (Json.Decode.field "name" Json.Decode.string)
             (Json.Decode.field "contents"
                 (Json.Decode.map2 ContentsDefinition
-                    (Json.Decode.field "group_keys" <| decodedWithNullAsDefault [] <| Json.Decode.list Json.Decode.string)
+                    (Json.Decode.field "refs" <| decodedWithNullAsDefault [] <| Json.Decode.list Json.Decode.string)
                     (Json.Decode.field "items" <| decodedWithNullAsDefault [] <| Json.Decode.list Json.Decode.string)
                 )
             )

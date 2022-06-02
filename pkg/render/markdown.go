@@ -51,7 +51,7 @@ func (r SortedMarkdownRenderer) group(w io.Writer, g graph.Group) error {
 		}
 	}
 	if r.IncludeGroupReferences {
-		includesGroups := list.GroupKeys(g.Group.Contents.GroupKeys)
+		includesGroups := list.References(g.Group.Contents.Refs)
 		if err := includes(w, includesGroups); err != nil {
 			return errors.Wrapf(err, "writing includes %q to writer", includesGroups)
 		}

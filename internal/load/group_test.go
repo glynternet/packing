@@ -13,8 +13,8 @@ import (
 )
 
 func TestGroups(t *testing.T) {
-	t.Run("empty keys", func(t *testing.T) {
-		actual, err := load.Loader{}.Groups(nil, list.GroupKeys{})
+	t.Run("empty references", func(t *testing.T) {
+		actual, err := load.Loader{}.Groups(nil, list.References{})
 		assert.NoError(t, err)
 		assert.Nil(t, actual)
 	})
@@ -22,7 +22,7 @@ func TestGroups(t *testing.T) {
 	logger := log.NewLogger(&bytes.Buffer{})
 
 	t.Run("single key empty returns contents", func(t *testing.T) {
-		keys := list.GroupKeys{"foo"}
+		keys := list.References{"foo"}
 		store := mockContentsGetter{}
 		expected := []api.Group{{Name: "foo"}}
 		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
@@ -31,7 +31,7 @@ func TestGroups(t *testing.T) {
 	})
 
 	t.Run("single key error in getter", func(t *testing.T) {
-		keys := list.GroupKeys{"foo"}
+		keys := list.References{"foo"}
 		expectedErr := errors.New("test error")
 		store := mockContentsGetter{error: expectedErr}
 		var expected []api.Group
@@ -41,9 +41,9 @@ func TestGroups(t *testing.T) {
 	})
 
 	t.Run("single key exists", func(t *testing.T) {
-		keys := list.GroupKeys{"foo"}
+		keys := list.References{"foo"}
 		store := mockContentsGetter{
-			groups: map[string]api.Contents{
+			refs: map[string]api.Contents{
 				"foo": {Items: list.Items{"fooItem"}},
 				"bar": {Items: list.Items{"barItem"}},
 			},
@@ -58,11 +58,11 @@ func TestGroups(t *testing.T) {
 	})
 
 	t.Run("single key containing self group reference", func(t *testing.T) {
-		// currently completes but will probably cause a bug when changing the way that groups are loaded
-		keys := list.GroupKeys{"foo"}
+		// currently completes but will probably cause a bug when changing the way that refs are loaded
+		keys := list.References{"foo"}
 		store := mockContentsGetter{
-			groups: map[string]api.Contents{
-				"foo": {GroupKeys: list.GroupKeys{"foo"}},
+			refs: map[string]api.Contents{
+				"foo": {Refs: list.References{"foo"}},
 			},
 		}
 		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
@@ -72,11 +72,11 @@ func TestGroups(t *testing.T) {
 }
 
 type mockContentsGetter struct {
-	groups map[string]api.Contents
+	refs map[string]api.Contents
 	error
 }
 
 func (mgg mockContentsGetter) GetContentsDefinition(key string) (api.Contents, error) {
-	g := mgg.groups[key]
+	g := mgg.refs[key]
 	return g, mgg.error
 }

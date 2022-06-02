@@ -104,9 +104,9 @@ func getRenderer(renderer string, includeEmptyParentGroups, includeGroupReferenc
 	case "item-list":
 		return func(w io.Writer, groups []graph.Group) error {
 			for _, group := range groups {
-				groupPrefix := group.Group.GetName() + ":"
-				for _, item := range group.Group.GetContents().GetItems() {
-					if _, err := fmt.Fprintln(w, groupPrefix+item.GetName()); err != nil {
+				groupPrefix := group.Group.Name + ":"
+				for _, item := range group.Group.Contents.Items {
+					if _, err := fmt.Fprintln(w, groupPrefix+item); err != nil {
 						return err
 					}
 				}

@@ -7,19 +7,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Loader is used to groups and content
+// Loader is used to load refs and content
 type Loader struct {
 	ContentsDefinitionGetter
 }
 
-// Groups returns all of the list.Group for the given GroupKeys, using the given ContentsDefinitionGetter
-func (l Loader) Groups(logger log.Logger, keys list.GroupKeys) ([]api.Group, error) {
-	if len(keys) == 0 {
+// Groups returns all list.Group for the given Refs, using the given ContentsDefinitionGetter
+func (l Loader) Groups(logger log.Logger, refs list.References) ([]api.Group, error) {
+	if len(refs) == 0 {
 		return nil, nil
 	}
 
 	loaded := make(map[string]api.Contents)
-	err := recursiveGroupsLoad(keys, logger, l.ContentsDefinitionGetter, loaded)
+	err := recursiveLoad(refs, logger, l.ContentsDefinitionGetter, loaded)
+
 	var groups []api.Group
 	for n, cs := range loaded {
 		groups = append(groups, api.Group{
@@ -29,44 +30,44 @@ func (l Loader) Groups(logger log.Logger, keys list.GroupKeys) ([]api.Group, err
 	return groups, err
 }
 
-func recursiveGroupsLoad(
-	keys list.GroupKeys,
+func recursiveLoad(
+	refs list.References,
 	logger log.Logger, cg ContentsDefinitionGetter,
 	loaded map[string]api.Contents) error {
-	if len(keys) == 0 {
+	if len(refs) == 0 {
 		return nil
 	}
-	var subgroupKeys list.GroupKeys
-	for _, key := range keys {
-		if _, ok := loaded[key]; ok {
-			// skip if exists
+	var childReferences list.References
+	for _, ref := range refs {
+		if _, ok := loaded[ref]; ok {
+			// skip if already loaded
 			continue
 		}
 
-		cs, err := cg.GetContentsDefinition(key)
+		cs, err := cg.GetContentsDefinition(ref)
 		if err != nil {
-			return errors.Wrapf(err, "getting group for key:%q", key)
+			return errors.Wrapf(err, "getting group for ref:%q", ref)
 		}
 
-		if cs.GroupKeys != nil && list.GroupKeys(cs.GroupKeys).Contains(key) {
-			return SelfReferenceError(key)
+		if list.References(cs.Refs).Contains(ref) {
+			return SelfReferenceError(ref)
 		}
 
-		loaded[key] = cs
-		if cs.GroupKeys == nil {
+		loaded[ref] = cs
+		if len(cs.Refs) == 0 {
 			continue
 		}
-		subgroupKeys = append(subgroupKeys, cs.GroupKeys...)
+		childReferences = append(childReferences, cs.Refs...)
 	}
-	return recursiveGroupsLoad(subgroupKeys, logger, cg, loaded)
+	return recursiveLoad(childReferences, logger, cg, loaded)
 }
 
-// AllGroups gets all of the Groups from the seed ContentsDefinition and recursively descending into all of those Groups
+// AllGroups gets all Groups from the seed ContentsDefinition and recursively descending into all of those Groups
 // until the whole tree has been found.
 func (l *Loader) AllGroups(logger log.Logger, seed api.Contents) ([]api.Group, error) {
-	groups, err := l.Groups(logger, seed.GroupKeys)
+	groups, err := l.Groups(logger, seed.Refs)
 	if err != nil {
-		return nil, errors.Wrap(err, "loading groups recursively")
+		return nil, errors.Wrap(err, "loading refs recursively")
 	}
 	if len(seed.Items) > 0 {
 		groups = append(groups, api.Group{

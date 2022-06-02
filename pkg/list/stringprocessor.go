@@ -41,8 +41,8 @@ func ItemNamesProcessor(items *Items) Processor {
 	}
 }
 
-// GroupKeysProcessor generates a Processor that attempts to parse lines into api.GroupKey
-func GroupKeysProcessor(names *GroupKeys, listNamePrefix string) Processor {
+// ReferenceParser generates a Processor that attempts to parse lines into api.Reference
+func ReferenceParser(names *[]string, listNamePrefix string) Processor {
 	return func(s string) error {
 		groupNameParseFn := parse.NewPrefixedParser(listNamePrefix)
 		name, err := groupNameParseFn(s)

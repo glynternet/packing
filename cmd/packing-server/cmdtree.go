@@ -140,9 +140,9 @@ func serve(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error),
 
 		groups := []api.Group{}
 		for _, apiGroup := range apiGroups {
-			var groupKeys []string
-			for _, key := range apiGroup.Contents.GroupKeys {
-				groupKeys = append(groupKeys, key)
+			var refs []string
+			for _, key := range apiGroup.Contents.Refs {
+				refs = append(refs, key)
 			}
 			var items []string
 			for _, item := range apiGroup.Contents.Items {
@@ -151,8 +151,8 @@ func serve(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error),
 			groups = append(groups, api.Group{
 				Name: apiGroup.Name,
 				Contents: api.Contents{
-					GroupKeys: groupKeys,
-					Items:     items,
+					Refs:  refs,
+					Items: items,
 				},
 			})
 		}

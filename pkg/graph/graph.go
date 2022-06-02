@@ -22,7 +22,7 @@ type groups []api.Group
 func (gs groups) thatImport(key string) []string {
 	var groups []string
 	for _, g := range gs {
-		for _, gk := range g.Contents.GroupKeys {
+		for _, gk := range g.Contents.Refs {
 			if gk == key {
 				groups = append(groups, g.Name)
 			}

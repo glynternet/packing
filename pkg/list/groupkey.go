@@ -1,11 +1,11 @@
 package list
 
-// GroupKeys is a set of api.GroupKey
-type GroupKeys []string
+// References is a set of references
+type References []string
 
-// Contains returns true if the GroupKeys contain the given api.GroupKey
-func (gks GroupKeys) Contains(k string) bool {
-	for _, gk := range gks {
+// Contains returns true if the References contain the given reference
+func (rs References) Contains(k string) bool {
+	for _, gk := range rs {
 		if gk == k {
 			return true
 		}

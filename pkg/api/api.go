@@ -6,6 +6,6 @@ type Group struct {
 }
 
 type Contents struct {
-	GroupKeys []string `json:"group_keys"`
-	Items     []string `json:"items"`
+	Refs  []string `json:"refs"`
+	Items []string `json:"items"`
 }

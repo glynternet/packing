@@ -15,14 +15,14 @@ type ContentsDefinitionGetter struct {
 	log.Logger
 }
 
-// ReadCloserGetter gets an io.ReadCloser for a given api.GroupKey
-type ReadCloserGetter func(key string) (io.ReadCloser, error)
+// ReadCloserGetter gets an io.ReadCloser for a given reference
+type ReadCloserGetter func(ref string) (io.ReadCloser, error)
 
-// GetContentsDefinition gets a api.ContentsDefinition fir a given api.GroupKey
-func (gg ContentsDefinitionGetter) GetContentsDefinition(key string) (api.Contents, error) {
-	rc, err := gg.GetReadCloser(key)
+// GetContentsDefinition gets a Contents for a given reference
+func (gg ContentsDefinitionGetter) GetContentsDefinition(ref string) (api.Contents, error) {
+	rc, err := gg.GetReadCloser(ref)
 	if err != nil {
-		return api.Contents{}, errors.Wrapf(err, "getting ReadCloser for key:%v", key)
+		return api.Contents{}, errors.Wrapf(err, "getting ReadCloser for ref:%v", ref)
 	}
 
 	defer func() {
@@ -41,6 +41,6 @@ func (gg ContentsDefinitionGetter) GetContentsDefinition(key string) (api.Conten
 	}()
 
 	def, err := list.ParseContentsDefinition(rc)
-	err = errors.Wrapf(err, "loading group for key:%v", key)
+	err = errors.Wrapf(err, "loading group for ref:%v", ref)
 	return def, err
 }
