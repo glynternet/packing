@@ -18,14 +18,15 @@ type ProcessorGroup []Processor
 // - no error is given, in which case nil is returned.
 // - all Processors have been applied, in which case the last is returned
 func (g ProcessorGroup) Process(s string) error {
+	var errMsgs []string
 	for _, processFn := range g {
 		err := processFn(s)
 		if err == nil {
 			return err
 		}
-		//TODO(glynternet): use multi error here?
+		errMsgs = append(errMsgs, err.Error())
 	}
-	return fmt.Errorf("unable to Process string:%q", s)
+	return fmt.Errorf("unable to Process string:%q. messages: %s", s, strings.Join(errMsgs, ", "))
 }
 
 // ItemNamesProcessor generates a Processor that parses a line into an api.Item
