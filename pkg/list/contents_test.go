@@ -100,4 +100,16 @@ func TestParseContentsDefinition(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run("reject line starting with tag that isn't ref", func(t *testing.T) {
+		input := "no:foo"
+		_, err := list.ParseContentsDefinition(strings.NewReader(input))
+		assert.EqualError(t, err, `processing lines: processing line:"no:foo": unsupported tag prefix: "no"`)
+	})
+
+	t.Run("reject line with reference tag prefix but empty reference", func(t *testing.T) {
+		input := "ref: "
+		_, err := list.ParseContentsDefinition(strings.NewReader(input))
+		assert.EqualError(t, err, `processing lines: processing line:"ref:": empty reference`)
+	})
 }

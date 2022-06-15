@@ -9,15 +9,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+const referencePrefix = "ref"
+
 // ParseContentsDefinition loads the ContentsDefinition of a single list from a Reader
 func ParseContentsDefinition(r io.Reader) (api.Contents, error) {
-	const referencePrefix = "ref:"
 	var refs []string
 	var itemNames Items
 	p := ProcessorGroup{
 		emptyStringCheck,
 		CommentProcessor(),
-		ReferenceParser(&refs, referencePrefix),
+		ReferenceParser(&refs),
 		ItemNamesProcessor(&itemNames),
 	}
 
