@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -20,6 +21,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+const defaultAddr = "http://localhost"
 
 func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	viper.SetEnvPrefix("packing")
@@ -66,7 +69,7 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		},
 	}
 
-	trip.Flags().String(keyServerHost, "http://localhost", "packing server host")
+	trip.Flags().String(keyServerHost, defaultAddr, "packing server host")
 	trip.Flags().Uint(keyServerPort, 3865, "packing server port")
 	trip.Flags().BoolVar(&includeEmptyParentGroups, "include-empty-parent-groups", false,
 		"Provide this flag to render groups that consist only of groups.")
@@ -75,6 +78,36 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	trip.Flags().StringVar(&renderer, keyRenderer, "html", "renderer to use: markdown or html")
 	cmd.MustBindPFlags(logger, trip)
 	rootCmd.AddCommand(trip)
+
+	ref := &cobra.Command{
+		Use:   "reference <reference>",
+		Args:  cobra.ExactArgs(1),
+		Short: "Query a reference",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			addr := viper.GetString(keyServerHost) + ":" +
+				strconv.FormatUint(uint64(viper.GetInt64(keyServerPort)), 10)
+
+			gs, err := client.GetGroups(logger, addr, api.Contents{
+				Refs: []string{args[0]},
+			})
+			if err != nil {
+				return errors.Wrap(err, "getting graph")
+			}
+
+			// TODO(glynternet): add renderer option here
+			out, err := json.Marshal(gs)
+			if err != nil {
+				return fmt.Errorf("marshaling response to json: %w", err)
+			}
+
+			_, err = cmd.OutOrStdout().Write(out)
+			return errors.Wrap(err, "writing result to output")
+		},
+	}
+	ref.Flags().String(keyServerHost, defaultAddr, "packing server host")
+	ref.Flags().Uint(keyServerPort, 3865, "packing server port")
+	cmd.MustBindPFlags(logger, ref)
+	rootCmd.AddCommand(ref)
 }
 
 type Renderer func(w io.Writer, group []graph.Group) error
