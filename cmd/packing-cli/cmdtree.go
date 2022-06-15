@@ -100,7 +100,7 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 				return fmt.Errorf("marshaling response to json: %w", err)
 			}
 
-			_, err = cmd.OutOrStdout().Write(out)
+			_, err = w.Write(out)
 			return errors.Wrap(err, "writing result to output")
 		},
 	}
@@ -114,6 +114,16 @@ type Renderer func(w io.Writer, group []graph.Group) error
 
 func getRenderer(renderer string, includeEmptyParentGroups, includeGroupReferences bool) (Renderer, error) {
 	switch renderer {
+	case "json":
+		return func(w io.Writer, groups []graph.Group) error {
+			out, err := json.Marshal(groups)
+			if err != nil {
+				return fmt.Errorf("marshaling response to json: %w", err)
+			}
+
+			_, err = w.Write(out)
+			return errors.Wrap(err, "writing result to output")
+		}, nil
 	case "markdown":
 		return render.SortedMarkdownRenderer{
 			IncludeEmptyParentGroups: includeEmptyParentGroups,
