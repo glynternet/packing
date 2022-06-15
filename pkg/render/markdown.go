@@ -58,7 +58,7 @@ func (r SortedMarkdownRenderer) group(w io.Writer, g graph.Group) error {
 	}
 	for _, contentItem := range g.Group.Contents.Items {
 		if err := item(w, contentItem); err != nil {
-			return errors.Wrapf(err, "writing Item %v to writer", item)
+			return errors.Wrapf(err, "writing Item %v to writer", contentItem)
 		}
 	}
 	return nil

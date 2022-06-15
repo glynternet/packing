@@ -8,8 +8,9 @@ import (
 	"github.com/glynternet/packing/pkg/parse"
 )
 
-// Processor should return an error if the string cannot be processed as the given type
-type Processor func(string) error
+// Processor should return true if the item has been processed and should not be processed by any others, or an error if
+// the string cannot be processed.
+type Processor func(string) (bool, error)
 
 // ProcessorGroup is a group of processors
 type ProcessorGroup []Processor
@@ -18,48 +19,52 @@ type ProcessorGroup []Processor
 // - no error is given, in which case nil is returned.
 // - all Processors have been applied, in which case the last is returned
 func (g ProcessorGroup) Process(s string) error {
-	var errMsgs []string
+	if len(g) == 0 {
+		return errors.New("no processors configured")
+	}
 	for _, processFn := range g {
-		err := processFn(s)
-		if err == nil {
+		done, err := processFn(s)
+		if err != nil {
 			return err
 		}
-		errMsgs = append(errMsgs, err.Error())
+		if done {
+			return nil
+		}
 	}
-	return fmt.Errorf("unable to Process string:%q. messages: %s", s, strings.Join(errMsgs, ", "))
+	return fmt.Errorf("no processor matched value: %q", s)
 }
 
 // ItemNamesProcessor generates a Processor that parses a line into an api.Item
 func ItemNamesProcessor(items *Items) Processor {
 	// TODO(glynternet): does this need to be improved to ignore groups and other cases?
-	return func(s string) error {
+	return func(s string) (bool, error) {
 		name, err := parse.NotEmpty(s)
 		if err == nil {
 			*items = append(*items, name)
 		}
-		return err
+		return true, err
 	}
 }
 
 // ReferenceParser generates a Processor that attempts to parse lines into api.Reference
 func ReferenceParser(names *[]string, listNamePrefix string) Processor {
-	return func(s string) error {
+	return func(s string) (bool, error) {
 		groupNameParseFn := parse.NewPrefixedParser(listNamePrefix)
-		name, err := groupNameParseFn(s)
-		if err == nil {
+		name, ok := groupNameParseFn(s)
+		if ok {
 			*names = append(*names, name)
 		}
-		return err
+		return ok, nil
 	}
 }
 
 // CommentProcessor generates a Processor that parses comment lines, returning an error if the given line is not a
 // comment
 func CommentProcessor() Processor {
-	return func(s string) error {
+	return func(s string) (bool, error) {
 		if strings.HasPrefix(strings.TrimSpace(s), "#") {
-			return nil
+			return true, nil
 		}
-		return errors.New("given string is not a comment")
+		return false, nil
 	}
 }

@@ -11,7 +11,7 @@ func TestNewPrefixedParser(t *testing.T) {
 	testPrefix := "TEST_PREFIX"
 	parseFn := parse.NewPrefixedParser(testPrefix)
 
-	t.Run("errors", func(t *testing.T) {
+	t.Run("non-matching", func(t *testing.T) {
 		for _, test := range []struct {
 			name  string
 			input string
@@ -25,14 +25,13 @@ func TestNewPrefixedParser(t *testing.T) {
 			},
 		} {
 			t.Run(test.name, func(t *testing.T) {
-				suffix, err := parseFn(test.input)
-				assert.Error(t, err)
-				assert.Equal(t, "", suffix)
+				_, match := parseFn(test.input)
+				assert.False(t, match)
 			})
 		}
 	})
 
-	t.Run("successes", func(t *testing.T) {
+	t.Run("matching", func(t *testing.T) {
 		for _, test := range []struct {
 			name   string
 			input  string
@@ -49,8 +48,8 @@ func TestNewPrefixedParser(t *testing.T) {
 			},
 		} {
 			t.Run(test.name, func(t *testing.T) {
-				listName, err := parseFn(test.input)
-				assert.NoError(t, err)
+				listName, match := parseFn(test.input)
+				assert.True(t, match)
 				assert.Equal(t, test.suffix, listName)
 			})
 		}

@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -9,13 +8,13 @@ import (
 
 // NewPrefixedParser generates a Parser that expects to parse a string that is prefixed by the given prefix.
 // An error is returned by the Parser if the string to parse does not start with the prefix.
-func NewPrefixedParser(prefix string) func(string) (string, error) {
-	return func(s string) (string, error) {
+func NewPrefixedParser(prefix string) func(string) (string, bool) {
+	return func(s string) (string, bool) {
 		ok := strings.HasPrefix(s, prefix)
 		if !ok {
-			return "", fmt.Errorf("not prefixed with %q", prefix)
+			return "", ok
 		}
-		return s[len(prefix):], nil
+		return s[len(prefix):], ok
 	}
 }
 

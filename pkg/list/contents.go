@@ -2,7 +2,6 @@ package list
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"strings"
 
@@ -25,7 +24,6 @@ func ParseContentsDefinition(r io.Reader) (api.Contents, error) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-
 		if err := p.Process(line); err != nil {
 			return api.Contents{}, errors.Wrapf(err, "processing line:%q", line)
 		}
@@ -41,9 +39,9 @@ func ParseContentsDefinition(r io.Reader) (api.Contents, error) {
 	}, nil
 }
 
-func emptyStringCheck(s string) error {
+func emptyStringCheck(s string) (bool, error) {
 	if s == "" {
-		return nil
+		return true, nil
 	}
-	return fmt.Errorf("string:%q is not an empty string", s)
+	return false, nil
 }

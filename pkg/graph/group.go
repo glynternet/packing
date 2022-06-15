@@ -8,9 +8,6 @@ type Group struct {
 }
 
 func (g Group) HasContents() bool {
-	if len(g.Group.GetContents().GetItems()) != 0 {
-		return true
-	}
-
-	return len(g.Group.GetContents().GetReferences()) != 0
+	return len(g.Group.Contents.Items) != 0 ||
+		len(g.Group.Contents.Refs) != 0
 }
