@@ -80,15 +80,15 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(selection)
 
 	ref := &cobra.Command{
-		Use:   "reference <reference>",
-		Args:  cobra.ExactArgs(1),
+		Use:   "reference <reference> [<reference>...]",
+		Args:  cobra.MinimumNArgs(1),
 		Short: "Query a reference",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, keys []string) error {
 			addr := viper.GetString(keyServerHost) + ":" +
 				strconv.FormatUint(uint64(viper.GetInt64(keyServerPort)), 10)
 
 			gs, err := client.GetGroups(logger, addr, api.Contents{
-				Refs: []string{args[0]},
+				Refs: keys,
 			})
 			if err != nil {
 				return errors.Wrap(err, "getting graph")
