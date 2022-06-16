@@ -39,15 +39,15 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		renderer                 string
 	)
 
-	trip := &cobra.Command{
-		Use:  "trip",
+	selection := &cobra.Command{
+		Use:  "selection",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			trip := args[0]
+			selection := args[0]
 
-			f, err := os.Open(trip)
+			f, err := os.Open(selection)
 			if err != nil {
-				return errors.Wrapf(err, "opening file at path:%q", trip)
+				return errors.Wrapf(err, "opening file at path:%q", selection)
 			}
 			seed, err := getContentsDefinitionSeed(f)
 			if err != nil {
@@ -69,15 +69,15 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		},
 	}
 
-	trip.Flags().String(keyServerHost, defaultAddr, "packing server host")
-	trip.Flags().Uint(keyServerPort, 3865, "packing server port")
-	trip.Flags().BoolVar(&includeEmptyParentGroups, "include-empty-parent-groups", false,
+	selection.Flags().String(keyServerHost, "", "packing server host")
+	selection.Flags().Uint(keyServerPort, 3865, "packing server port")
+	selection.Flags().BoolVar(&includeEmptyParentGroups, "include-empty-parent-groups", false,
 		"Provide this flag to render groups that consist only of groups.")
-	trip.Flags().BoolVar(&includeGroupReferences, "include-group-references", false,
+	selection.Flags().BoolVar(&includeGroupReferences, "include-group-references", false,
 		"Provide this flag to render references to groups that contain other groups.")
-	trip.Flags().StringVar(&renderer, keyRenderer, "html", "renderer to use: markdown or html")
-	cmd.MustBindPFlags(logger, trip)
-	rootCmd.AddCommand(trip)
+	selection.Flags().StringVar(&renderer, keyRenderer, "html", "renderer to use: markdown or html")
+	cmd.MustBindPFlags(logger, selection)
+	rootCmd.AddCommand(selection)
 
 	ref := &cobra.Command{
 		Use:   "reference <reference>",
