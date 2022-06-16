@@ -23,21 +23,17 @@ func ParseContentsDefinition(r io.Reader) (api.Contents, error) {
 	}
 
 	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
+	for lineNum := 1; scanner.Scan(); lineNum++ {
 		line := strings.TrimSpace(scanner.Text())
 		if err := p.Process(line); err != nil {
-			return api.Contents{}, errors.Wrapf(err, "processing line:%q", line)
+			return api.Contents{}, errors.Wrapf(err, "processing line %d: %q", lineNum, line)
 		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return api.Contents{}, errors.Wrap(err, "scanning lines")
 	}
 
 	return api.Contents{
 		Refs:  refs,
 		Items: itemNames,
-	}, nil
+	}, errors.Wrap(scanner.Err(), "scanning lines")
 }
 
 func emptyStringCheck(s string) (bool, error) {
