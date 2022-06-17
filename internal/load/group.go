@@ -46,18 +46,17 @@ func recursiveLoad(
 
 		cs, err := cg.GetContentsDefinition(ref)
 		if err != nil {
-			return errors.Wrapf(err, "getting group for ref:%q", ref)
+			return errors.Wrapf(err, "getting contents for ref:%q", ref)
 		}
 
 		if list.References(cs.Refs).Contains(ref) {
 			return SelfReferenceError(ref)
 		}
 
-		loaded[ref] = cs
-		if len(cs.Refs) == 0 {
-			continue
-		}
+		// TODO: handler getting requirements here
+
 		childReferences = append(childReferences, cs.Refs...)
+		loaded[ref] = cs
 	}
 	return recursiveLoad(childReferences, logger, cg, loaded)
 }

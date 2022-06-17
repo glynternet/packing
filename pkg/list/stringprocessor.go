@@ -46,21 +46,29 @@ func ItemNamesProcessor(items *Items) Processor {
 	}
 }
 
-// ReferenceParser generates a Processor that attempts to parse lines into api.Reference
-func ReferenceParser(names *[]string) Processor {
+// TaggedLineParser generates a Processor that attempts to parse lines into references and requirements
+func TaggedLineParser(refs *References, reqs *References) Processor {
 	return func(s string) (bool, error) {
 		i := strings.IndexRune(s, ':')
 		if i == -1 {
 			return false, nil
 		}
-		if tag := s[:i]; tag != referencePrefix {
+
+		tagValue := strings.TrimSpace(s[i+1:])
+		switch tag := s[:i]; tag {
+		case referencePrefix:
+			if tagValue == "" {
+				return false, errors.New("empty reference value")
+			}
+			*refs = append(*refs, tagValue)
+		case requirementPrefix:
+			if tagValue == "" {
+				return false, errors.New("empty requirement value")
+			}
+			*reqs = append(*reqs, tagValue)
+		default:
 			return false, fmt.Errorf("unsupported tag prefix: %q", tag)
 		}
-		name := strings.TrimSpace(s[i+1:])
-		if name == "" {
-			return false, errors.New("empty reference")
-		}
-		*names = append(*names, name)
 		return true, nil
 	}
 }

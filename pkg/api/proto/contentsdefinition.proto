@@ -8,4 +8,5 @@ import "reference.proto";
 message ContentsDefinition {
   repeated Reference references = 1;
   repeated Item items = 2;
+  repeated Reference requires = 3;
 }

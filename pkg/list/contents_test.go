@@ -68,11 +68,17 @@ func TestParseContentsDefinition(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("items and groups", func(t *testing.T) {
-		input := "foo\nref:foo\nbar\nref:bar"
+	t.Run("items, references, requirements", func(t *testing.T) {
+		input := `foo
+ref:foo
+bar
+req:baz
+ref:bar
+req:qux`
 		expected := api.Contents{
-			Items: list.Items{"foo", "bar"},
-			Refs:  list.References{"foo", "bar"},
+			Items:    list.Items{"foo", "bar"},
+			Refs:     list.References{"foo", "bar"},
+			Requires: list.References{"baz", "qux"},
 		}
 		actual, err := list.ParseContentsDefinition(strings.NewReader(input))
 		assert.NoError(t, err)
@@ -101,15 +107,21 @@ func TestParseContentsDefinition(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("reject line starting with tag that isn't ref", func(t *testing.T) {
+	t.Run("reject line starting with tag that isn't supported", func(t *testing.T) {
 		input := "no:foo"
 		_, err := list.ParseContentsDefinition(strings.NewReader(input))
 		assert.EqualError(t, err, `processing line 1: "no:foo": unsupported tag prefix: "no"`)
 	})
 
-	t.Run("reject line with reference tag prefix but empty reference", func(t *testing.T) {
+	t.Run("reject line with empty ref value", func(t *testing.T) {
 		input := "ref: "
 		_, err := list.ParseContentsDefinition(strings.NewReader(input))
-		assert.EqualError(t, err, `processing line 1: "ref:": empty reference`)
+		assert.EqualError(t, err, `processing line 1: "ref:": empty reference value`)
+	})
+
+	t.Run("reject line with empty req value", func(t *testing.T) {
+		input := "req: "
+		_, err := list.ParseContentsDefinition(strings.NewReader(input))
+		assert.EqualError(t, err, `processing line 1: "req:": empty requirement value`)
 	})
 }

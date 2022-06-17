@@ -10,15 +10,17 @@ import (
 )
 
 const referencePrefix = "ref"
+const requirementPrefix = "req"
 
 // ParseContentsDefinition loads the ContentsDefinition of a single list from a Reader
 func ParseContentsDefinition(r io.Reader) (api.Contents, error) {
-	var refs []string
+	var refs References
+	var reqs References
 	var itemNames Items
 	p := ProcessorGroup{
 		emptyStringCheck,
 		CommentProcessor(),
-		ReferenceParser(&refs),
+		TaggedLineParser(&refs, &reqs),
 		ItemNamesProcessor(&itemNames),
 	}
 
@@ -31,8 +33,9 @@ func ParseContentsDefinition(r io.Reader) (api.Contents, error) {
 	}
 
 	return api.Contents{
-		Refs:  refs,
-		Items: itemNames,
+		Refs:     refs,
+		Items:    itemNames,
+		Requires: reqs,
 	}, errors.Wrap(scanner.Err(), "scanning lines")
 }
 

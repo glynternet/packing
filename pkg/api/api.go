@@ -6,6 +6,7 @@ type Group struct {
 }
 
 type Contents struct {
-	Refs  []string `json:"refs"`
-	Items []string `json:"items"`
+	Refs     []string `json:"refs"`
+	Items    []string `json:"items"`
+	Requires []string `json:"requires"`
 }
