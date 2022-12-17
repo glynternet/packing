@@ -7,7 +7,10 @@ type Group struct {
 	ImportedBy []string
 }
 
-func (g Group) Has() bool {
-	return len(g.Group.Contents.Items) != 0 ||
-		len(g.Group.Contents.Refs) != 0
+func (g Group) HasContents() bool {
+	return g.HasItems() || len(g.Group.Contents.Refs) > 0
+}
+
+func (g Group) HasItems() bool {
+	return len(g.Group.Contents.Items) > 0
 }

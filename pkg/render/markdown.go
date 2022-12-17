@@ -27,6 +27,9 @@ func (r SortedMarkdownRenderer) Render(w io.Writer, gs []graph.Group) error {
 		if !g.HasContents() {
 			continue
 		}
+		if !g.HasItems() && !r.IncludeEmptyParentGroups {
+			continue
+		}
 		if err := r.group(w, g); err != nil {
 			return errors.Wrapf(err, "writing Group %v to writer", g)
 		}
