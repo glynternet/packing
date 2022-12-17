@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/glynternet/packing/pkg/api"
 	"github.com/glynternet/packing/pkg/client"
@@ -38,6 +40,8 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		includeGroupReferences   bool
 		renderer                 string
 	)
+
+	supportedRenderers, getRenderer := rendererFactory()
 
 	selection := &cobra.Command{
 		Use:  "selection",
@@ -75,7 +79,7 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		"Provide this flag to render groups that consist only of groups.")
 	selection.Flags().BoolVar(&includeGroupReferences, "include-group-references", false,
 		"Provide this flag to render references to groups that contain other groups.")
-	selection.Flags().StringVar(&renderer, keyRenderer, "html", "renderer to use: markdown or html")
+	selection.Flags().StringVar(&renderer, keyRenderer, "html", "renderer to use: "+strings.Join(supportedRenderers, ", "))
 	cmd.MustBindPFlags(logger, selection)
 	rootCmd.AddCommand(selection)
 
@@ -112,52 +116,66 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 
 type Renderer func(w io.Writer, group []graph.Group) error
 
-func getRenderer(renderer string, includeEmptyParentGroups, includeGroupReferences bool) (Renderer, error) {
-	switch renderer {
-	case "json":
-		return func(w io.Writer, groups []graph.Group) error {
-			out, err := json.Marshal(groups)
-			if err != nil {
-				return fmt.Errorf("marshaling response to json: %w", err)
-			}
+func rendererFactory() ([]string, func(renderer string, includeEmptyParentGroups, includeGroupReferences bool) (Renderer, error)) {
+	renderers := map[string]func(includeEmptyParentGroups, includeGroupReferences bool) (Renderer, error){
+		"json": func(includeEmptyParentGroups, includeGroupReferences bool) (Renderer, error) {
+			return func(w io.Writer, groups []graph.Group) error {
+				out, err := json.Marshal(groups)
+				if err != nil {
+					return fmt.Errorf("marshaling response to json: %w", err)
+				}
 
-			_, err = w.Write(out)
-			return errors.Wrap(err, "writing result to output")
-		}, nil
-	case "markdown":
-		return render.SortedMarkdownRenderer{
-			IncludeEmptyParentGroups: includeEmptyParentGroups,
-			IncludeGroupReferences:   includeGroupReferences,
-		}.Render, nil
-	case "html":
-		return func(w io.Writer, group []graph.Group) error {
-			var md bytes.Buffer
-			mdRenderer := render.SortedMarkdownRenderer{
+				_, err = w.Write(out)
+				return errors.Wrap(err, "writing result to output")
+			}, nil
+		},
+		"markdown": func(includeEmptyParentGroups, includeGroupReferences bool) (Renderer, error) {
+			return render.SortedMarkdownRenderer{
 				IncludeEmptyParentGroups: includeEmptyParentGroups,
 				IncludeGroupReferences:   includeGroupReferences,
-			}
-			if err := mdRenderer.Render(&md, group); err != nil {
-				return errors.Wrap(err, "rendering intermediate markdown")
-			}
+			}.Render, nil
+		},
+		"html": func(includeEmptyParentGroups, includeGroupReferences bool) (Renderer, error) {
+			return func(w io.Writer, group []graph.Group) error {
+				var md bytes.Buffer
+				mdRenderer := render.SortedMarkdownRenderer{
+					IncludeEmptyParentGroups: includeEmptyParentGroups,
+					IncludeGroupReferences:   includeGroupReferences,
+				}
+				if err := mdRenderer.Render(&md, group); err != nil {
+					return errors.Wrap(err, "rendering intermediate markdown")
+				}
 
-			extensions := parser.CommonExtensions | parser.AutoHeadingIDs
-			_, err := w.Write(markdown.ToHTML(md.Bytes(), parser.NewWithExtensions(extensions), nil))
-			return errors.Wrap(err, "writing html to writer")
-		}, nil
-	case "item-list":
-		return func(w io.Writer, groups []graph.Group) error {
-			for _, group := range groups {
-				groupPrefix := group.Group.Name + ":"
-				for _, item := range group.Group.Contents.Items {
-					if _, err := fmt.Fprintln(w, groupPrefix+item); err != nil {
-						return err
+				extensions := parser.CommonExtensions | parser.AutoHeadingIDs
+				_, err := w.Write(markdown.ToHTML(md.Bytes(), parser.NewWithExtensions(extensions), nil))
+				return errors.Wrap(err, "writing html to writer")
+			}, nil
+		},
+		"item-list": func(includeEmptyParentGroups, includeGroupReferences bool) (Renderer, error) {
+			return func(w io.Writer, groups []graph.Group) error {
+				for _, group := range groups {
+					groupPrefix := group.Group.Name + ":"
+					for _, item := range group.Group.Contents.Items {
+						if _, err := fmt.Fprintln(w, groupPrefix+item); err != nil {
+							return err
+						}
 					}
 				}
-			}
-			return nil
-		}, nil
+				return nil
+			}, nil
+		},
 	}
-	return nil, fmt.Errorf(`unsupported renderer:%q, supported renderers are "markdown", "html" and "item-list"`, renderer)
+	var supported []string
+	for renderer := range renderers {
+		supported = append(supported, renderer)
+	}
+	sort.Strings(supported)
+	return supported, func(renderer string, includeEmptyParentGroups, includeGroupReferences bool) (Renderer, error) {
+		if r, ok := renderers[renderer]; ok {
+			return r(includeEmptyParentGroups, includeGroupReferences)
+		}
+		return nil, fmt.Errorf(`unsupported renderer:%q, supported renderers are: %s`, renderer, strings.Join(supported, ", "))
+	}
 }
 
 func getContentsDefinitionSeed(rc io.ReadCloser) (api.Contents, error) {
