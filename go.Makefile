@@ -1,6 +1,7 @@
 # dubplate version: v0.10.1
 
 OUTBIN ?= $(BUILD_DIR)/$(APP_NAME)
+INSTALL_DIR ?= $(HOME)/bin
 
 VERSION_VAR ?= main.version
 LDFLAGS = -ldflags "-w -X $(VERSION_VAR)=$(VERSION)"
@@ -20,6 +21,14 @@ $(COMPONENTS:=-binary):
 	$(MAKE) binary \
 		APP_NAME=$(@:-binary=)
 
+install: binary
+	cp -v $(OUTBIN) $(INSTALL_DIR)/
+
+install-all: $(COMPONENTS:=-install)
+
+$(COMPONENTS:=-install):
+	$(MAKE) install \
+		APP_NAME=$(@:-install=)
 
 test-binary-version-output: VERSION_CMD ?= $(OUTBIN) version
 test-binary-version-output:
