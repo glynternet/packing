@@ -1,17 +1,12 @@
 package list
 
-import (
-	api "github.com/glynternet/packing/pkg/api/build"
-	"google.golang.org/protobuf/proto"
-)
-
 // Items is a set of api.Item
-type Items []*api.Item
+type Items []string
 
 // Contains returns true if the Items contains the given api.Item
-func (is Items) Contains(i *api.Item) bool {
+func (is Items) Contains(i string) bool {
 	for _, ii := range is {
-		if proto.Equal(ii, i) {
+		if i == ii {
 			return true
 		}
 	}

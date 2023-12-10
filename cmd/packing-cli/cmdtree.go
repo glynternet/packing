@@ -1,16 +1,14 @@
 package main
 
 import (
-	"context"
 	"io"
 	"os"
 	"strconv"
 
-	api "github.com/glynternet/packing/pkg/api/build"
+	"github.com/glynternet/packing/pkg/api"
 	"github.com/glynternet/packing/pkg/client"
 	"github.com/glynternet/packing/pkg/cmd"
 	"github.com/glynternet/packing/pkg/graph"
-	"github.com/glynternet/packing/pkg/grpc"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/pkg/render"
 	"github.com/glynternet/pkg/log"
@@ -43,13 +41,7 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 			}
 			addr := viper.GetString(keyServerHost) + ":" +
 				strconv.FormatUint(uint64(viper.GetInt64(keyServerPort)), 10)
-
-			conn, err := grpc.GetGRPCConnection(addr)
-			if err != nil {
-				return errors.Wrapf(err, "getting new GRPC connection for %q", addr)
-			}
-
-			gs, err := client.GetGroups(context.Background(), conn, seed)
+			gs, err := client.GetGroups(logger, addr, seed)
 			if err != nil {
 				return errors.Wrap(err, "getting graph")
 			}
@@ -58,16 +50,16 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		},
 	}
 
-	trip.Flags().String(keyServerHost, "", "packing server host")
+	trip.Flags().String(keyServerHost, "http://localhost", "packing server host")
 	trip.Flags().Uint(keyServerPort, 3865, "packing server port")
 	cmd.MustBindPFlags(logger, trip)
 	rootCmd.AddCommand(trip)
 }
 
-func getContentsDefinitionSeed(rc io.ReadCloser) (*api.ContentsDefinition, error) {
+func getContentsDefinitionSeed(rc io.ReadCloser) (api.Contents, error) {
 	root, err := list.ParseContentsDefinition(rc)
 	if err != nil {
-		return &api.ContentsDefinition{}, errors.Wrap(err, "parsing contents definition")
+		return api.Contents{}, errors.Wrap(err, "parsing contents definition")
 	}
 	return root, errors.Wrap(rc.Close(), "closing route definition reader")
 }

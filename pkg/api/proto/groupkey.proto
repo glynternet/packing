@@ -1,7 +1,0 @@
-syntax = "proto3";
-package api;
-option go_package = "api/build";
-
-message GroupKey {
-  string key = 1;
-}

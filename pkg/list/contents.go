@@ -6,37 +6,16 @@ import (
 	"io"
 	"strings"
 
-	api "github.com/glynternet/packing/pkg/api/build"
+	"github.com/glynternet/packing/pkg/api"
 	"github.com/pkg/errors"
 )
 
+const groupNamePrefix = "ref:"
+
 // ParseContentsDefinition loads the ContentsDefinition of a single list from a Reader
-func ParseContentsDefinition(r io.Reader) (*api.ContentsDefinition, error) {
-	lines, err := readAllLines(r)
-	if err != nil {
-		return &api.ContentsDefinition{}, errors.Wrap(err, "reading lines")
-	}
-
-	cs, err := processLines(lines)
-	err = errors.Wrap(err, "processing lines")
-	return &cs, err
-}
-
-func readAllLines(r io.Reader) ([]string, error) {
-	scanner := bufio.NewScanner(r)
-	var lines []string
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		lines = append(lines, line)
-	}
-	return lines, errors.Wrap(scanner.Err(), "scanning lines")
-}
-
-func processLines(lines []string) (api.ContentsDefinition, error) {
-	const groupNamePrefix = "group:"
+func ParseContentsDefinition(r io.Reader) (api.Contents, error) {
 	var groupNames GroupKeys
 	var itemNames Items
-
 	p := ProcessorGroup{
 		emptyStringCheck,
 		CommentProcessor(),
@@ -44,14 +23,20 @@ func processLines(lines []string) (api.ContentsDefinition, error) {
 		ItemNamesProcessor(&itemNames),
 	}
 
-	for _, line := range lines {
-		err := p.Process(line)
-		if err != nil {
-			return api.ContentsDefinition{}, errors.Wrapf(err, "processing line:%q", line)
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		if err := p.Process(line); err != nil {
+			return api.Contents{}, errors.Wrapf(err, "processing line:%q", line)
 		}
 	}
 
-	return api.ContentsDefinition{
+	if err := scanner.Err(); err != nil {
+		return api.Contents{}, errors.Wrap(err, "scanning lines")
+	}
+
+	return api.Contents{
 		GroupKeys: groupNames,
 		Items:     itemNames,
 	}, nil

@@ -1,11 +1,9 @@
 package graph
 
-import (
-	api "github.com/glynternet/packing/pkg/api/build"
-)
+import "github.com/glynternet/packing/pkg/api"
 
 type Group struct {
-	Group      *api.Group
+	Group      api.Group
 	ImportedBy []string
 }
 

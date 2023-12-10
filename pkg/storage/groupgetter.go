@@ -3,7 +3,7 @@ package storage
 import (
 	"io"
 
-	api "github.com/glynternet/packing/pkg/api/build"
+	"github.com/glynternet/packing/pkg/api"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/pkg/log"
 	"github.com/pkg/errors"
@@ -16,13 +16,13 @@ type ContentsDefinitionGetter struct {
 }
 
 // ReadCloserGetter gets an io.ReadCloser for a given api.GroupKey
-type ReadCloserGetter func(key *api.GroupKey) (io.ReadCloser, error)
+type ReadCloserGetter func(key string) (io.ReadCloser, error)
 
 // GetContentsDefinition gets a api.ContentsDefinition fir a given api.GroupKey
-func (gg ContentsDefinitionGetter) GetContentsDefinition(key *api.GroupKey) (*api.ContentsDefinition, error) {
+func (gg ContentsDefinitionGetter) GetContentsDefinition(key string) (api.Contents, error) {
 	rc, err := gg.GetReadCloser(key)
 	if err != nil {
-		return nil, errors.Wrapf(err, "getting ReadCloser for key:%v", key)
+		return api.Contents{}, errors.Wrapf(err, "getting ReadCloser for key:%v", key)
 	}
 
 	defer func() {
