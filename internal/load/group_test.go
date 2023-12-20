@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/glynternet/packing/internal/load"
-	api "github.com/glynternet/packing/pkg/api/build"
+	"github.com/glynternet/packing/pkg/api"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/pkg/log"
 	"github.com/pkg/errors"
@@ -21,36 +21,36 @@ func TestGroups(t *testing.T) {
 
 	logger := log.NewLogger(&bytes.Buffer{})
 
-	t.Run("single key missing in getter", func(t *testing.T) {
-		keys := list.GroupKeys{{Key: "foo"}}
+	t.Run("single key empty returns contents", func(t *testing.T) {
+		keys := list.GroupKeys{"foo"}
 		store := mockContentsGetter{}
-		var expected []*api.Group
+		expected := []api.Group{{Name: "foo"}}
 		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
 		assert.NoError(t, err)
 		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("single key error in getter", func(t *testing.T) {
-		keys := list.GroupKeys{{Key: "foo"}}
+		keys := list.GroupKeys{"foo"}
 		expectedErr := errors.New("test error")
 		store := mockContentsGetter{error: expectedErr}
-		var expected []*api.Group
+		var expected []api.Group
 		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
 		assert.Equal(t, expectedErr, errors.Cause(err))
 		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("single key exists", func(t *testing.T) {
-		keys := list.GroupKeys{{Key: "foo"}}
+		keys := list.GroupKeys{"foo"}
 		store := mockContentsGetter{
-			groups: map[string]api.ContentsDefinition{
-				"foo": {Items: list.Items{{Name: "fooItem"}}},
-				"bar": {Items: list.Items{{Name: "barItem"}}},
+			groups: map[string]api.Contents{
+				"foo": {Items: list.Items{"fooItem"}},
+				"bar": {Items: list.Items{"barItem"}},
 			},
 		}
-		expected := []*api.Group{{
+		expected := []api.Group{{
 			Name:     "foo",
-			Contents: &api.ContentsDefinition{Items: list.Items{{Name: "fooItem"}}}},
+			Contents: api.Contents{Items: list.Items{"fooItem"}}},
 		}
 		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
 		assert.NoError(t, err)
@@ -59,10 +59,10 @@ func TestGroups(t *testing.T) {
 
 	t.Run("single key containing self group reference", func(t *testing.T) {
 		// currently completes but will probably cause a bug when changing the way that groups are loaded
-		keys := list.GroupKeys{{Key: "foo"}}
+		keys := list.GroupKeys{"foo"}
 		store := mockContentsGetter{
-			groups: map[string]api.ContentsDefinition{
-				"foo": {GroupKeys: list.GroupKeys{{Key: "foo"}}},
+			groups: map[string]api.Contents{
+				"foo": {GroupKeys: list.GroupKeys{"foo"}},
 			},
 		}
 		actual, err := load.Loader{ContentsDefinitionGetter: store}.Groups(logger, keys)
@@ -72,14 +72,11 @@ func TestGroups(t *testing.T) {
 }
 
 type mockContentsGetter struct {
-	groups map[string]api.ContentsDefinition
+	groups map[string]api.Contents
 	error
 }
 
-func (mgg mockContentsGetter) GetContentsDefinition(key *api.GroupKey) (*api.ContentsDefinition, error) {
-	g, ok := mgg.groups[key.Key]
-	if !ok {
-		return nil, mgg.error
-	}
-	return &g, mgg.error
+func (mgg mockContentsGetter) GetContentsDefinition(key string) (api.Contents, error) {
+	g := mgg.groups[key]
+	return g, mgg.error
 }

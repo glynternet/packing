@@ -47,12 +47,12 @@ func (r SortedMarkdownRenderer) group(g graph.Group) error {
 	if err := r.includedIns(g.ImportedBy); err != nil {
 		return errors.Wrapf(err, "writing ImportedBy %q to writer", g.ImportedBy)
 	}
-	includes := list.GroupKeys(g.Group.GetContents().GetGroupKeys()).Strings()
+	includes := list.GroupKeys(g.Group.Contents.GroupKeys)
 	if err := r.includes(includes); err != nil {
 		return errors.Wrapf(err, "writing includes %q to writer", includes)
 	}
 	for _, item := range g.Group.Contents.Items {
-		if err := r.item(item.Name); err != nil {
+		if err := r.item(item); err != nil {
 			return errors.Wrapf(err, "writing Item %v to writer", item)
 		}
 	}

@@ -3,3 +3,5 @@
 build
 *.pb.go
 !vendor/**
+elm-stuff
+node_modules
