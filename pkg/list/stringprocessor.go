@@ -72,14 +72,3 @@ func TaggedLineParser(refs *References, reqs *References) Processor {
 		return true, nil
 	}
 }
-
-// CommentProcessor generates a Processor that parses comment lines, returning an error if the given line is not a
-// comment
-func CommentProcessor() Processor {
-	return func(s string) (bool, error) {
-		if strings.HasPrefix(strings.TrimSpace(s), "#") {
-			return true, nil
-		}
-		return false, nil
-	}
-}

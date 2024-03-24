@@ -19,14 +19,17 @@ func ParseContentsDefinition(r io.Reader) (api.Contents, error) {
 	var itemNames Items
 	p := ProcessorGroup{
 		emptyStringCheck,
-		CommentProcessor(),
 		TaggedLineParser(&refs, &reqs),
 		ItemNamesProcessor(&itemNames),
 	}
 
 	scanner := bufio.NewScanner(r)
 	for lineNum := 1; scanner.Scan(); lineNum++ {
-		line := strings.TrimSpace(scanner.Text())
+		line := scanner.Text()
+		if commentStart := strings.IndexRune(line, '#'); commentStart != -1 {
+			line = line[:commentStart]
+		}
+		line = strings.TrimSpace(line)
 		if err := p.Process(line); err != nil {
 			return api.Contents{}, errors.Wrapf(err, "processing line %d: %q", lineNum, line)
 		}

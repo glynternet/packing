@@ -28,6 +28,16 @@ func TestParseContentsDefinition(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
+	t.Run("single item with following comment", func(t *testing.T) {
+		input := `foo # this is my comment yo`
+		expected := api.Contents{
+			Items: list.Items{"foo"},
+		}
+		actual, err := list.ParseContentsDefinition(strings.NewReader(input))
+		assert.NoError(t, err)
+		assert.Equal(t, expected, actual)
+	})
+
 	t.Run("trims space before input", func(t *testing.T) {
 		input := `	foo  `
 		expected := api.Contents{
