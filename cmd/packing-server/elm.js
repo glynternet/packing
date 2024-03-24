@@ -5584,17 +5584,17 @@ var $author$project$Main$init = function (flags) {
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $author$project$Main$contentsDef = {
-	groupKeys: _List_fromArray(
-		['battery_pack', 'board_games', 'camera', 'clothing', 'clothing_bottoms', 'clothing_cold', 'clothing_general', 'clothing_gym', 'clothing_hot', 'clothing_shoes', 'clothing_sunny', 'clothing_tops', 'clothing_underwear', 'clothing_wet', 'cycling_bike', 'cycling_clothing', 'cycling_clothing_cold', 'cycling_clothing_essential', 'cycling_clothing_mild', 'cycling_fluids', 'cycling_food', 'cycling_garmin', 'cycling_guest_bike', 'cycling_lights', 'cycling_lock', 'cycling_tools_ride', 'cycling_tools_workshop_portable', 'earplugs', 'flight', 'hiking', 'hiking_boots_socks', 'hygene_essentials', 'hygene_teeth_essentials', 'hygene_teeth_medium_or_longtrip', 'keyboard_mouse', 'keys_phone_wallet', 'laptop', 'music_player', 'outdoors', 'phone', 'phone_accessories', 'phone_and_accessories', 'remote_workstation', 'smart_watch', 'sun', 'sunglasses', 'sunscreen', 'swimming_shorts', 'towel', 'travel_documents', 'travel_utils', 'water_bottle', 'work_remotely_essentials']),
 	items: _List_fromArray(
-		['Shave before going', 'Change cassette before going', 'Power meter medals', 'Bart card'])
+		['Shave before going', 'Change cassette before going', 'Power meter medals', 'Bart card']),
+	refs: _List_fromArray(
+		['battery_pack', 'board_games', 'camera', 'clothing', 'clothing_bottoms', 'clothing_cold', 'clothing_general', 'clothing_gym', 'clothing_hot', 'clothing_shoes', 'clothing_sunny', 'clothing_tops', 'clothing_underwear', 'clothing_wet', 'cycling_bike', 'cycling_clothing', 'cycling_clothing_cold', 'cycling_clothing_essential', 'cycling_clothing_mild', 'cycling_fluids', 'cycling_food', 'cycling_garmin', 'cycling_guest_bike', 'cycling_lights', 'cycling_lock', 'cycling_tools_ride', 'cycling_tools_workshop_portable', 'earplugs', 'flight', 'hiking', 'hiking_boots_socks', 'hygene_essentials', 'hygene_teeth_essentials', 'hygene_teeth_medium_or_longtrip', 'keyboard_mouse', 'keys_phone_wallet', 'laptop', 'music_player', 'outdoors', 'phone', 'phone_accessories', 'phone_and_accessories', 'remote_workstation', 'smart_watch', 'sun', 'sunglasses', 'sunscreen', 'swimming_shorts', 'towel', 'travel_documents', 'travel_utils', 'water_bottle', 'work_remotely_essentials'])
 };
 var $author$project$Main$FetchedResults = function (a) {
 	return {$: 'FetchedResults', a: a};
 };
 var $author$project$Main$ContentsDefinition = F2(
-	function (groupKeys, items) {
-		return {groupKeys: groupKeys, items: items};
+	function (refs, items) {
+		return {items: items, refs: refs};
 	});
 var $author$project$Main$Group = F2(
 	function (name, contents) {
@@ -5620,7 +5620,7 @@ var $author$project$Main$decodeGroups = $elm$json$Json$Decode$list(
 				$author$project$Main$ContentsDefinition,
 				A2(
 					$elm$json$Json$Decode$field,
-					'group_keys',
+					'refs',
 					A2(
 						$author$project$Main$decodedWithNullAsDefault,
 						_List_Nil,
@@ -6278,8 +6278,8 @@ var $author$project$Main$encodeContentsDefinition = function (def) {
 		_List_fromArray(
 			[
 				_Utils_Tuple2(
-				'group_keys',
-				A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, def.groupKeys)),
+				'refs',
+				A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, def.refs)),
 				_Utils_Tuple2(
 				'items',
 				A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, def.items))
@@ -6730,7 +6730,7 @@ var $author$project$Main$view = function (model) {
 																items);
 														} else {
 															var groupDisplayContents = _Utils_ap(
-																($elm$core$List$isEmpty(group.contents.groupKeys) || (!model.showGroups)) ? _List_Nil : _Utils_ap(
+																($elm$core$List$isEmpty(group.contents.refs) || (!model.showGroups)) ? _List_Nil : _Utils_ap(
 																	_List_fromArray(
 																		[
 																			A2(
@@ -6752,7 +6752,7 @@ var $author$project$Main$view = function (model) {
 																						$elm$html$Html$text(key)
 																					]));
 																		},
-																		group.contents.groupKeys)),
+																		group.contents.refs)),
 																$elm$core$List$isEmpty(items) ? _List_Nil : _Utils_ap(
 																	_List_fromArray(
 																		[
