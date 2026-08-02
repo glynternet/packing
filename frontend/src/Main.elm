@@ -1,7 +1,7 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, a, button, div, h3, h4, p, text, textarea)
+import Html exposing (Html, a, button, div, h3, h4, p, span, text, textarea)
 import Html.Attributes exposing (href, id, rows, style, value)
 import Html.Events exposing (onClick, onInput)
 import Http
@@ -41,7 +41,6 @@ type alias StoredState =
 type alias Model =
     { fetchResults : Maybe (List Group)
     , viewMode : ViewMode
-    , error : Maybe String
     , done : Set.Set String
 
     -- showGroupLinks mirrors the CLI's --include-group-references: show the links
@@ -57,12 +56,22 @@ type alias Model =
     -- requestId tags each in-flight fetch so out-of-order responses (e.g. while
     -- typing quickly) can be discarded; only the latest request's result is used.
     , requestId : Int
+
+    -- renderStatus reflects the outcome of the most recent /selection/ request,
+    -- surfaced as a marker next to the Selection header.
+    , renderStatus : RenderStatus
     }
 
 
 type ViewMode
     = ToDo
     | Done
+
+
+type RenderStatus
+    = Rendering
+    | Rendered
+    | RenderFailed String
 
 
 plzResult : Result x x -> x
@@ -149,13 +158,13 @@ defaultModel : Model
 defaultModel =
     { fetchResults = Nothing
     , viewMode = ToDo
-    , error = Nothing
     , done = Set.empty
     , showGroupLinks = False
     , showContainerGroups = False
     , itemsOnly = 0
     , selectionText = defaultSelectionText
     , requestId = 0
+    , renderStatus = Rendering
     }
 
 
@@ -166,7 +175,8 @@ init flags =
             flags.state
                 |> Maybe.map
                     (Json.Decode.decodeString storedStateDecoder
-                        >> Result.mapError (\err -> { defaultModel | error = Just ("Init decode error: " ++ Json.Decode.errorToString err) })
+                        -- On corrupt stored state, fall back to defaults.
+                        >> Result.mapError (\_ -> defaultModel)
                         >> Result.map
                             (\stored ->
                                 { defaultModel
@@ -210,7 +220,7 @@ update msg model =
                     model.requestId + 1
 
                 newModel =
-                    { model | selectionText = selectionText, requestId = newId }
+                    { model | selectionText = selectionText, requestId = newId, renderStatus = Rendering }
             in
             ( newModel
             , Cmd.batch
@@ -227,11 +237,11 @@ update msg model =
             else
                 ( case res of
                     Ok groups ->
-                        { model | error = Nothing, fetchResults = Just groups }
+                        { model | fetchResults = Just groups, renderStatus = Rendered }
 
                     Err err ->
-                        -- Keep the last good render visible while showing the error.
-                        { model | error = Just err }
+                        -- Keep the last good render visible; the marker shows the error.
+                        { model | renderStatus = RenderFailed err }
                 , Cmd.none
                 )
 
@@ -306,7 +316,8 @@ view model =
             , style "padding" "1rem"
             ]
             [ div [ style "flex" "1 1 0" ]
-                [ h3 [] [ text "Selection" ]
+                [ h3 [] [ text "Selection ", renderStatusBadge model.renderStatus ]
+                , renderStatusMessage model.renderStatus
                 , p [] [ text "Edit your selection below. Copy the text out to save it." ]
                 , textarea
                     [ value model.selectionText
@@ -327,6 +338,34 @@ view model =
     }
 
 
+{-| A small marker shown next to the "Selection" header reflecting the outcome
+of the most recent /selection/ request.
+-}
+renderStatusBadge : RenderStatus -> Html msg
+renderStatusBadge status =
+    case status of
+        Rendering ->
+            span [ Html.Attributes.title "Rendering…" ] [ text "⏳" ]
+
+        Rendered ->
+            span [ Html.Attributes.title "Rendered successfully" ] [ text "✅" ]
+
+        RenderFailed _ ->
+            span [ Html.Attributes.title "Render failed", style "color" "red" ] [ text "❌" ]
+
+
+{-| On failure, the render error message shown under the header; nothing otherwise.
+-}
+renderStatusMessage : RenderStatus -> Html msg
+renderStatusMessage status =
+    case status of
+        RenderFailed err ->
+            p [ style "color" "red" ] [ text err ]
+
+        _ ->
+            text ""
+
+
 controlsView : Model -> Html Msg
 controlsView model =
     div []
@@ -345,21 +384,15 @@ controlsView model =
 
 resultsView : Model -> Html Msg
 resultsView model =
+    -- Errors are surfaced by the render-status marker next to the Selection
+    -- header, so this panel only shows the last successfully rendered groups.
     div []
-        (List.concat
-            [ case model.error of
-                Just err ->
-                    [ p [ style "color" "red" ] [ text err ] ]
+        (case model.fetchResults of
+            Nothing ->
+                [ text "Editing selection…" ]
 
-                Nothing ->
-                    []
-            , case model.fetchResults of
-                Nothing ->
-                    [ text "Editing selection…" ]
-
-                Just groups ->
-                    groupsView model groups
-            ]
+            Just groups ->
+                groupsView model groups
         )
 
 

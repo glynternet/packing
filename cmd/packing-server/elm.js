@@ -5342,6 +5342,7 @@ var $elm$core$Basics$composeR = F3(
 			f(x));
 	});
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
+var $author$project$Main$Rendering = {$: 'Rendering'};
 var $author$project$Main$ToDo = {$: 'ToDo'};
 var $author$project$Main$defaultSelectionText = 'ref: battery_pack\nref: board_games\nref: camera\nref: clothing\nref: clothing_bottoms\nref: clothing_cold\nref: clothing_general\nref: clothing_gym\nref: clothing_hot\nref: clothing_shoes\nref: clothing_sunny\nref: clothing_tops\nref: clothing_underwear\nref: clothing_wet\nref: cycling_bike\nref: cycling_clothing\nref: cycling_clothing_cold\nref: cycling_clothing_essential\nref: cycling_clothing_mild\nref: cycling_fluids\nref: cycling_food\nref: cycling_garmin\nref: cycling_guest_bike\nref: cycling_lights\nref: cycling_lock\nref: cycling_tools_ride\nref: cycling_tools_workshop_portable\nref: earplugs\nref: flight\nref: hiking\nref: hiking_boots_socks\nref: hygene_essentials\nref: hygene_teeth_essentials\nref: hygene_teeth_medium_or_longtrip\nref: keyboard_mouse\nref: keys_phone_wallet\nref: laptop\nref: music_player\nref: outdoors\nref: phone\nref: phone_accessories\nref: phone_and_accessories\nref: remote_workstation\nref: smart_watch\nref: sun\nref: sunglasses\nref: sunscreen\nref: swimming_shorts\nref: towel\nref: travel_documents\nref: travel_utils\nref: water_bottle\nref: work_remotely_essentials\n\nShave before going\nChange cassette before going\n\n# Add this to some group\nPower meter medals\n\n# Add this to Bay Area location\nBart card\n';
 var $elm$core$Set$Set_elm_builtin = function (a) {
@@ -5350,7 +5351,7 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, error: $elm$core$Maybe$Nothing, fetchResults: $elm$core$Maybe$Nothing, itemsOnly: 0, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, viewMode: $author$project$Main$ToDo};
+var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, fetchResults: $elm$core$Maybe$Nothing, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, viewMode: $author$project$Main$ToDo};
 var $author$project$Main$FetchedResults = F2(
 	function (a, b) {
 		return {$: 'FetchedResults', a: a, b: b};
@@ -6264,13 +6265,8 @@ var $author$project$Main$init = function (flags) {
 				A2(
 					$elm$core$Basics$composeR,
 					$elm$core$Result$mapError(
-						function (err) {
-							return _Utils_update(
-								$author$project$Main$defaultModel,
-								{
-									error: $elm$core$Maybe$Just(
-										'Init decode error: ' + $elm$json$Json$Decode$errorToString(err))
-								});
+						function (_v0) {
+							return $author$project$Main$defaultModel;
 						}),
 					A2(
 						$elm$core$Basics$composeR,
@@ -6294,6 +6290,10 @@ var $author$project$Main$init = function (flags) {
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $author$project$Main$RenderFailed = function (a) {
+	return {$: 'RenderFailed', a: a};
+};
+var $author$project$Main$Rendered = {$: 'Rendered'};
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Basics$neq = _Utils_notEqual;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
@@ -6361,7 +6361,7 @@ var $author$project$Main$update = F2(
 				var newId = model.requestId + 1;
 				var newModel = _Utils_update(
 					model,
-					{requestId: newId, selectionText: selectionText});
+					{renderStatus: $author$project$Main$Rendering, requestId: newId, selectionText: selectionText});
 				return _Utils_Tuple2(
 					newModel,
 					$elm$core$Platform$Cmd$batch(
@@ -6381,15 +6381,15 @@ var $author$project$Main$update = F2(
 							return _Utils_update(
 								model,
 								{
-									error: $elm$core$Maybe$Nothing,
-									fetchResults: $elm$core$Maybe$Just(groups)
+									fetchResults: $elm$core$Maybe$Just(groups),
+									renderStatus: $author$project$Main$Rendered
 								});
 						} else {
 							var err = res.a;
 							return _Utils_update(
 								model,
 								{
-									error: $elm$core$Maybe$Just(err)
+									renderStatus: $author$project$Main$RenderFailed(err)
 								});
 						}
 					}(),
@@ -6593,6 +6593,77 @@ var $elm$html$Html$Events$onInput = function (tagger) {
 			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
 };
 var $elm$html$Html$p = _VirtualDom_node('p');
+var $elm$html$Html$span = _VirtualDom_node('span');
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
+var $author$project$Main$renderStatusBadge = function (status) {
+	switch (status.$) {
+		case 'Rendering':
+			return A2(
+				$elm$html$Html$span,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$title('Rendering…')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('⏳')
+					]));
+		case 'Rendered':
+			return A2(
+				$elm$html$Html$span,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$title('Rendered successfully')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('✅')
+					]));
+		default:
+			return A2(
+				$elm$html$Html$span,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$title('Render failed'),
+						A2($elm$html$Html$Attributes$style, 'color', 'red')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('❌')
+					]));
+	}
+};
+var $author$project$Main$renderStatusMessage = function (status) {
+	if (status.$ === 'RenderFailed') {
+		var err = status.a;
+		return A2(
+			$elm$html$Html$p,
+			_List_fromArray(
+				[
+					A2($elm$html$Html$Attributes$style, 'color', 'red')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text(err)
+				]));
+	} else {
+		return $elm$html$Html$text('');
+	}
+};
+var $author$project$Main$ItemDone = F2(
+	function (a, b) {
+		return {$: 'ItemDone', a: a, b: b};
+	});
+var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$core$List$append = F2(
 	function (xs, ys) {
 		if (!ys.b) {
@@ -6604,11 +6675,6 @@ var $elm$core$List$append = F2(
 var $elm$core$List$concat = function (lists) {
 	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
 };
-var $author$project$Main$ItemDone = F2(
-	function (a, b) {
-		return {$: 'ItemDone', a: a, b: b};
-	});
-var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
 		return A3(
@@ -6621,13 +6687,6 @@ var $elm$core$List$filter = F2(
 			list);
 	});
 var $elm$html$Html$h4 = _VirtualDom_node('h4');
-var $elm$html$Html$Attributes$stringProperty = F2(
-	function (key, string) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$string(string));
-	});
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
 		$elm$html$Html$Attributes$stringProperty,
@@ -6708,8 +6767,6 @@ var $elm$core$List$sortBy = _List_sortBy;
 var $elm$core$List$sort = function (xs) {
 	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
 };
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $author$project$Main$groupsView = F2(
 	function (model, groups) {
 		var parentsOf = function (name) {
@@ -6927,43 +6984,18 @@ var $author$project$Main$resultsView = function (model) {
 	return A2(
 		$elm$html$Html$div,
 		_List_Nil,
-		$elm$core$List$concat(
-			_List_fromArray(
-				[
-					function () {
-					var _v0 = model.error;
-					if (_v0.$ === 'Just') {
-						var err = _v0.a;
-						return _List_fromArray(
-							[
-								A2(
-								$elm$html$Html$p,
-								_List_fromArray(
-									[
-										A2($elm$html$Html$Attributes$style, 'color', 'red')
-									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text(err)
-									]))
-							]);
-					} else {
-						return _List_Nil;
-					}
-				}(),
-					function () {
-					var _v1 = model.fetchResults;
-					if (_v1.$ === 'Nothing') {
-						return _List_fromArray(
-							[
-								$elm$html$Html$text('Editing selection…')
-							]);
-					} else {
-						var groups = _v1.a;
-						return A2($author$project$Main$groupsView, model, groups);
-					}
-				}()
-				])));
+		function () {
+			var _v0 = model.fetchResults;
+			if (_v0.$ === 'Nothing') {
+				return _List_fromArray(
+					[
+						$elm$html$Html$text('Editing selection…')
+					]);
+			} else {
+				var groups = _v0.a;
+				return A2($author$project$Main$groupsView, model, groups);
+			}
+		}());
 };
 var $elm$html$Html$Attributes$rows = function (n) {
 	return A2(
@@ -7001,8 +7033,10 @@ var $author$project$Main$view = function (model) {
 								_List_Nil,
 								_List_fromArray(
 									[
-										$elm$html$Html$text('Selection')
+										$elm$html$Html$text('Selection '),
+										$author$project$Main$renderStatusBadge(model.renderStatus)
 									])),
+								$author$project$Main$renderStatusMessage(model.renderStatus),
 								A2(
 								$elm$html$Html$p,
 								_List_Nil,
