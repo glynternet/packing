@@ -14,6 +14,7 @@ import (
 	"github.com/glynternet/packing/internal/service"
 	"github.com/glynternet/packing/pkg/api"
 	"github.com/glynternet/packing/pkg/cmd"
+	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/pkg/storage"
 	"github.com/glynternet/packing/pkg/storage/file"
 	"github.com/glynternet/pkg/log"
@@ -69,8 +70,9 @@ func buildCmdTree(logger log.Logger, _ io.Writer, rootCmd *cobra.Command) {
 The server hosts a directory of reusable group files (--groups-dir), where
 each file's name is the key used to reference it (ref:<name>). It exposes:
 
-  POST /groups/   expand a selection into a full set of groups
-  GET  /          the Elm web UI (also /index.html and /elm.js)
+  POST /groups/     expand a selection (JSON api.Contents) into a full set of groups
+  POST /selection/  expand a selection (raw text, as a selection file) into groups
+  GET  /            the Elm web UI (also /index.html and /elm.js)
 
 Point packing-cli at this server with --server-host / --server-port.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -139,39 +141,33 @@ func serve(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error),
 			return
 		}
 
-		apiGroups, err := getGroups(contentsDefinition)
+		writeGroups(logger, writer, getGroups, contentsDefinition)
+	})
+	// /selection/ accepts a raw selection in the same text format as a selection
+	// file (ref:/req: tags, plain lines as items, # comments) and expands it into
+	// the full set of groups. Parsing is done server-side via
+	// list.ParseContentsDefinition so the web UI and the CLI share one definition
+	// of the format.
+	serveMux.HandleFunc("/selection/", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodPost {
+			_ = log.Error(logger, log.Message("Unsupported method"), log.KV{K: "url", V: request.URL}, log.KV{K: "method", V: request.Method})
+			writer.WriteHeader(http.StatusMethodNotAllowed)
+			_, _ = writer.Write([]byte("Only POST supported"))
+			return
+		}
+
+		_ = logger.Log(log.Message("Handling selection"), log.KV{K: "path", V: request.URL})
+
+		seed, err := list.ParseContentsDefinition(request.Body)
 		if err != nil {
-			_ = log.Error(logger, log.Message("Error getting groups"), log.ErrorMessage(err))
-			err = fmt.Errorf("error getting groups: %w", err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			_ = log.Error(logger, log.Message("Error parsing selection body"), log.ErrorMessage(err))
+			err = fmt.Errorf("cannot parse selection: %w", err)
+			writer.WriteHeader(http.StatusBadRequest)
 			_, _ = writer.Write([]byte(err.Error()))
 			return
 		}
 
-		groups := []api.Group{}
-		for _, apiGroup := range apiGroups {
-			var refs []string
-			for _, key := range apiGroup.Contents.Refs {
-				refs = append(refs, key)
-			}
-			var items []string
-			for _, item := range apiGroup.Contents.Items {
-				items = append(items, item)
-			}
-			groups = append(groups, api.Group{
-				Name: apiGroup.Name,
-				Contents: api.Contents{
-					Refs:  refs,
-					Items: items,
-				},
-			})
-		}
-
-		if err := json.NewEncoder(writer).Encode(groups); err != nil {
-			_ = log.Error(logger, log.Message("Error writing json response"), log.ErrorMessage(err))
-		} else {
-			_ = logger.Log(log.Message("Successfully served"), log.KV{K: "groups", V: groups})
-		}
+		writeGroups(logger, writer, getGroups, seed)
 	})
 	serveMux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		writeStaticContent(logger, w, []byte(index))
@@ -197,6 +193,45 @@ func serve(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error),
 			log.ErrorMessage(err))
 	}
 	return sErr
+}
+
+// writeGroups expands the given seed into its full set of groups and writes them
+// to writer as JSON. It is shared by the /groups/ (JSON body) and /selection/
+// (text body) handlers, which differ only in how they obtain the seed.
+func writeGroups(logger log.Logger, writer http.ResponseWriter, getGroups func(api.Contents) ([]api.Group, error), seed api.Contents) {
+	apiGroups, err := getGroups(seed)
+	if err != nil {
+		_ = log.Error(logger, log.Message("Error getting groups"), log.ErrorMessage(err))
+		err = fmt.Errorf("error getting groups: %w", err)
+		writer.WriteHeader(http.StatusInternalServerError)
+		_, _ = writer.Write([]byte(err.Error()))
+		return
+	}
+
+	groups := []api.Group{}
+	for _, apiGroup := range apiGroups {
+		var refs []string
+		for _, key := range apiGroup.Contents.Refs {
+			refs = append(refs, key)
+		}
+		var items []string
+		for _, item := range apiGroup.Contents.Items {
+			items = append(items, item)
+		}
+		groups = append(groups, api.Group{
+			Name: apiGroup.Name,
+			Contents: api.Contents{
+				Refs:  refs,
+				Items: items,
+			},
+		})
+	}
+
+	if err := json.NewEncoder(writer).Encode(groups); err != nil {
+		_ = log.Error(logger, log.Message("Error writing json response"), log.ErrorMessage(err))
+	} else {
+		_ = logger.Log(log.Message("Successfully served"), log.KV{K: "groups", V: groups})
+	}
 }
 
 func writeStaticContent(logger log.Logger, writer http.ResponseWriter, content []byte) {

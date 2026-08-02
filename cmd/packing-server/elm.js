@@ -5342,18 +5342,139 @@ var $elm$core$Basics$composeR = F3(
 			f(x));
 	});
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
-var $author$project$Main$Model = F6(
-	function (fetchResults, viewMode, error, done, showGroups, itemsOnly) {
-		return {done: done, error: error, fetchResults: fetchResults, itemsOnly: itemsOnly, showGroups: showGroups, viewMode: viewMode};
-	});
 var $author$project$Main$ToDo = {$: 'ToDo'};
+var $author$project$Main$defaultSelectionText = 'ref: battery_pack\nref: board_games\nref: camera\nref: clothing\nref: clothing_bottoms\nref: clothing_cold\nref: clothing_general\nref: clothing_gym\nref: clothing_hot\nref: clothing_shoes\nref: clothing_sunny\nref: clothing_tops\nref: clothing_underwear\nref: clothing_wet\nref: cycling_bike\nref: cycling_clothing\nref: cycling_clothing_cold\nref: cycling_clothing_essential\nref: cycling_clothing_mild\nref: cycling_fluids\nref: cycling_food\nref: cycling_garmin\nref: cycling_guest_bike\nref: cycling_lights\nref: cycling_lock\nref: cycling_tools_ride\nref: cycling_tools_workshop_portable\nref: earplugs\nref: flight\nref: hiking\nref: hiking_boots_socks\nref: hygene_essentials\nref: hygene_teeth_essentials\nref: hygene_teeth_medium_or_longtrip\nref: keyboard_mouse\nref: keys_phone_wallet\nref: laptop\nref: music_player\nref: outdoors\nref: phone\nref: phone_accessories\nref: phone_and_accessories\nref: remote_workstation\nref: smart_watch\nref: sun\nref: sunglasses\nref: sunscreen\nref: swimming_shorts\nref: towel\nref: travel_documents\nref: travel_utils\nref: water_bottle\nref: work_remotely_essentials\n\nShave before going\nChange cassette before going\n\n# Add this to some group\nPower meter medals\n\n# Add this to Bay Area location\nBart card\n';
 var $elm$core$Set$Set_elm_builtin = function (a) {
 	return {$: 'Set_elm_builtin', a: a};
 };
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Main$defaultModel = A6($author$project$Main$Model, $elm$core$Maybe$Nothing, $author$project$Main$ToDo, $elm$core$Maybe$Nothing, $elm$core$Set$empty, false, 0);
+var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, error: $elm$core$Maybe$Nothing, fetchResults: $elm$core$Maybe$Nothing, itemsOnly: 0, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showGroups: false, viewMode: $author$project$Main$ToDo};
+var $author$project$Main$FetchedResults = F2(
+	function (a, b) {
+		return {$: 'FetchedResults', a: a, b: b};
+	});
+var $author$project$Main$ContentsDefinition = F2(
+	function (refs, items) {
+		return {items: items, refs: refs};
+	});
+var $author$project$Main$Group = F2(
+	function (name, contents) {
+		return {contents: contents, name: name};
+	});
+var $elm$json$Json$Decode$null = _Json_decodeNull;
+var $elm$json$Json$Decode$oneOf = _Json_oneOf;
+var $elm$json$Json$Decode$nullable = function (decoder) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
+				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder)
+			]));
+};
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
+var $author$project$Main$decodedWithNullAsDefault = F2(
+	function (_default, decoder) {
+		return A2(
+			$elm$json$Json$Decode$map,
+			$elm$core$Maybe$withDefault(_default),
+			$elm$json$Json$Decode$nullable(decoder));
+	});
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $elm$json$Json$Decode$string = _Json_decodeString;
+var $author$project$Main$decodeGroups = $elm$json$Json$Decode$list(
+	A3(
+		$elm$json$Json$Decode$map2,
+		$author$project$Main$Group,
+		A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string),
+		A2(
+			$elm$json$Json$Decode$field,
+			'contents',
+			A3(
+				$elm$json$Json$Decode$map2,
+				$author$project$Main$ContentsDefinition,
+				A2(
+					$elm$json$Json$Decode$field,
+					'refs',
+					A2(
+						$author$project$Main$decodedWithNullAsDefault,
+						_List_Nil,
+						$elm$json$Json$Decode$list($elm$json$Json$Decode$string))),
+				A2(
+					$elm$json$Json$Decode$field,
+					'items',
+					A2(
+						$author$project$Main$decodedWithNullAsDefault,
+						_List_Nil,
+						$elm$json$Json$Decode$list($elm$json$Json$Decode$string)))))));
+var $elm$http$Http$BadStatus_ = F2(
+	function (a, b) {
+		return {$: 'BadStatus_', a: a, b: b};
+	});
+var $elm$http$Http$BadUrl_ = function (a) {
+	return {$: 'BadUrl_', a: a};
+};
+var $elm$http$Http$GoodStatus_ = F2(
+	function (a, b) {
+		return {$: 'GoodStatus_', a: a, b: b};
+	});
+var $elm$http$Http$NetworkError_ = {$: 'NetworkError_'};
+var $elm$http$Http$Receiving = function (a) {
+	return {$: 'Receiving', a: a};
+};
+var $elm$http$Http$Sending = function (a) {
+	return {$: 'Sending', a: a};
+};
+var $elm$http$Http$Timeout_ = {$: 'Timeout_'};
+var $elm$core$Maybe$isJust = function (maybe) {
+	if (maybe.$ === 'Just') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
+var $elm$core$Basics$compare = _Utils_compare;
+var $elm$core$Dict$get = F2(
+	function (targetKey, dict) {
+		get:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
+				switch (_v1.$) {
+					case 'LT':
+						var $temp$targetKey = targetKey,
+							$temp$dict = left;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+					case 'EQ':
+						return $elm$core$Maybe$Just(value);
+					default:
+						var $temp$targetKey = targetKey,
+							$temp$dict = right;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+				}
+			}
+		}
+	});
 var $elm$core$Dict$Black = {$: 'Black'};
 var $elm$core$Dict$RBNode_elm_builtin = F5(
 	function (a, b, c, d, e) {
@@ -5414,7 +5535,6 @@ var $elm$core$Dict$balance = F5(
 			}
 		}
 	});
-var $elm$core$Basics$compare = _Utils_compare;
 var $elm$core$Dict$insertHelp = F3(
 	function (key, value, dict) {
 		if (dict.$ === 'RBEmpty_elm_builtin') {
@@ -5461,233 +5581,6 @@ var $elm$core$Dict$insert = F3(
 		} else {
 			var x = _v0;
 			return x;
-		}
-	});
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
-	});
-var $elm$core$Set$fromList = function (list) {
-	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
-};
-var $elm$json$Json$Decode$list = _Json_decodeList;
-var $elm$core$Maybe$map = F2(
-	function (f, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return $elm$core$Maybe$Just(
-				f(value));
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $elm$core$Result$map = F2(
-	function (func, ra) {
-		if (ra.$ === 'Ok') {
-			var a = ra.a;
-			return $elm$core$Result$Ok(
-				func(a));
-		} else {
-			var e = ra.a;
-			return $elm$core$Result$Err(e);
-		}
-	});
-var $elm$core$Result$mapError = F2(
-	function (f, result) {
-		if (result.$ === 'Ok') {
-			var v = result.a;
-			return $elm$core$Result$Ok(v);
-		} else {
-			var e = result.a;
-			return $elm$core$Result$Err(
-				f(e));
-		}
-	});
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $elm$json$Json$Decode$null = _Json_decodeNull;
-var $elm$json$Json$Decode$oneOf = _Json_oneOf;
-var $elm$json$Json$Decode$nullable = function (decoder) {
-	return $elm$json$Json$Decode$oneOf(
-		_List_fromArray(
-			[
-				$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
-				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder)
-			]));
-};
-var $author$project$Main$plzResult = function (res) {
-	if (res.$ === 'Ok') {
-		var ok = res.a;
-		return ok;
-	} else {
-		var err = res.a;
-		return err;
-	}
-};
-var $elm$json$Json$Decode$string = _Json_decodeString;
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
-	});
-var $author$project$Main$init = function (flags) {
-	return _Utils_Tuple2(
-		A2(
-			$elm$core$Maybe$withDefault,
-			$author$project$Main$defaultModel,
-			A2(
-				$elm$core$Maybe$map,
-				A2(
-					$elm$core$Basics$composeR,
-					$elm$json$Json$Decode$decodeString(
-						A2(
-							$elm$json$Json$Decode$field,
-							'done',
-							$elm$json$Json$Decode$nullable(
-								$elm$json$Json$Decode$list($elm$json$Json$Decode$string)))),
-					A2(
-						$elm$core$Basics$composeR,
-						$elm$core$Result$mapError(
-							A2(
-								$elm$core$Basics$composeR,
-								$elm$json$Json$Decode$errorToString,
-								function (errStr) {
-									return _Utils_update(
-										$author$project$Main$defaultModel,
-										{
-											error: $elm$core$Maybe$Just('Init decode error: ' + errStr)
-										});
-								})),
-						A2(
-							$elm$core$Basics$composeR,
-							$elm$core$Result$map(
-								function (done) {
-									return _Utils_update(
-										$author$project$Main$defaultModel,
-										{
-											done: A2(
-												$elm$core$Maybe$withDefault,
-												$elm$core$Set$empty,
-												A2($elm$core$Maybe$map, $elm$core$Set$fromList, done))
-										});
-								}),
-							$author$project$Main$plzResult))),
-				flags.state)),
-		$elm$core$Platform$Cmd$none);
-};
-var $elm$core$Platform$Sub$batch = _Platform_batch;
-var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $author$project$Main$contentsDef = {
-	items: _List_fromArray(
-		['Shave before going', 'Change cassette before going', 'Power meter medals', 'Bart card']),
-	refs: _List_fromArray(
-		['battery_pack', 'board_games', 'camera', 'clothing', 'clothing_bottoms', 'clothing_cold', 'clothing_general', 'clothing_gym', 'clothing_hot', 'clothing_shoes', 'clothing_sunny', 'clothing_tops', 'clothing_underwear', 'clothing_wet', 'cycling_bike', 'cycling_clothing', 'cycling_clothing_cold', 'cycling_clothing_essential', 'cycling_clothing_mild', 'cycling_fluids', 'cycling_food', 'cycling_garmin', 'cycling_guest_bike', 'cycling_lights', 'cycling_lock', 'cycling_tools_ride', 'cycling_tools_workshop_portable', 'earplugs', 'flight', 'hiking', 'hiking_boots_socks', 'hygene_essentials', 'hygene_teeth_essentials', 'hygene_teeth_medium_or_longtrip', 'keyboard_mouse', 'keys_phone_wallet', 'laptop', 'music_player', 'outdoors', 'phone', 'phone_accessories', 'phone_and_accessories', 'remote_workstation', 'smart_watch', 'sun', 'sunglasses', 'sunscreen', 'swimming_shorts', 'towel', 'travel_documents', 'travel_utils', 'water_bottle', 'work_remotely_essentials'])
-};
-var $author$project$Main$FetchedResults = function (a) {
-	return {$: 'FetchedResults', a: a};
-};
-var $author$project$Main$ContentsDefinition = F2(
-	function (refs, items) {
-		return {items: items, refs: refs};
-	});
-var $author$project$Main$Group = F2(
-	function (name, contents) {
-		return {contents: contents, name: name};
-	});
-var $author$project$Main$decodedWithNullAsDefault = F2(
-	function (_default, decoder) {
-		return A2(
-			$elm$json$Json$Decode$map,
-			$elm$core$Maybe$withDefault(_default),
-			$elm$json$Json$Decode$nullable(decoder));
-	});
-var $author$project$Main$decodeGroups = $elm$json$Json$Decode$list(
-	A3(
-		$elm$json$Json$Decode$map2,
-		$author$project$Main$Group,
-		A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string),
-		A2(
-			$elm$json$Json$Decode$field,
-			'contents',
-			A3(
-				$elm$json$Json$Decode$map2,
-				$author$project$Main$ContentsDefinition,
-				A2(
-					$elm$json$Json$Decode$field,
-					'refs',
-					A2(
-						$author$project$Main$decodedWithNullAsDefault,
-						_List_Nil,
-						$elm$json$Json$Decode$list($elm$json$Json$Decode$string))),
-				A2(
-					$elm$json$Json$Decode$field,
-					'items',
-					A2(
-						$author$project$Main$decodedWithNullAsDefault,
-						_List_Nil,
-						$elm$json$Json$Decode$list($elm$json$Json$Decode$string)))))));
-var $elm$http$Http$BadStatus_ = F2(
-	function (a, b) {
-		return {$: 'BadStatus_', a: a, b: b};
-	});
-var $elm$http$Http$BadUrl_ = function (a) {
-	return {$: 'BadUrl_', a: a};
-};
-var $elm$http$Http$GoodStatus_ = F2(
-	function (a, b) {
-		return {$: 'GoodStatus_', a: a, b: b};
-	});
-var $elm$http$Http$NetworkError_ = {$: 'NetworkError_'};
-var $elm$http$Http$Receiving = function (a) {
-	return {$: 'Receiving', a: a};
-};
-var $elm$http$Http$Sending = function (a) {
-	return {$: 'Sending', a: a};
-};
-var $elm$http$Http$Timeout_ = {$: 'Timeout_'};
-var $elm$core$Maybe$isJust = function (maybe) {
-	if (maybe.$ === 'Just') {
-		return true;
-	} else {
-		return false;
-	}
-};
-var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
-var $elm$core$Dict$get = F2(
-	function (targetKey, dict) {
-		get:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
-				switch (_v1.$) {
-					case 'LT':
-						var $temp$targetKey = targetKey,
-							$temp$dict = left;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-					case 'EQ':
-						return $elm$core$Maybe$Just(value);
-					default:
-						var $temp$targetKey = targetKey,
-							$temp$dict = right;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-				}
-			}
 		}
 	});
 var $elm$core$Dict$getMin = function (dict) {
@@ -6063,11 +5956,55 @@ var $elm$core$Dict$update = F3(
 			return A2($elm$core$Dict$remove, targetKey, dictionary);
 		}
 	});
-var $elm$http$Http$jsonBody = function (value) {
+var $elm$http$Http$expectStringResponse = F2(
+	function (toMsg, toResult) {
+		return A3(
+			_Http_expect,
+			'',
+			$elm$core$Basics$identity,
+			A2($elm$core$Basics$composeR, toResult, toMsg));
+	});
+var $elm$core$Result$mapError = F2(
+	function (f, result) {
+		if (result.$ === 'Ok') {
+			var v = result.a;
+			return $elm$core$Result$Ok(v);
+		} else {
+			var e = result.a;
+			return $elm$core$Result$Err(
+				f(e));
+		}
+	});
+var $elm$core$String$trim = _String_trim;
+var $author$project$Main$expectGroups = function (toMsg) {
 	return A2(
-		_Http_pair,
-		'application/json',
-		A2($elm$json$Json$Encode$encode, 0, value));
+		$elm$http$Http$expectStringResponse,
+		toMsg,
+		function (response) {
+			switch (response.$) {
+				case 'BadUrl_':
+					var url = response.a;
+					return $elm$core$Result$Err('The URL ' + (url + ' was invalid'));
+				case 'Timeout_':
+					return $elm$core$Result$Err('Unable to reach the server, try again');
+				case 'NetworkError_':
+					return $elm$core$Result$Err('Unable to reach the server, check your network connection');
+				case 'BadStatus_':
+					var metadata = response.a;
+					var body = response.b;
+					return $elm$core$Result$Err(
+						$elm$core$String$isEmpty(
+							$elm$core$String$trim(body)) ? ('Server error, status: ' + $elm$core$String$fromInt(metadata.statusCode)) : $elm$core$String$trim(body));
+				default:
+					var body = response.b;
+					return A2(
+						$elm$core$Result$mapError,
+						function (err) {
+							return 'Data received was not in the correct format: ' + $elm$json$Json$Decode$errorToString(err);
+						},
+						A2($elm$json$Json$Decode$decodeString, $author$project$Main$decodeGroups, body));
+			}
+		});
 };
 var $elm$http$Http$Request = function (a) {
 	return {$: 'Request', a: a};
@@ -6237,18 +6174,134 @@ var $elm$http$Http$request = function (r) {
 		$elm$http$Http$Request(
 			{allowCookiesFromOtherDomains: false, body: r.body, expect: r.expect, headers: r.headers, method: r.method, timeout: r.timeout, tracker: r.tracker, url: r.url}));
 };
-var $author$project$Main$defaultPostJSON = F3(
-	function (url, jsonValue, expect) {
+var $elm$http$Http$stringBody = _Http_pair;
+var $author$project$Main$fetch = F2(
+	function (id, selectionText) {
 		return $elm$http$Http$request(
 			{
-				body: $elm$http$Http$jsonBody(jsonValue),
-				expect: expect,
+				body: A2($elm$http$Http$stringBody, 'text/plain', selectionText),
+				expect: $author$project$Main$expectGroups(
+					$author$project$Main$FetchedResults(id)),
 				headers: _List_Nil,
 				method: 'POST',
-				timeout: $elm$core$Maybe$Just(2000),
+				timeout: $elm$core$Maybe$Just(5000),
 				tracker: $elm$core$Maybe$Nothing,
-				url: url
+				url: '/selection/'
 			});
+	});
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $elm$core$Set$fromList = function (list) {
+	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+};
+var $elm$core$Maybe$map = F2(
+	function (f, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return $elm$core$Maybe$Just(
+				f(value));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $elm$core$Result$map = F2(
+	function (func, ra) {
+		if (ra.$ === 'Ok') {
+			var a = ra.a;
+			return $elm$core$Result$Ok(
+				func(a));
+		} else {
+			var e = ra.a;
+			return $elm$core$Result$Err(e);
+		}
+	});
+var $author$project$Main$plzResult = function (res) {
+	if (res.$ === 'Ok') {
+		var ok = res.a;
+		return ok;
+	} else {
+		var err = res.a;
+		return err;
+	}
+};
+var $author$project$Main$StoredState = F2(
+	function (done, selection) {
+		return {done: done, selection: selection};
+	});
+var $elm$json$Json$Decode$maybe = function (decoder) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder),
+				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
+			]));
+};
+var $author$project$Main$storedStateDecoder = A3(
+	$elm$json$Json$Decode$map2,
+	$author$project$Main$StoredState,
+	A2(
+		$elm$json$Json$Decode$field,
+		'done',
+		A2(
+			$author$project$Main$decodedWithNullAsDefault,
+			_List_Nil,
+			$elm$json$Json$Decode$list($elm$json$Json$Decode$string))),
+	$elm$json$Json$Decode$maybe(
+		A2($elm$json$Json$Decode$field, 'selection', $elm$json$Json$Decode$string)));
+var $author$project$Main$init = function (flags) {
+	var loaded = A2(
+		$elm$core$Maybe$withDefault,
+		$author$project$Main$defaultModel,
+		A2(
+			$elm$core$Maybe$map,
+			A2(
+				$elm$core$Basics$composeR,
+				$elm$json$Json$Decode$decodeString($author$project$Main$storedStateDecoder),
+				A2(
+					$elm$core$Basics$composeR,
+					$elm$core$Result$mapError(
+						function (err) {
+							return _Utils_update(
+								$author$project$Main$defaultModel,
+								{
+									error: $elm$core$Maybe$Just(
+										'Init decode error: ' + $elm$json$Json$Decode$errorToString(err))
+								});
+						}),
+					A2(
+						$elm$core$Basics$composeR,
+						$elm$core$Result$map(
+							function (stored) {
+								return _Utils_update(
+									$author$project$Main$defaultModel,
+									{
+										done: $elm$core$Set$fromList(stored.done),
+										selectionText: A2($elm$core$Maybe$withDefault, $author$project$Main$defaultSelectionText, stored.selection)
+									});
+							}),
+						$author$project$Main$plzResult))),
+			flags.state));
+	var firstId = loaded.requestId + 1;
+	return _Utils_Tuple2(
+		_Utils_update(
+			loaded,
+			{requestId: firstId}),
+		A2($author$project$Main$fetch, firstId, loaded.selectionText));
+};
+var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Basics$neq = _Utils_notEqual;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$core$Set$remove = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$remove, key, dict));
 	});
 var $elm$json$Json$Encode$list = F2(
 	function (func, entries) {
@@ -6273,107 +6326,6 @@ var $elm$json$Json$Encode$object = function (pairs) {
 			pairs));
 };
 var $elm$json$Json$Encode$string = _Json_wrap;
-var $author$project$Main$encodeContentsDefinition = function (def) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'refs',
-				A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, def.refs)),
-				_Utils_Tuple2(
-				'items',
-				A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, def.items))
-			]));
-};
-var $elm$http$Http$expectStringResponse = F2(
-	function (toMsg, toResult) {
-		return A3(
-			_Http_expect,
-			'',
-			$elm$core$Basics$identity,
-			A2($elm$core$Basics$composeR, toResult, toMsg));
-	});
-var $elm$http$Http$BadBody = function (a) {
-	return {$: 'BadBody', a: a};
-};
-var $elm$http$Http$BadStatus = function (a) {
-	return {$: 'BadStatus', a: a};
-};
-var $elm$http$Http$BadUrl = function (a) {
-	return {$: 'BadUrl', a: a};
-};
-var $elm$http$Http$NetworkError = {$: 'NetworkError'};
-var $elm$http$Http$Timeout = {$: 'Timeout'};
-var $elm$http$Http$resolve = F2(
-	function (toResult, response) {
-		switch (response.$) {
-			case 'BadUrl_':
-				var url = response.a;
-				return $elm$core$Result$Err(
-					$elm$http$Http$BadUrl(url));
-			case 'Timeout_':
-				return $elm$core$Result$Err($elm$http$Http$Timeout);
-			case 'NetworkError_':
-				return $elm$core$Result$Err($elm$http$Http$NetworkError);
-			case 'BadStatus_':
-				var metadata = response.a;
-				return $elm$core$Result$Err(
-					$elm$http$Http$BadStatus(metadata.statusCode));
-			default:
-				var body = response.b;
-				return A2(
-					$elm$core$Result$mapError,
-					$elm$http$Http$BadBody,
-					toResult(body));
-		}
-	});
-var $elm$http$Http$expectJson = F2(
-	function (toMsg, decoder) {
-		return A2(
-			$elm$http$Http$expectStringResponse,
-			toMsg,
-			$elm$http$Http$resolve(
-				function (string) {
-					return A2(
-						$elm$core$Result$mapError,
-						$elm$json$Json$Decode$errorToString,
-						A2($elm$json$Json$Decode$decodeString, decoder, string));
-				}));
-	});
-var $author$project$Main$dataReceivedErrToString = function (error) {
-	switch (error.$) {
-		case 'BadUrl':
-			var url = error.a;
-			return 'The URL ' + (url + ' was invalid');
-		case 'Timeout':
-			return 'Unable to reach the server, try again';
-		case 'NetworkError':
-			return 'Unable to reach the server, check your network connection';
-		case 'BadStatus':
-			var code = error.a;
-			return 'Unable to get data. Status: ' + $elm$core$String$fromInt(code);
-		default:
-			var errorMessage = error.a;
-			return 'Data received was not in the correct format. Error message: ' + errorMessage;
-	}
-};
-var $author$project$Main$resultFromHttpResult = $elm$core$Result$mapError($author$project$Main$dataReceivedErrToString);
-var $author$project$Main$fetch = function (def) {
-	return A3(
-		$author$project$Main$defaultPostJSON,
-		'/groups/',
-		$author$project$Main$encodeContentsDefinition(def),
-		A2(
-			$elm$http$Http$expectJson,
-			A2($elm$core$Basics$composeR, $author$project$Main$resultFromHttpResult, $author$project$Main$FetchedResults),
-			$author$project$Main$decodeGroups));
-};
-var $elm$core$Set$remove = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A2($elm$core$Dict$remove, key, dict));
-	});
 var $author$project$Main$serialiseStateForStorage = function (model) {
 	return A2(
 		$elm$json$Json$Encode$encode,
@@ -6387,7 +6339,10 @@ var $author$project$Main$serialiseStateForStorage = function (model) {
 						$elm$core$Basics$composeR,
 						$elm$core$Set$toList,
 						$elm$json$Json$Encode$list($elm$json$Json$Encode$string),
-						model.done))
+						model.done)),
+					_Utils_Tuple2(
+					'selection',
+					$elm$json$Json$Encode$string(model.selectionText))
 				])));
 };
 var $author$project$State$storeState = _Platform_outgoingPort('storeState', $elm$json$Json$Encode$string);
@@ -6401,22 +6356,25 @@ var $author$project$State$updateModel = F2(
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
-			case 'Fetch':
-				return _Utils_Tuple2(
+			case 'SelectionChanged':
+				var selectionText = msg.a;
+				var newId = model.requestId + 1;
+				var newModel = _Utils_update(
 					model,
-					$author$project$Main$fetch($author$project$Main$contentsDef));
-			case 'ViewMode':
-				var mode = msg.a;
+					{requestId: newId, selectionText: selectionText});
 				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{viewMode: mode}),
-					$elm$core$Platform$Cmd$none);
+					newModel,
+					$elm$core$Platform$Cmd$batch(
+						_List_fromArray(
+							[
+								$author$project$State$storeState(
+								$author$project$Main$serialiseStateForStorage(newModel)),
+								A2($author$project$Main$fetch, newId, selectionText)
+							])));
 			case 'FetchedResults':
-				var res = msg.a;
-				return A2(
-					$author$project$State$updateModel,
-					$author$project$Main$serialiseStateForStorage,
+				var id = msg.a;
+				var res = msg.b;
+				return (!_Utils_eq(id, model.requestId)) ? _Utils_Tuple2(model, $elm$core$Platform$Cmd$none) : _Utils_Tuple2(
 					function () {
 						if (res.$ === 'Ok') {
 							var groups = res.a;
@@ -6431,11 +6389,18 @@ var $author$project$Main$update = F2(
 							return _Utils_update(
 								model,
 								{
-									error: $elm$core$Maybe$Just(err),
-									fetchResults: $elm$core$Maybe$Nothing
+									error: $elm$core$Maybe$Just(err)
 								});
 						}
-					}());
+					}(),
+					$elm$core$Platform$Cmd$none);
+			case 'ViewMode':
+				var mode = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{viewMode: mode}),
+					$elm$core$Platform$Cmd$none);
 			case 'ItemDone':
 				var item = msg.a;
 				var done = msg.b;
@@ -6470,13 +6435,11 @@ var $author$project$Main$update = F2(
 						{done: $elm$core$Set$empty}));
 		}
 	});
+var $author$project$Main$SelectionChanged = function (a) {
+	return {$: 'SelectionChanged', a: a};
+};
 var $author$project$Main$ClearDone = {$: 'ClearDone'};
 var $author$project$Main$Done = {$: 'Done'};
-var $author$project$Main$Fetch = {$: 'Fetch'};
-var $author$project$Main$ItemDone = F2(
-	function (a, b) {
-		return {$: 'ItemDone', a: a, b: b};
-	});
 var $author$project$Main$ItemsOnly = function (a) {
 	return {$: 'ItemsOnly', a: a};
 };
@@ -6487,6 +6450,128 @@ var $author$project$Main$ViewMode = function (a) {
 	return {$: 'ViewMode', a: a};
 };
 var $elm$html$Html$button = _VirtualDom_node('button');
+var $elm$html$Html$div = _VirtualDom_node('div');
+var $elm$core$Basics$not = _Basics_not;
+var $elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var $elm$html$Html$Events$onClick = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'click',
+		$elm$json$Json$Decode$succeed(msg));
+};
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Main$controlsView = function (model) {
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				function () {
+				var _v0 = model.viewMode;
+				if (_v0.$ === 'ToDo') {
+					return A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onClick(
+								$author$project$Main$ViewMode($author$project$Main$Done))
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('view done')
+							]));
+				} else {
+					return A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onClick(
+								$author$project$Main$ViewMode($author$project$Main$ToDo))
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('view todo')
+							]));
+				}
+			}(),
+				A2(
+				$elm$html$Html$button,
+				_List_fromArray(
+					[
+						$elm$html$Html$Events$onClick(
+						$author$project$Main$ShowGroups(!model.showGroups))
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('toggle groups')
+					])),
+				A2(
+				$elm$html$Html$button,
+				_List_fromArray(
+					[
+						$elm$html$Html$Events$onClick(
+						$author$project$Main$ItemsOnly((model.itemsOnly + 1) % 3))
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('toggle items only')
+					])),
+				A2(
+				$elm$html$Html$button,
+				_List_fromArray(
+					[
+						$elm$html$Html$Events$onClick($author$project$Main$ClearDone)
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('reset')
+					]))
+			]));
+};
+var $elm$html$Html$h3 = _VirtualDom_node('h3');
+var $elm$html$Html$Events$alwaysStop = function (x) {
+	return _Utils_Tuple2(x, true);
+};
+var $elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
+	return {$: 'MayStopPropagation', a: a};
+};
+var $elm$html$Html$Events$stopPropagationOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
+	});
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
+var $elm$html$Html$Events$targetValue = A2(
+	$elm$json$Json$Decode$at,
+	_List_fromArray(
+		['target', 'value']),
+	$elm$json$Json$Decode$string);
+var $elm$html$Html$Events$onInput = function (tagger) {
+	return A2(
+		$elm$html$Html$Events$stopPropagationOn,
+		'input',
+		A2(
+			$elm$json$Json$Decode$map,
+			$elm$html$Html$Events$alwaysStop,
+			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
+};
+var $elm$html$Html$p = _VirtualDom_node('p');
 var $elm$core$List$append = F2(
 	function (xs, ys) {
 		if (!ys.b) {
@@ -6498,7 +6583,10 @@ var $elm$core$List$append = F2(
 var $elm$core$List$concat = function (lists) {
 	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
 };
-var $elm$html$Html$div = _VirtualDom_node('div');
+var $author$project$Main$ItemDone = F2(
+	function (a, b) {
+		return {$: 'ItemDone', a: a, b: b};
+	});
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
 		return A3(
@@ -6510,7 +6598,6 @@ var $elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
-var $elm$html$Html$h3 = _VirtualDom_node('h3');
 var $elm$html$Html$h4 = _VirtualDom_node('h4');
 var $elm$core$List$isEmpty = function (xs) {
 	if (!xs.b) {
@@ -6533,270 +6620,271 @@ var $elm$core$Set$member = F2(
 		var dict = _v0.a;
 		return A2($elm$core$Dict$member, key, dict);
 	});
-var $elm$core$Basics$not = _Basics_not;
-var $elm$virtual_dom$VirtualDom$Normal = function (a) {
-	return {$: 'Normal', a: a};
-};
-var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
-var $elm$html$Html$Events$on = F2(
-	function (event, decoder) {
-		return A2(
-			$elm$virtual_dom$VirtualDom$on,
-			event,
-			$elm$virtual_dom$VirtualDom$Normal(decoder));
-	});
-var $elm$html$Html$Events$onClick = function (msg) {
-	return A2(
-		$elm$html$Html$Events$on,
-		'click',
-		$elm$json$Json$Decode$succeed(msg));
-};
-var $elm$html$Html$p = _VirtualDom_node('p');
 var $elm$core$List$sortBy = _List_sortBy;
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $author$project$Main$groupsView = F2(
+	function (model, groups) {
+		return A2(
+			$elm$core$List$cons,
+			A2(
+				$elm$html$Html$h3,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						'Viewing ' + function () {
+							var _v0 = model.viewMode;
+							if (_v0.$ === 'ToDo') {
+								return 'to do';
+							} else {
+								return 'done';
+							}
+						}())
+					])),
+			A2(
+				$elm$core$List$map,
+				function (group) {
+					return A2(
+						$elm$html$Html$div,
+						_List_Nil,
+						function () {
+							var toClickableItem = F2(
+								function (itemKey, itemText) {
+									return A2(
+										$elm$html$Html$p,
+										_List_fromArray(
+											[
+												A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+												$elm$html$Html$Events$onClick(
+												A2(
+													$author$project$Main$ItemDone,
+													itemKey,
+													function () {
+														var _v2 = model.viewMode;
+														if (_v2.$ === 'ToDo') {
+															return true;
+														} else {
+															return false;
+														}
+													}()))
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text(itemText)
+											]));
+								});
+							var items = A2(
+								$elm$core$List$filter,
+								function (item) {
+									return function () {
+										var _v1 = model.viewMode;
+										if (_v1.$ === 'ToDo') {
+											return $elm$core$Basics$not;
+										} else {
+											return $elm$core$Basics$identity;
+										}
+									}()(
+										A2($elm$core$Set$member, item, model.done));
+								},
+								group.contents.items);
+							if (model.itemsOnly > 0) {
+								return A2(
+									$elm$core$List$map,
+									function (itemKey) {
+										return A2(
+											toClickableItem,
+											itemKey,
+											_Utils_ap(
+												(model.itemsOnly === 1) ? (group.name + ':') : '',
+												itemKey));
+									},
+									items);
+							} else {
+								var groupDisplayContents = _Utils_ap(
+									($elm$core$List$isEmpty(group.contents.refs) || (!model.showGroups)) ? _List_Nil : _Utils_ap(
+										_List_fromArray(
+											[
+												A2(
+												$elm$html$Html$h4,
+												_List_Nil,
+												_List_fromArray(
+													[
+														$elm$html$Html$text('groups')
+													]))
+											]),
+										A2(
+											$elm$core$List$map,
+											function (key) {
+												return A2(
+													$elm$html$Html$p,
+													_List_Nil,
+													_List_fromArray(
+														[
+															$elm$html$Html$text(key)
+														]));
+											},
+											group.contents.refs)),
+									$elm$core$List$isEmpty(items) ? _List_Nil : _Utils_ap(
+										_List_fromArray(
+											[
+												A2(
+												$elm$html$Html$h4,
+												_List_Nil,
+												_List_fromArray(
+													[
+														$elm$html$Html$text('items')
+													]))
+											]),
+										A2(
+											$elm$core$List$map,
+											function (key) {
+												return A2(toClickableItem, key, key);
+											},
+											items)));
+								return $elm$core$List$isEmpty(groupDisplayContents) ? _List_Nil : $elm$core$List$concat(
+									_List_fromArray(
+										[
+											_List_fromArray(
+											[
+												A2(
+												$elm$html$Html$h3,
+												_List_Nil,
+												_List_fromArray(
+													[
+														$elm$html$Html$text(group.name)
+													]))
+											]),
+											groupDisplayContents
+										]));
+							}
+						}());
+				},
+				A2(
+					$elm$core$List$sortBy,
+					function ($) {
+						return $.name;
+					},
+					groups)));
+	});
+var $author$project$Main$resultsView = function (model) {
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		$elm$core$List$concat(
+			_List_fromArray(
+				[
+					function () {
+					var _v0 = model.error;
+					if (_v0.$ === 'Just') {
+						var err = _v0.a;
+						return _List_fromArray(
+							[
+								A2(
+								$elm$html$Html$p,
+								_List_fromArray(
+									[
+										A2($elm$html$Html$Attributes$style, 'color', 'red')
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text(err)
+									]))
+							]);
+					} else {
+						return _List_Nil;
+					}
+				}(),
+					function () {
+					var _v1 = model.fetchResults;
+					if (_v1.$ === 'Nothing') {
+						return _List_fromArray(
+							[
+								$elm$html$Html$text('Editing selection…')
+							]);
+					} else {
+						var groups = _v1.a;
+						return A2($author$project$Main$groupsView, model, groups);
+					}
+				}()
+				])));
+};
+var $elm$html$Html$Attributes$rows = function (n) {
+	return A2(
+		_VirtualDom_attribute,
+		'rows',
+		$elm$core$String$fromInt(n));
+};
+var $elm$html$Html$textarea = _VirtualDom_node('textarea');
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$Main$view = function (model) {
 	return {
 		body: _List_fromArray(
 			[
 				A2(
 				$elm$html$Html$div,
-				_List_Nil,
+				_List_fromArray(
+					[
+						A2($elm$html$Html$Attributes$style, 'display', 'flex'),
+						A2($elm$html$Html$Attributes$style, 'gap', '1rem'),
+						A2($elm$html$Html$Attributes$style, 'align-items', 'flex-start'),
+						A2($elm$html$Html$Attributes$style, 'padding', '1rem')
+					]),
 				_List_fromArray(
 					[
 						A2(
-						$elm$html$Html$button,
+						$elm$html$Html$div,
 						_List_fromArray(
 							[
-								$elm$html$Html$Events$onClick($author$project$Main$Fetch)
+								A2($elm$html$Html$Attributes$style, 'flex', '1 1 0')
 							]),
 						_List_fromArray(
 							[
-								$elm$html$Html$text('fetch')
-							])),
-						function () {
-						var _v0 = model.viewMode;
-						if (_v0.$ === 'ToDo') {
-							return A2(
-								$elm$html$Html$button,
+								A2(
+								$elm$html$Html$h3,
+								_List_Nil,
 								_List_fromArray(
 									[
-										$elm$html$Html$Events$onClick(
-										$author$project$Main$ViewMode($author$project$Main$Done))
+										$elm$html$Html$text('Selection')
+									])),
+								A2(
+								$elm$html$Html$p,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Edit your selection below. Copy the text out to save it.')
+									])),
+								A2(
+								$elm$html$Html$textarea,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value(model.selectionText),
+										$elm$html$Html$Events$onInput($author$project$Main$SelectionChanged),
+										$elm$html$Html$Attributes$rows(30),
+										A2($elm$html$Html$Attributes$style, 'width', '100%'),
+										A2($elm$html$Html$Attributes$style, 'box-sizing', 'border-box'),
+										A2($elm$html$Html$Attributes$style, 'font-family', 'monospace')
 									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text('view done')
-									]));
-						} else {
-							return A2(
-								$elm$html$Html$button,
-								_List_fromArray(
-									[
-										$elm$html$Html$Events$onClick(
-										$author$project$Main$ViewMode($author$project$Main$ToDo))
-									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text('view todo')
-									]));
-						}
-					}(),
-						A2(
-						$elm$html$Html$button,
-						_List_fromArray(
-							[
-								$elm$html$Html$Events$onClick(
-								$author$project$Main$ShowGroups(!model.showGroups))
-							]),
-						_List_fromArray(
-							[
-								$elm$html$Html$text('toggle groups')
-							])),
-						A2(
-						$elm$html$Html$button,
-						_List_fromArray(
-							[
-								$elm$html$Html$Events$onClick(
-								$author$project$Main$ItemsOnly((model.itemsOnly + 1) % 3))
-							]),
-						_List_fromArray(
-							[
-								$elm$html$Html$text('toggle items only')
-							])),
-						A2(
-						$elm$html$Html$button,
-						_List_fromArray(
-							[
-								$elm$html$Html$Events$onClick($author$project$Main$ClearDone)
-							]),
-						_List_fromArray(
-							[
-								$elm$html$Html$text('reset')
+								_List_Nil)
 							])),
 						A2(
 						$elm$html$Html$div,
-						_List_Nil,
-						function () {
-							var _v1 = model.error;
-							if (_v1.$ === 'Just') {
-								var err = _v1.a;
-								return _List_fromArray(
-									[
-										$elm$html$Html$text(err)
-									]);
-							} else {
-								var _v2 = model.fetchResults;
-								if (_v2.$ === 'Nothing') {
-									return _List_fromArray(
-										[
-											$elm$html$Html$text('Need to fetch')
-										]);
-								} else {
-									var groups = _v2.a;
-									return A2(
-										$elm$core$List$cons,
-										A2(
-											$elm$html$Html$h3,
-											_List_Nil,
-											_List_fromArray(
-												[
-													$elm$html$Html$text(
-													'Viewing ' + function () {
-														var _v3 = model.viewMode;
-														if (_v3.$ === 'ToDo') {
-															return 'to do';
-														} else {
-															return 'done';
-														}
-													}())
-												])),
-										A2(
-											$elm$core$List$map,
-											function (group) {
-												return A2(
-													$elm$html$Html$div,
-													_List_Nil,
-													function () {
-														var toClickableItem = F2(
-															function (itemKey, itemText) {
-																return A2(
-																	$elm$html$Html$p,
-																	_List_fromArray(
-																		[
-																			$elm$html$Html$Events$onClick(
-																			A2(
-																				$author$project$Main$ItemDone,
-																				itemKey,
-																				function () {
-																					var _v5 = model.viewMode;
-																					if (_v5.$ === 'ToDo') {
-																						return true;
-																					} else {
-																						return false;
-																					}
-																				}()))
-																		]),
-																	_List_fromArray(
-																		[
-																			$elm$html$Html$text(itemText)
-																		]));
-															});
-														var items = A2(
-															$elm$core$List$filter,
-															function (item) {
-																return function () {
-																	var _v4 = model.viewMode;
-																	if (_v4.$ === 'ToDo') {
-																		return $elm$core$Basics$not;
-																	} else {
-																		return $elm$core$Basics$identity;
-																	}
-																}()(
-																	A2($elm$core$Set$member, item, model.done));
-															},
-															group.contents.items);
-														if (model.itemsOnly > 0) {
-															return A2(
-																$elm$core$List$map,
-																function (itemKey) {
-																	return A2(
-																		toClickableItem,
-																		itemKey,
-																		_Utils_ap(
-																			(model.itemsOnly === 1) ? (group.name + ':') : '',
-																			itemKey));
-																},
-																items);
-														} else {
-															var groupDisplayContents = _Utils_ap(
-																($elm$core$List$isEmpty(group.contents.refs) || (!model.showGroups)) ? _List_Nil : _Utils_ap(
-																	_List_fromArray(
-																		[
-																			A2(
-																			$elm$html$Html$h4,
-																			_List_Nil,
-																			_List_fromArray(
-																				[
-																					$elm$html$Html$text('groups')
-																				]))
-																		]),
-																	A2(
-																		$elm$core$List$map,
-																		function (key) {
-																			return A2(
-																				$elm$html$Html$p,
-																				_List_Nil,
-																				_List_fromArray(
-																					[
-																						$elm$html$Html$text(key)
-																					]));
-																		},
-																		group.contents.refs)),
-																$elm$core$List$isEmpty(items) ? _List_Nil : _Utils_ap(
-																	_List_fromArray(
-																		[
-																			A2(
-																			$elm$html$Html$h4,
-																			_List_Nil,
-																			_List_fromArray(
-																				[
-																					$elm$html$Html$text('items')
-																				]))
-																		]),
-																	A2(
-																		$elm$core$List$map,
-																		function (key) {
-																			return A2(toClickableItem, key, key);
-																		},
-																		items)));
-															return $elm$core$List$isEmpty(groupDisplayContents) ? _List_Nil : $elm$core$List$concat(
-																_List_fromArray(
-																	[
-																		_List_fromArray(
-																		[
-																			A2(
-																			$elm$html$Html$h3,
-																			_List_Nil,
-																			_List_fromArray(
-																				[
-																					$elm$html$Html$text(group.name)
-																				]))
-																		]),
-																		groupDisplayContents
-																	]));
-														}
-													}());
-											},
-											A2(
-												$elm$core$List$sortBy,
-												function ($) {
-													return $.name;
-												},
-												groups)));
-								}
-							}
-						}())
+						_List_fromArray(
+							[
+								A2($elm$html$Html$Attributes$style, 'flex', '1 1 0')
+							]),
+						_List_fromArray(
+							[
+								$author$project$Main$controlsView(model),
+								$author$project$Main$resultsView(model)
+							]))
 					]))
 			]),
 		title: 'Packing'
