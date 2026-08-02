@@ -6587,6 +6587,7 @@ var $author$project$Main$ItemDone = F2(
 	function (a, b) {
 		return {$: 'ItemDone', a: a, b: b};
 	});
+var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
 		return A3(
@@ -6599,6 +6600,20 @@ var $elm$core$List$filter = F2(
 			list);
 	});
 var $elm$html$Html$h4 = _VirtualDom_node('h4');
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$href = function (url) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'href',
+		_VirtualDom_noJavaScriptUri(url));
+};
+var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
 var $elm$core$List$isEmpty = function (xs) {
 	if (!xs.b) {
 		return true;
@@ -6647,7 +6662,10 @@ var $author$project$Main$groupsView = F2(
 				function (group) {
 					return A2(
 						$elm$html$Html$div,
-						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$id(group.name)
+							]),
 						function () {
 							var toClickableItem = F2(
 								function (itemKey, itemText) {
@@ -6721,7 +6739,17 @@ var $author$project$Main$groupsView = F2(
 													_List_Nil,
 													_List_fromArray(
 														[
-															$elm$html$Html$text(key)
+															A2(
+															$elm$html$Html$a,
+															_List_fromArray(
+																[
+																	$elm$html$Html$Attributes$href('#' + key),
+																	A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')
+																]),
+															_List_fromArray(
+																[
+																	$elm$html$Html$text(key)
+																]))
 														]));
 											},
 											group.contents.refs)),
@@ -6816,13 +6844,6 @@ var $elm$html$Html$Attributes$rows = function (n) {
 		$elm$core$String$fromInt(n));
 };
 var $elm$html$Html$textarea = _VirtualDom_node('textarea');
-var $elm$html$Html$Attributes$stringProperty = F2(
-	function (key, string) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$string(string));
-	});
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$Main$view = function (model) {
 	return {

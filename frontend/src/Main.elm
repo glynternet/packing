@@ -1,8 +1,8 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, button, div, h3, h4, p, text, textarea)
-import Html.Attributes exposing (rows, style, value)
+import Html exposing (Html, a, button, div, h3, h4, p, text, textarea)
+import Html.Attributes exposing (href, id, rows, style, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Json.Decode
@@ -368,7 +368,8 @@ groupsView model groups =
                 |> List.sortBy .name
                 |> List.map
                     (\group ->
-                        div []
+                        -- id is the group name so nested-group refs can link to it (href="#name")
+                        div [ id group.name ]
                             (let
                                 items =
                                     group.contents.items
@@ -422,7 +423,7 @@ groupsView model groups =
                                             []
 
                                          else
-                                            [ h4 [] [ text "groups" ] ] ++ (group.contents.refs |> List.map (\key -> p [] [ text key ]))
+                                            [ h4 [] [ text "groups" ] ] ++ (group.contents.refs |> List.map (\key -> p [] [ a [ href ("#" ++ key), style "cursor" "pointer" ] [ text key ] ]))
                                         )
                                             ++ (if List.isEmpty items then
                                                     []
