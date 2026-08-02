@@ -5350,7 +5350,7 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, error: $elm$core$Maybe$Nothing, fetchResults: $elm$core$Maybe$Nothing, itemsOnly: 0, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showGroups: false, viewMode: $author$project$Main$ToDo};
+var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, error: $elm$core$Maybe$Nothing, fetchResults: $elm$core$Maybe$Nothing, itemsOnly: 0, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, viewMode: $author$project$Main$ToDo};
 var $author$project$Main$FetchedResults = F2(
 	function (a, b) {
 		return {$: 'FetchedResults', a: a, b: b};
@@ -6412,12 +6412,19 @@ var $author$project$Main$update = F2(
 						{
 							done: done ? A2($elm$core$Set$insert, item, model.done) : A2($elm$core$Set$remove, item, model.done)
 						}));
-			case 'ShowGroups':
+			case 'ShowGroupLinks':
 				var show = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{showGroups: show}),
+						{showGroupLinks: show}),
+					$elm$core$Platform$Cmd$none);
+			case 'ShowContainerGroups':
+				var show = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{showContainerGroups: show}),
 					$elm$core$Platform$Cmd$none);
 			case 'ItemsOnly':
 				var itemsOnly = msg.a;
@@ -6443,8 +6450,11 @@ var $author$project$Main$Done = {$: 'Done'};
 var $author$project$Main$ItemsOnly = function (a) {
 	return {$: 'ItemsOnly', a: a};
 };
-var $author$project$Main$ShowGroups = function (a) {
-	return {$: 'ShowGroups', a: a};
+var $author$project$Main$ShowContainerGroups = function (a) {
+	return {$: 'ShowContainerGroups', a: a};
+};
+var $author$project$Main$ShowGroupLinks = function (a) {
+	return {$: 'ShowGroupLinks', a: a};
 };
 var $author$project$Main$ViewMode = function (a) {
 	return {$: 'ViewMode', a: a};
@@ -6510,11 +6520,22 @@ var $author$project$Main$controlsView = function (model) {
 				_List_fromArray(
 					[
 						$elm$html$Html$Events$onClick(
-						$author$project$Main$ShowGroups(!model.showGroups))
+						$author$project$Main$ShowGroupLinks(!model.showGroupLinks))
 					]),
 				_List_fromArray(
 					[
-						$elm$html$Html$text('toggle groups')
+						$elm$html$Html$text('show group links')
+					])),
+				A2(
+				$elm$html$Html$button,
+				_List_fromArray(
+					[
+						$elm$html$Html$Events$onClick(
+						$author$project$Main$ShowContainerGroups(!model.showContainerGroups))
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('show container groups')
 					])),
 				A2(
 				$elm$html$Html$button,
@@ -6614,6 +6635,24 @@ var $elm$html$Html$Attributes$href = function (url) {
 		_VirtualDom_noJavaScriptUri(url));
 };
 var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
+var $elm$core$List$intersperse = F2(
+	function (sep, xs) {
+		if (!xs.b) {
+			return _List_Nil;
+		} else {
+			var hd = xs.a;
+			var tl = xs.b;
+			var step = F2(
+				function (x, rest) {
+					return A2(
+						$elm$core$List$cons,
+						sep,
+						A2($elm$core$List$cons, x, rest));
+				});
+			var spersed = A3($elm$core$List$foldr, step, _List_Nil, tl);
+			return A2($elm$core$List$cons, hd, spersed);
+		}
+	});
 var $elm$core$List$isEmpty = function (xs) {
 	if (!xs.b) {
 		return true;
@@ -6621,6 +6660,36 @@ var $elm$core$List$isEmpty = function (xs) {
 		return false;
 	}
 };
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
+var $elm$core$List$member = F2(
+	function (x, xs) {
+		return A2(
+			$elm$core$List$any,
+			function (a) {
+				return _Utils_eq(a, x);
+			},
+			xs);
+	});
 var $elm$core$Dict$member = F2(
 	function (key, dict) {
 		var _v0 = A2($elm$core$Dict$get, key, dict);
@@ -6636,10 +6705,27 @@ var $elm$core$Set$member = F2(
 		return A2($elm$core$Dict$member, key, dict);
 	});
 var $elm$core$List$sortBy = _List_sortBy;
+var $elm$core$List$sort = function (xs) {
+	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
+};
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $author$project$Main$groupsView = F2(
 	function (model, groups) {
+		var parentsOf = function (name) {
+			return $elm$core$List$sort(
+				A2(
+					$elm$core$List$map,
+					function ($) {
+						return $.name;
+					},
+					A2(
+						$elm$core$List$filter,
+						function (g) {
+							return A2($elm$core$List$member, name, g.contents.refs);
+						},
+						groups)));
+		};
 		return A2(
 			$elm$core$List$cons,
 			A2(
@@ -6679,8 +6765,8 @@ var $author$project$Main$groupsView = F2(
 													$author$project$Main$ItemDone,
 													itemKey,
 													function () {
-														var _v2 = model.viewMode;
-														if (_v2.$ === 'ToDo') {
+														var _v3 = model.viewMode;
+														if (_v3.$ === 'ToDo') {
 															return true;
 														} else {
 															return false;
@@ -6696,8 +6782,8 @@ var $author$project$Main$groupsView = F2(
 								$elm$core$List$filter,
 								function (item) {
 									return function () {
-										var _v1 = model.viewMode;
-										if (_v1.$ === 'ToDo') {
+										var _v2 = model.viewMode;
+										if (_v2.$ === 'ToDo') {
 											return $elm$core$Basics$not;
 										} else {
 											return $elm$core$Basics$identity;
@@ -6719,8 +6805,49 @@ var $author$project$Main$groupsView = F2(
 									},
 									items);
 							} else {
+								var parentsLine = function () {
+									var _v1 = parentsOf(group.name);
+									if (!_v1.b) {
+										return _List_Nil;
+									} else {
+										var parents = _v1;
+										return _List_fromArray(
+											[
+												A2(
+												$elm$html$Html$p,
+												_List_fromArray(
+													[
+														A2($elm$html$Html$Attributes$style, 'font-size', '0.85em'),
+														A2($elm$html$Html$Attributes$style, 'color', '#666')
+													]),
+												A2(
+													$elm$core$List$cons,
+													$elm$html$Html$text('part of: '),
+													A2(
+														$elm$core$List$intersperse,
+														$elm$html$Html$text(' · '),
+														A2(
+															$elm$core$List$map,
+															function (parent) {
+																return A2(
+																	$elm$html$Html$a,
+																	_List_fromArray(
+																		[
+																			$elm$html$Html$Attributes$href('#' + parent),
+																			A2($elm$html$Html$Attributes$style, 'cursor', 'pointer')
+																		]),
+																	_List_fromArray(
+																		[
+																			$elm$html$Html$text(parent)
+																		]));
+															},
+															parents))))
+											]);
+									}
+								}();
+								var isContainer = $elm$core$List$isEmpty(group.contents.items);
 								var groupDisplayContents = _Utils_ap(
-									($elm$core$List$isEmpty(group.contents.refs) || (!model.showGroups)) ? _List_Nil : _Utils_ap(
+									(model.showGroupLinks && (!$elm$core$List$isEmpty(group.contents.refs))) ? _Utils_ap(
 										_List_fromArray(
 											[
 												A2(
@@ -6752,7 +6879,7 @@ var $author$project$Main$groupsView = F2(
 																]))
 														]));
 											},
-											group.contents.refs)),
+											group.contents.refs)) : _List_Nil,
 									$elm$core$List$isEmpty(items) ? _List_Nil : _Utils_ap(
 										_List_fromArray(
 											[
@@ -6770,7 +6897,7 @@ var $author$project$Main$groupsView = F2(
 												return A2(toClickableItem, key, key);
 											},
 											items)));
-								return $elm$core$List$isEmpty(groupDisplayContents) ? _List_Nil : $elm$core$List$concat(
+								return (isContainer && (!model.showContainerGroups)) ? _List_Nil : (((!isContainer) && $elm$core$List$isEmpty(groupDisplayContents)) ? _List_Nil : $elm$core$List$concat(
 									_List_fromArray(
 										[
 											_List_fromArray(
@@ -6783,8 +6910,9 @@ var $author$project$Main$groupsView = F2(
 														$elm$html$Html$text(group.name)
 													]))
 											]),
+											parentsLine,
 											groupDisplayContents
-										]));
+										])));
 							}
 						}());
 				},

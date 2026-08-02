@@ -43,7 +43,14 @@ type alias Model =
     , viewMode : ViewMode
     , error : Maybe String
     , done : Set.Set String
-    , showGroups : Bool
+
+    -- showGroupLinks mirrors the CLI's --include-group-references: show the links
+    -- to each group's nested groups.
+    , showGroupLinks : Bool
+
+    -- showContainerGroups mirrors the CLI's --include-empty-parent-groups: show
+    -- groups that only bundle other groups and have no items of their own.
+    , showContainerGroups : Bool
     , itemsOnly : Int
     , selectionText : String
 
@@ -144,7 +151,8 @@ defaultModel =
     , viewMode = ToDo
     , error = Nothing
     , done = Set.empty
-    , showGroups = False
+    , showGroupLinks = False
+    , showContainerGroups = False
     , itemsOnly = 0
     , selectionText = defaultSelectionText
     , requestId = 0
@@ -186,7 +194,8 @@ type Msg
     = FetchedResults Int (Result String (List Group))
     | ViewMode ViewMode
     | ItemDone String Bool
-    | ShowGroups Bool
+    | ShowGroupLinks Bool
+    | ShowContainerGroups Bool
     | ItemsOnly Int
     | ClearDone
     | SelectionChanged String
@@ -240,8 +249,11 @@ update msg model =
                             Set.remove item model.done
                 }
 
-        ShowGroups show ->
-            ( { model | showGroups = show }, Cmd.none )
+        ShowGroupLinks show ->
+            ( { model | showGroupLinks = show }, Cmd.none )
+
+        ShowContainerGroups show ->
+            ( { model | showContainerGroups = show }, Cmd.none )
 
         ItemsOnly itemsOnly ->
             ( { model | itemsOnly = itemsOnly }, Cmd.none )
@@ -324,7 +336,8 @@ controlsView model =
 
             Done ->
                 button [ onClick <| ViewMode ToDo ] [ text "view todo" ]
-        , button [ onClick <| ShowGroups (not model.showGroups) ] [ text "toggle groups" ]
+        , button [ onClick <| ShowGroupLinks (not model.showGroupLinks) ] [ text "show group links" ]
+        , button [ onClick <| ShowContainerGroups (not model.showContainerGroups) ] [ text "show container groups" ]
         , button [ onClick <| ItemsOnly (remainderBy 3 (model.itemsOnly + 1)) ] [ text "toggle items only" ]
         , button [ onClick <| ClearDone ] [ text "reset" ]
         ]
@@ -352,6 +365,14 @@ resultsView model =
 
 groupsView : Model -> List Group -> List (Html Msg)
 groupsView model groups =
+    let
+        -- Reverse of contents.refs: the groups that directly reference `name`.
+        parentsOf name =
+            groups
+                |> List.filter (\g -> List.member name g.contents.refs)
+                |> List.map .name
+                |> List.sort
+    in
     h3 []
         [ text
             ("Viewing "
@@ -418,12 +439,32 @@ groupsView model groups =
 
                              else
                                 let
+                                    -- Back-links to the parent groups that contain this group, if any.
+                                    parentsLine =
+                                        case parentsOf group.name of
+                                            [] ->
+                                                []
+
+                                            parents ->
+                                                [ p [ style "font-size" "0.85em", style "color" "#666" ]
+                                                    (text "part of: "
+                                                        :: (parents
+                                                                |> List.map (\parent -> a [ href ("#" ++ parent), style "cursor" "pointer" ] [ text parent ])
+                                                                |> List.intersperse (text " · ")
+                                                           )
+                                                    )
+                                                ]
+
+                                    -- A container (empty-parent) group bundles other groups but has no items of its own.
+                                    isContainer =
+                                        List.isEmpty group.contents.items
+
                                     groupDisplayContents =
-                                        (if List.isEmpty group.contents.refs || not model.showGroups then
-                                            []
+                                        (if model.showGroupLinks && not (List.isEmpty group.contents.refs) then
+                                            [ h4 [] [ text "groups" ] ] ++ (group.contents.refs |> List.map (\key -> p [] [ a [ href ("#" ++ key), style "cursor" "pointer" ] [ text key ] ]))
 
                                          else
-                                            [ h4 [] [ text "groups" ] ] ++ (group.contents.refs |> List.map (\key -> p [] [ a [ href ("#" ++ key), style "cursor" "pointer" ] [ text key ] ]))
+                                            []
                                         )
                                             ++ (if List.isEmpty items then
                                                     []
@@ -435,11 +476,16 @@ groupsView model groups =
                                                            )
                                                )
                                 in
-                                if List.isEmpty groupDisplayContents then
+                                if isContainer && not model.showContainerGroups then
+                                    -- Empty-parent group: hidden unless the container-groups toggle is on.
+                                    []
+
+                                else if not isContainer && List.isEmpty groupDisplayContents then
+                                    -- Ordinary group with nothing left to show (e.g. all its items are done).
                                     []
 
                                 else
-                                    List.concat [ [ h3 [] [ text group.name ] ], groupDisplayContents ]
+                                    List.concat [ [ h3 [] [ text group.name ] ], parentsLine, groupDisplayContents ]
                             )
                     )
            )
