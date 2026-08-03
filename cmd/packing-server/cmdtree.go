@@ -61,8 +61,18 @@ func buildCmdTree(logger log.Logger, _ io.Writer, rootCmd *cobra.Command) {
 	)
 
 	serve := &cobra.Command{
-		Use:  "serve",
-		Args: cobra.NoArgs,
+		Use:   "serve",
+		Args:  cobra.NoArgs,
+		Short: "Start the packing HTTP server",
+		Long: `Start the packing HTTP server.
+
+The server hosts a directory of reusable group files (--groups-dir), where
+each file's name is the key used to reference it (ref:<name>). It exposes:
+
+  POST /groups/   expand a selection into a full set of groups
+  GET  /          the Elm web UI (also /index.html and /elm.js)
+
+Point packing-cli at this server with --server-host / --server-port.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			groupsDir := strings.TrimSpace(viper.GetString(keyPackingGroups))
 			if groupsDir == "" {
@@ -92,7 +102,7 @@ func buildCmdTree(logger log.Logger, _ io.Writer, rootCmd *cobra.Command) {
 		},
 	}
 
-	serve.Flags().String(keyPackingGroups, "", "directory containing packing groups")
+	serve.Flags().String(keyPackingGroups, "", "directory of group files to serve; each filename is its reference key (defaults to the current directory)")
 	serve.Flags().Uint(keyPort, 3865, "port to listen on")
 	cmd.MustBindPFlags(logger, serve)
 	rootCmd.AddCommand(serve)
