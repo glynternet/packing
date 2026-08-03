@@ -63,6 +63,11 @@ type alias Model =
     , itemsOnly : Int
     , selectionText : String
 
+    -- simplifyNote holds the outcome of the most recent Simplify action (the
+    -- refs/items that were removed), shown next to the editor until the user
+    -- edits the selection again. Nothing when no Simplify has run since.
+    , simplifyNote : Maybe { refs : List String, items : List String }
+
     -- requestId tags each in-flight fetch so out-of-order responses (e.g. while
     -- typing quickly) can be discarded; only the latest request's result is used.
     , requestId : Int
@@ -183,6 +188,7 @@ defaultModel =
     , inlineSingletons = True
     , itemsOnly = 0
     , selectionText = defaultSelectionText
+    , simplifyNote = Nothing
     , requestId = 0
     , renderStatus = Rendering
     , graphScale = 1
@@ -235,6 +241,8 @@ type Msg
     | ItemsOnly Int
     | ClearDone
     | SelectionChanged String
+    | SimplifyClicked
+    | Simplified (Result String SimplifyResponse)
     | GraphWheel Float Float Float
     | GraphDragStart Float Float
     | GraphDragMove Float Float
@@ -254,7 +262,7 @@ update msg model =
                     model.requestId + 1
 
                 newModel =
-                    { model | selectionText = selectionText, requestId = newId, renderStatus = Rendering }
+                    { model | selectionText = selectionText, simplifyNote = Nothing, requestId = newId, renderStatus = Rendering }
             in
             ( newModel
             , Cmd.batch
@@ -262,6 +270,37 @@ update msg model =
                 , fetch newId selectionText
                 ]
             )
+
+        SimplifyClicked ->
+            -- Fire-and-forget: the response (Simplified) applies the minified
+            -- selection and re-renders. Leave the model as-is meanwhile.
+            ( model, simplifyRequest model.selectionText )
+
+        Simplified result ->
+            case result of
+                Ok resp ->
+                    let
+                        newId =
+                            model.requestId + 1
+
+                        newModel =
+                            { model
+                                | selectionText = resp.selection
+                                , simplifyNote = Just { refs = resp.removedRefs, items = resp.removedItems }
+                                , requestId = newId
+                                , renderStatus = Rendering
+                            }
+                    in
+                    ( newModel
+                    , Cmd.batch
+                        [ State.storeState (serialiseStateForStorage newModel)
+                        , fetch newId resp.selection
+                        ]
+                    )
+
+                Err err ->
+                    -- Keep the current selection; surface the error via the badge.
+                    ( { model | renderStatus = RenderFailed err }, Cmd.none )
 
         FetchedResults id res ->
             if id /= model.requestId then
@@ -525,6 +564,19 @@ fetch id selectionText =
         }
 
 
+simplifyRequest : String -> Cmd Msg
+simplifyRequest selectionText =
+    Http.request
+        { method = "POST"
+        , headers = []
+        , url = "/simplify/"
+        , body = Http.stringBody "text/plain" selectionText
+        , expect = expectSimplify Simplified
+        , timeout = Just 5000
+        , tracker = Nothing
+        }
+
+
 
 -- SUBSCRIPTIONS
 
@@ -571,6 +623,12 @@ view model =
                 [ h3 [] [ text "Selection ", renderStatusBadge model.renderStatus ]
                 , renderStatusMessage model.renderStatus
                 , p [] [ text "Edit your selection below. Copy the text out to save it." ]
+                , div [ style "margin-bottom" "0.5rem" ]
+                    [ button [ onClick SimplifyClicked ] [ text "Simplify" ]
+                    , span [ style "margin-left" "0.5rem", style "color" "#555", style "font-size" "0.85rem" ]
+                        [ text "remove refs already pulled in by others, and items already in a group" ]
+                    ]
+                , simplifyNoteView model.simplifyNote
                 , textarea
                     [ value model.selectionText
                     , onInput SelectionChanged
@@ -616,6 +674,42 @@ renderStatusMessage status =
 
         _ ->
             text ""
+
+
+{-| The result of the most recent Simplify: which refs/items were removed, or a
+"nothing to remove" note. Cleared (Nothing) once the user edits the selection.
+-}
+simplifyNoteView : Maybe { refs : List String, items : List String } -> Html Msg
+simplifyNoteView note =
+    case note of
+        Nothing ->
+            text ""
+
+        Just { refs, items } ->
+            if List.isEmpty refs && List.isEmpty items then
+                p [ style "color" "green", style "font-size" "0.85rem" ]
+                    [ text "Selection already minimal; nothing removed." ]
+
+            else
+                div [ style "color" "#555", style "font-size" "0.85rem", style "margin-bottom" "0.5rem" ]
+                    (p [ style "margin" "0 0 0.25rem 0" ] [ text "Simplified — removed:" ]
+                        :: removedLine "ref" refs
+                        ++ removedLine "item" items
+                    )
+
+
+{-| A single "N refs: a, b, c" line for the simplify note, or nothing when the
+list is empty.
+-}
+removedLine : String -> List String -> List (Html Msg)
+removedLine noun xs =
+    if List.isEmpty xs then
+        []
+
+    else
+        [ p [ style "margin" "0 0 0.25rem 0" ]
+            [ text (String.fromInt (List.length xs) ++ " " ++ noun ++ "(s): " ++ String.join ", " xs) ]
+        ]
 
 
 {-| Label for the inline-singletons toggle, reflecting the current state
@@ -1022,6 +1116,53 @@ expectGroups toMsg =
 
                 Http.GoodStatus_ _ body ->
                     Json.Decode.decodeString decodeGroups body
+                        |> Result.mapError
+                            (\err -> "Data received was not in the correct format: " ++ Json.Decode.errorToString err)
+
+
+type alias SimplifyResponse =
+    { selection : String
+    , removedRefs : List String
+    , removedItems : List String
+    }
+
+
+decodeSimplify : Json.Decode.Decoder SimplifyResponse
+decodeSimplify =
+    Json.Decode.map3 SimplifyResponse
+        (Json.Decode.field "selection" Json.Decode.string)
+        (Json.Decode.field "removedRefs" <| decodedWithNullAsDefault [] <| Json.Decode.list Json.Decode.string)
+        (Json.Decode.field "removedItems" <| decodedWithNullAsDefault [] <| Json.Decode.list Json.Decode.string)
+
+
+{-| expectSimplify mirrors expectGroups: decode the JSON simplify response, and
+on a non-2xx status surface the server's plain-text error body to the user.
+-}
+expectSimplify : (Result String SimplifyResponse -> msg) -> Http.Expect msg
+expectSimplify toMsg =
+    Http.expectStringResponse toMsg <|
+        \response ->
+            case response of
+                Http.BadUrl_ url ->
+                    Err ("The URL " ++ url ++ " was invalid")
+
+                Http.Timeout_ ->
+                    Err "Unable to reach the server, try again"
+
+                Http.NetworkError_ ->
+                    Err "Unable to reach the server, check your network connection"
+
+                Http.BadStatus_ metadata body ->
+                    Err
+                        (if String.isEmpty (String.trim body) then
+                            "Server error, status: " ++ String.fromInt metadata.statusCode
+
+                         else
+                            String.trim body
+                        )
+
+                Http.GoodStatus_ _ body ->
+                    Json.Decode.decodeString decodeSimplify body
                         |> Result.mapError
                             (\err -> "Data received was not in the correct format: " ++ Json.Decode.errorToString err)
 

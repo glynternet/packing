@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"github.com/glynternet/packing/pkg/api"
 	"github.com/glynternet/packing/pkg/cmd"
 	"github.com/glynternet/packing/pkg/list"
+	"github.com/glynternet/packing/pkg/simplify"
 	"github.com/glynternet/packing/pkg/storage"
 	"github.com/glynternet/packing/pkg/storage/file"
 	"github.com/glynternet/pkg/log"
@@ -72,6 +74,8 @@ each file's name is the key used to reference it (ref:<name>). It exposes:
 
   POST /groups/     expand a selection (JSON api.Contents) into a full set of groups
   POST /selection/  expand a selection (raw text, as a selection file) into groups
+  POST /simplify/   minify a selection (raw text), returning the simplified text
+                    and the refs/items removed as JSON
   GET  /            the Elm web UI (also /index.html and /elm.js)
 
 Point packing-cli at this server with --server-host / --server-port.`,
@@ -169,6 +173,53 @@ func serve(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error),
 
 		writeGroups(logger, writer, getGroups, seed)
 	})
+	// /simplify/ accepts a raw selection (same text format as /selection/) and
+	// returns the minified selection text plus the refs/items that were removed.
+	// The raw body is kept so redundant lines can be dropped in place, preserving
+	// comments, ordering and req: lines (simplify.Filter).
+	serveMux.HandleFunc("/simplify/", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodPost {
+			_ = log.Error(logger, log.Message("Unsupported method"), log.KV{K: "url", V: request.URL}, log.KV{K: "method", V: request.Method})
+			writer.WriteHeader(http.StatusMethodNotAllowed)
+			_, _ = writer.Write([]byte("Only POST supported"))
+			return
+		}
+
+		_ = logger.Log(log.Message("Handling simplify"), log.KV{K: "path", V: request.URL})
+
+		body, err := io.ReadAll(request.Body)
+		if err != nil {
+			_ = log.Error(logger, log.Message("Error reading request body"), log.ErrorMessage(err))
+			writer.WriteHeader(http.StatusInternalServerError)
+			_, _ = writer.Write([]byte(fmt.Errorf("cannot read request body: %w", err).Error()))
+			return
+		}
+
+		seed, err := list.ParseContentsDefinition(bytes.NewReader(body))
+		if err != nil {
+			_ = log.Error(logger, log.Message("Error parsing selection body"), log.ErrorMessage(err))
+			err = fmt.Errorf("cannot parse selection: %w", err)
+			writer.WriteHeader(http.StatusBadRequest)
+			_, _ = writer.Write([]byte(err.Error()))
+			return
+		}
+
+		groups, err := getGroups(seed)
+		if err != nil {
+			_ = log.Error(logger, log.Message("Error getting groups"), log.ErrorMessage(err))
+			err = fmt.Errorf("error getting groups: %w", err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			_, _ = writer.Write([]byte(err.Error()))
+			return
+		}
+
+		res := simplify.Simplify(seed, groups)
+		writeSimplifyResponse(logger, writer, simplifyResponse{
+			Selection:    simplify.Filter(string(body), res.RemovedRefs, res.RemovedItems),
+			RemovedRefs:  nonNil(res.RemovedRefs),
+			RemovedItems: nonNil(res.RemovedItems),
+		})
+	})
 	serveMux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		writeStaticContent(logger, w, []byte(index))
 	})
@@ -193,6 +244,30 @@ func serve(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error),
 			log.ErrorMessage(err))
 	}
 	return sErr
+}
+
+// simplifyResponse is the JSON body returned by /simplify/: the minified
+// selection text plus the refs and items that were removed.
+type simplifyResponse struct {
+	Selection    string   `json:"selection"`
+	RemovedRefs  []string `json:"removedRefs"`
+	RemovedItems []string `json:"removedItems"`
+}
+
+func writeSimplifyResponse(logger log.Logger, writer http.ResponseWriter, resp simplifyResponse) {
+	writer.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(writer).Encode(resp); err != nil {
+		_ = log.Error(logger, log.Message("Error writing json response"), log.ErrorMessage(err))
+	}
+}
+
+// nonNil returns a non-nil slice so the JSON response encodes an empty list as
+// [] rather than null, keeping the web UI's decoder simple.
+func nonNil(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
 }
 
 // writeGroups expands the given seed into its full set of groups and writes them

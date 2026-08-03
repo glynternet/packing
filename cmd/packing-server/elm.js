@@ -5351,7 +5351,7 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, fetchResults: $elm$core$Maybe$Nothing, graphDrag: $elm$core$Maybe$Nothing, graphPanX: 20, graphPanY: 20, graphScale: 1, graphSelected: $elm$core$Maybe$Nothing, inlineSingletons: true, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, viewMode: $author$project$Main$ToDo};
+var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, fetchResults: $elm$core$Maybe$Nothing, graphDrag: $elm$core$Maybe$Nothing, graphPanX: 20, graphPanY: 20, graphScale: 1, graphSelected: $elm$core$Maybe$Nothing, inlineSingletons: true, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, simplifyNote: $elm$core$Maybe$Nothing, viewMode: $author$project$Main$ToDo};
 var $author$project$Main$FetchedResults = F2(
 	function (a, b) {
 		return {$: 'FetchedResults', a: a, b: b};
@@ -7344,6 +7344,74 @@ var $author$project$Main$serialiseStateForStorage = function (model) {
 					$elm$json$Json$Encode$string(model.selectionText))
 				])));
 };
+var $author$project$Main$Simplified = function (a) {
+	return {$: 'Simplified', a: a};
+};
+var $author$project$Main$SimplifyResponse = F3(
+	function (selection, removedRefs, removedItems) {
+		return {removedItems: removedItems, removedRefs: removedRefs, selection: selection};
+	});
+var $elm$json$Json$Decode$map3 = _Json_map3;
+var $author$project$Main$decodeSimplify = A4(
+	$elm$json$Json$Decode$map3,
+	$author$project$Main$SimplifyResponse,
+	A2($elm$json$Json$Decode$field, 'selection', $elm$json$Json$Decode$string),
+	A2(
+		$elm$json$Json$Decode$field,
+		'removedRefs',
+		A2(
+			$author$project$Main$decodedWithNullAsDefault,
+			_List_Nil,
+			$elm$json$Json$Decode$list($elm$json$Json$Decode$string))),
+	A2(
+		$elm$json$Json$Decode$field,
+		'removedItems',
+		A2(
+			$author$project$Main$decodedWithNullAsDefault,
+			_List_Nil,
+			$elm$json$Json$Decode$list($elm$json$Json$Decode$string))));
+var $author$project$Main$expectSimplify = function (toMsg) {
+	return A2(
+		$elm$http$Http$expectStringResponse,
+		toMsg,
+		function (response) {
+			switch (response.$) {
+				case 'BadUrl_':
+					var url = response.a;
+					return $elm$core$Result$Err('The URL ' + (url + ' was invalid'));
+				case 'Timeout_':
+					return $elm$core$Result$Err('Unable to reach the server, try again');
+				case 'NetworkError_':
+					return $elm$core$Result$Err('Unable to reach the server, check your network connection');
+				case 'BadStatus_':
+					var metadata = response.a;
+					var body = response.b;
+					return $elm$core$Result$Err(
+						$elm$core$String$isEmpty(
+							$elm$core$String$trim(body)) ? ('Server error, status: ' + $elm$core$String$fromInt(metadata.statusCode)) : $elm$core$String$trim(body));
+				default:
+					var body = response.b;
+					return A2(
+						$elm$core$Result$mapError,
+						function (err) {
+							return 'Data received was not in the correct format: ' + $elm$json$Json$Decode$errorToString(err);
+						},
+						A2($elm$json$Json$Decode$decodeString, $author$project$Main$decodeSimplify, body));
+			}
+		});
+};
+var $author$project$Main$simplifyRequest = function (selectionText) {
+	return $elm$http$Http$request(
+		{
+			body: A2($elm$http$Http$stringBody, 'text/plain', selectionText),
+			expect: $author$project$Main$expectSimplify($author$project$Main$Simplified),
+			headers: _List_Nil,
+			method: 'POST',
+			timeout: $elm$core$Maybe$Just(5000),
+			tracker: $elm$core$Maybe$Nothing,
+			url: '/simplify/'
+		});
+};
 var $author$project$State$storeState = _Platform_outgoingPort('storeState', $elm$json$Json$Encode$string);
 var $author$project$State$updateModel = F2(
 	function (serialise, model) {
@@ -7360,7 +7428,7 @@ var $author$project$Main$update = F2(
 				var newId = model.requestId + 1;
 				var newModel = _Utils_update(
 					model,
-					{renderStatus: $author$project$Main$Rendering, requestId: newId, selectionText: selectionText});
+					{renderStatus: $author$project$Main$Rendering, requestId: newId, selectionText: selectionText, simplifyNote: $elm$core$Maybe$Nothing});
 				return _Utils_Tuple2(
 					newModel,
 					$elm$core$Platform$Cmd$batch(
@@ -7370,6 +7438,43 @@ var $author$project$Main$update = F2(
 								$author$project$Main$serialiseStateForStorage(newModel)),
 								A2($author$project$Main$fetch, newId, selectionText)
 							])));
+			case 'SimplifyClicked':
+				return _Utils_Tuple2(
+					model,
+					$author$project$Main$simplifyRequest(model.selectionText));
+			case 'Simplified':
+				var result = msg.a;
+				if (result.$ === 'Ok') {
+					var resp = result.a;
+					var newId = model.requestId + 1;
+					var newModel = _Utils_update(
+						model,
+						{
+							renderStatus: $author$project$Main$Rendering,
+							requestId: newId,
+							selectionText: resp.selection,
+							simplifyNote: $elm$core$Maybe$Just(
+								{items: resp.removedItems, refs: resp.removedRefs})
+						});
+					return _Utils_Tuple2(
+						newModel,
+						$elm$core$Platform$Cmd$batch(
+							_List_fromArray(
+								[
+									$author$project$State$storeState(
+									$author$project$Main$serialiseStateForStorage(newModel)),
+									A2($author$project$Main$fetch, newId, resp.selection)
+								])));
+				} else {
+					var err = result.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								renderStatus: $author$project$Main$RenderFailed(err)
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
 			case 'FetchedResults':
 				var id = msg.a;
 				var res = msg.b;
@@ -7395,7 +7500,7 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'ViewMode':
 				if (msg.a.$ === 'Graph') {
-					var _v2 = msg.a;
+					var _v3 = msg.a;
 					var fit = $author$project$Main$fitToView(
 						$author$project$Main$effectiveResults(model));
 					return _Utils_Tuple2(
@@ -7441,8 +7546,8 @@ var $author$project$Main$update = F2(
 				var base = _Utils_update(
 					model,
 					{inlineSingletons: enabled});
-				var _v3 = model.viewMode;
-				if (_v3.$ === 'Graph') {
+				var _v4 = model.viewMode;
+				if (_v4.$ === 'Graph') {
 					var fit = $author$project$Main$fitToView(
 						$author$project$Main$effectiveResults(base));
 					return _Utils_Tuple2(
@@ -7494,9 +7599,9 @@ var $author$project$Main$update = F2(
 			case 'GraphDragMove':
 				var x = msg.a;
 				var y = msg.b;
-				var _v4 = model.graphDrag;
-				if (_v4.$ === 'Just') {
-					var d = _v4.a;
+				var _v5 = model.graphDrag;
+				if (_v5.$ === 'Just') {
+					var d = _v5.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -7516,9 +7621,9 @@ var $author$project$Main$update = F2(
 				var x = msg.a;
 				var y = msg.b;
 				var wasClick = function () {
-					var _v5 = model.graphDrag;
-					if (_v5.$ === 'Just') {
-						var d = _v5.a;
+					var _v6 = model.graphDrag;
+					if (_v6.$ === 'Just') {
+						var d = _v6.a;
 						return ($elm$core$Basics$abs(x - d.startX) + $elm$core$Basics$abs(y - d.startY)) < 4;
 					} else {
 						return false;
@@ -7594,6 +7699,8 @@ var $author$project$Main$update = F2(
 var $author$project$Main$SelectionChanged = function (a) {
 	return {$: 'SelectionChanged', a: a};
 };
+var $author$project$Main$SimplifyClicked = {$: 'SimplifyClicked'};
+var $elm$html$Html$button = _VirtualDom_node('button');
 var $author$project$Main$ClearDone = {$: 'ClearDone'};
 var $author$project$Main$Done = {$: 'Done'};
 var $author$project$Main$GraphFit = {$: 'GraphFit'};
@@ -7615,7 +7722,6 @@ var $author$project$Main$ToggleInlineSingletons = function (a) {
 var $author$project$Main$ViewMode = function (a) {
 	return {$: 'ViewMode', a: a};
 };
-var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $author$project$Main$inlineToggleLabel = function (enabled) {
 	return enabled ? 'singletons: inlined' : 'singletons: grouped';
@@ -8200,7 +8306,6 @@ var $author$project$Main$GraphWheel = F3(
 	function (a, b, c) {
 		return {$: 'GraphWheel', a: a, b: b, c: c};
 	});
-var $elm$json$Json$Decode$map3 = _Json_map3;
 var $author$project$Main$wheelDecoder = A4(
 	$elm$json$Json$Decode$map3,
 	F3(
@@ -8623,6 +8728,65 @@ var $elm$html$Html$Attributes$rows = function (n) {
 		'rows',
 		$elm$core$String$fromInt(n));
 };
+var $author$project$Main$removedLine = F2(
+	function (noun, xs) {
+		return $elm$core$List$isEmpty(xs) ? _List_Nil : _List_fromArray(
+			[
+				A2(
+				$elm$html$Html$p,
+				_List_fromArray(
+					[
+						A2($elm$html$Html$Attributes$style, 'margin', '0 0 0.25rem 0')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						$elm$core$String$fromInt(
+							$elm$core$List$length(xs)) + (' ' + (noun + ('(s): ' + A2($elm$core$String$join, ', ', xs)))))
+					]))
+			]);
+	});
+var $author$project$Main$simplifyNoteView = function (note) {
+	if (note.$ === 'Nothing') {
+		return $elm$html$Html$text('');
+	} else {
+		var refs = note.a.refs;
+		var items = note.a.items;
+		return ($elm$core$List$isEmpty(refs) && $elm$core$List$isEmpty(items)) ? A2(
+			$elm$html$Html$p,
+			_List_fromArray(
+				[
+					A2($elm$html$Html$Attributes$style, 'color', 'green'),
+					A2($elm$html$Html$Attributes$style, 'font-size', '0.85rem')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text('Selection already minimal; nothing removed.')
+				])) : A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					A2($elm$html$Html$Attributes$style, 'color', '#555'),
+					A2($elm$html$Html$Attributes$style, 'font-size', '0.85rem'),
+					A2($elm$html$Html$Attributes$style, 'margin-bottom', '0.5rem')
+				]),
+			A2(
+				$elm$core$List$cons,
+				A2(
+					$elm$html$Html$p,
+					_List_fromArray(
+						[
+							A2($elm$html$Html$Attributes$style, 'margin', '0 0 0.25rem 0')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Simplified — removed:')
+						])),
+				_Utils_ap(
+					A2($author$project$Main$removedLine, 'ref', refs),
+					A2($author$project$Main$removedLine, 'item', items))));
+	}
+};
 var $elm$html$Html$textarea = _VirtualDom_node('textarea');
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$Main$view = function (model) {
@@ -8664,6 +8828,38 @@ var $author$project$Main$view = function (model) {
 									[
 										$elm$html$Html$text('Edit your selection below. Copy the text out to save it.')
 									])),
+								A2(
+								$elm$html$Html$div,
+								_List_fromArray(
+									[
+										A2($elm$html$Html$Attributes$style, 'margin-bottom', '0.5rem')
+									]),
+								_List_fromArray(
+									[
+										A2(
+										$elm$html$Html$button,
+										_List_fromArray(
+											[
+												$elm$html$Html$Events$onClick($author$project$Main$SimplifyClicked)
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text('Simplify')
+											])),
+										A2(
+										$elm$html$Html$span,
+										_List_fromArray(
+											[
+												A2($elm$html$Html$Attributes$style, 'margin-left', '0.5rem'),
+												A2($elm$html$Html$Attributes$style, 'color', '#555'),
+												A2($elm$html$Html$Attributes$style, 'font-size', '0.85rem')
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text('remove refs already pulled in by others, and items already in a group')
+											]))
+									])),
+								$author$project$Main$simplifyNoteView(model.simplifyNote),
 								A2(
 								$elm$html$Html$textarea,
 								_List_fromArray(

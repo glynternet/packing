@@ -16,6 +16,7 @@ import (
 	"github.com/glynternet/packing/pkg/inline"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/pkg/render"
+	"github.com/glynternet/packing/pkg/simplify"
 	"github.com/glynternet/pkg/log"
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
@@ -40,6 +41,7 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		includeGroupReferences   bool
 		inlineSingletonGroups    bool
 		renderer                 string
+		simplifyInPlace          bool
 	)
 
 	supportedRenderers, getRenderer := rendererFactory()
@@ -151,6 +153,89 @@ and prints the result as JSON.`,
 	ref.Flags().String(keyServerHost, defaultAddr, "packing server host, e.g. http://localhost")
 	ref.Flags().Uint(keyServerPort, 3865, "packing server port")
 	rootCmd.AddCommand(ref)
+
+	simplifyCmd := &cobra.Command{
+		Use:   "simplify <file>",
+		Args:  cobra.ExactArgs(1),
+		Short: "Remove redundant refs/items from a selection file",
+		Long: `Minify a selection file by removing entries that are already covered.
+
+<file> is a selection file in the same format as "selection". It is sent to the
+packing server for expansion, then:
+
+  - a ref: is dropped when its group is already reachable via another ref: (this
+    never changes the resulting packing list, only the selection file);
+  - an item is dropped when it already appears in one of the selected groups.
+
+req: lines, comments, blank lines and ordering are preserved verbatim. By default
+the simplified selection is printed to stdout and a summary of what was removed is
+printed to stderr; use --in-place to rewrite <file> instead.`,
+		// See the note on the selection command: bind per-command in PreRunE so
+		// this command's --server-* flags are not clobbered by another command's.
+		PreRunE: func(c *cobra.Command, _ []string) error {
+			return viper.BindPFlags(c.Flags())
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := args[0]
+
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return errors.Wrapf(err, "reading file at path:%q", path)
+			}
+			seed, err := list.ParseContentsDefinition(bytes.NewReader(data))
+			if err != nil {
+				return errors.Wrap(err, "parsing contents definition")
+			}
+
+			addr := viper.GetString(keyServerHost) + ":" +
+				strconv.FormatUint(uint64(viper.GetInt64(keyServerPort)), 10)
+			gs, err := client.GetGroups(logger, addr, seed)
+			if err != nil {
+				return errors.Wrap(err, "getting groups")
+			}
+
+			res := simplify.Simplify(seed, gs)
+			simplified := simplify.Filter(string(data), res.RemovedRefs, res.RemovedItems)
+
+			// Report what was removed on stderr so stdout stays a clean selection.
+			reportSimplification(os.Stderr, res)
+
+			if simplifyInPlace {
+				// Preserve the existing file mode; fall back to 0o644 if it cannot
+				// be determined (e.g. the file was removed after being read).
+				mode := os.FileMode(0o644)
+				if info, statErr := os.Stat(path); statErr == nil {
+					mode = info.Mode().Perm()
+				}
+				return errors.Wrapf(os.WriteFile(path, []byte(simplified), mode),
+					"writing simplified selection to path:%q", path)
+			}
+
+			_, err = io.WriteString(w, simplified)
+			return errors.Wrap(err, "writing simplified selection to output")
+		},
+	}
+	simplifyCmd.Flags().String(keyServerHost, defaultAddr, "packing server host, e.g. http://localhost")
+	simplifyCmd.Flags().Uint(keyServerPort, 3865, "packing server port")
+	simplifyCmd.Flags().BoolVarP(&simplifyInPlace, "in-place", "w", false,
+		"rewrite the selection file in place instead of printing to stdout")
+	rootCmd.AddCommand(simplifyCmd)
+}
+
+// reportSimplification writes a human-readable summary of what Simplify removed.
+func reportSimplification(w io.Writer, res simplify.Result) {
+	if len(res.RemovedRefs) == 0 && len(res.RemovedItems) == 0 {
+		_, _ = fmt.Fprintln(w, "selection already minimal; nothing removed")
+		return
+	}
+	if len(res.RemovedRefs) > 0 {
+		_, _ = fmt.Fprintf(w, "removed %d redundant ref(s): %s\n",
+			len(res.RemovedRefs), strings.Join(res.RemovedRefs, ", "))
+	}
+	if len(res.RemovedItems) > 0 {
+		_, _ = fmt.Fprintf(w, "removed %d redundant item(s): %s\n",
+			len(res.RemovedItems), strings.Join(res.RemovedItems, ", "))
+	}
 }
 
 type Renderer func(w io.Writer, group []graph.Group) error
