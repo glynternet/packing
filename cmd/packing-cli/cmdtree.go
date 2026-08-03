@@ -44,8 +44,22 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	supportedRenderers, getRenderer := rendererFactory()
 
 	selection := &cobra.Command{
-		Use:  "selection",
-		Args: cobra.ExactArgs(1),
+		Use:   "selection <file>",
+		Args:  cobra.ExactArgs(1),
+		Short: "Render a packing list from a local selection file",
+		Long: `Render a full packing list from a local selection file.
+
+<file> is a path to a local file describing what you are packing for.
+Each line is one of:
+
+  <item>       an item to pack            (e.g. "toothbrush")
+  ref:<name>   include a server group by its name
+  req:<name>   mark a server group as required
+  # ...        a comment (also allowed at the end of a line)
+
+Blank lines are ignored. The file is sent to the packing server, which
+recursively expands every ref: against its groups directory. The resulting
+list is rendered using --renderer.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			selection := args[0]
 
@@ -73,7 +87,7 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		},
 	}
 
-	selection.Flags().String(keyServerHost, "", "packing server host")
+	selection.Flags().String(keyServerHost, defaultAddr, "packing server host, e.g. http://localhost")
 	selection.Flags().Uint(keyServerPort, 3865, "packing server port")
 	selection.Flags().BoolVar(&includeEmptyParentGroups, "include-empty-parent-groups", false,
 		"Provide this flag to render groups that consist only of groups.")
@@ -86,7 +100,13 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	ref := &cobra.Command{
 		Use:   "reference <reference> [<reference>...]",
 		Args:  cobra.MinimumNArgs(1),
-		Short: "Query a reference",
+		Short: "Fetch groups from the server by name",
+		Long: `Fetch one or more groups directly from the packing server by name.
+
+Each <reference> is the name (key) of a group hosted by the server — i.e.
+the filename of a group in the server's groups directory. Unlike "selection",
+this does not read a local file; it looks up the given names, expands them,
+and prints the result as JSON.`,
 		RunE: func(cmd *cobra.Command, keys []string) error {
 			addr := viper.GetString(keyServerHost) + ":" +
 				strconv.FormatUint(uint64(viper.GetInt64(keyServerPort)), 10)
@@ -108,7 +128,7 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 			return errors.Wrap(err, "writing result to output")
 		},
 	}
-	ref.Flags().String(keyServerHost, defaultAddr, "packing server host")
+	ref.Flags().String(keyServerHost, defaultAddr, "packing server host, e.g. http://localhost")
 	ref.Flags().Uint(keyServerPort, 3865, "packing server port")
 	cmd.MustBindPFlags(logger, ref)
 	rootCmd.AddCommand(ref)
