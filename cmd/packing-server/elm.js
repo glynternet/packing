@@ -5351,7 +5351,7 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, fetchResults: $elm$core$Maybe$Nothing, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, viewMode: $author$project$Main$ToDo};
+var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, fetchResults: $elm$core$Maybe$Nothing, graphDrag: $elm$core$Maybe$Nothing, graphPanX: 20, graphPanY: 20, graphScale: 1, graphSelected: $elm$core$Maybe$Nothing, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, viewMode: $author$project$Main$ToDo};
 var $author$project$Main$FetchedResults = F2(
 	function (a, b) {
 		return {$: 'FetchedResults', a: a, b: b};
@@ -6288,13 +6288,725 @@ var $author$project$Main$init = function (flags) {
 			{requestId: firstId}),
 		A2($author$project$Main$fetch, firstId, loaded.selectionText));
 };
+var $author$project$Main$GraphDragEnd = F2(
+	function (a, b) {
+		return {$: 'GraphDragEnd', a: a, b: b};
+	});
+var $author$project$Main$GraphDragMove = F2(
+	function (a, b) {
+		return {$: 'GraphDragMove', a: a, b: b};
+	});
 var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $elm$json$Json$Decode$float = _Json_decodeFloat;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $elm$browser$Browser$Events$Document = {$: 'Document'};
+var $elm$browser$Browser$Events$MySub = F3(
+	function (a, b, c) {
+		return {$: 'MySub', a: a, b: b, c: c};
+	});
+var $elm$browser$Browser$Events$State = F2(
+	function (subs, pids) {
+		return {pids: pids, subs: subs};
+	});
+var $elm$browser$Browser$Events$init = $elm$core$Task$succeed(
+	A2($elm$browser$Browser$Events$State, _List_Nil, $elm$core$Dict$empty));
+var $elm$browser$Browser$Events$nodeToKey = function (node) {
+	if (node.$ === 'Document') {
+		return 'd_';
+	} else {
+		return 'w_';
+	}
+};
+var $elm$browser$Browser$Events$addKey = function (sub) {
+	var node = sub.a;
+	var name = sub.b;
+	return _Utils_Tuple2(
+		_Utils_ap(
+			$elm$browser$Browser$Events$nodeToKey(node),
+			name),
+		sub);
+};
+var $elm$core$Dict$fromList = function (assocs) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (_v0, dict) {
+				var key = _v0.a;
+				var value = _v0.b;
+				return A3($elm$core$Dict$insert, key, value, dict);
+			}),
+		$elm$core$Dict$empty,
+		assocs);
+};
+var $elm$core$Dict$foldl = F3(
+	function (func, acc, dict) {
+		foldl:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return acc;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$func = func,
+					$temp$acc = A3(
+					func,
+					key,
+					value,
+					A3($elm$core$Dict$foldl, func, acc, left)),
+					$temp$dict = right;
+				func = $temp$func;
+				acc = $temp$acc;
+				dict = $temp$dict;
+				continue foldl;
+			}
+		}
+	});
+var $elm$core$Dict$merge = F6(
+	function (leftStep, bothStep, rightStep, leftDict, rightDict, initialResult) {
+		var stepState = F3(
+			function (rKey, rValue, _v0) {
+				stepState:
+				while (true) {
+					var list = _v0.a;
+					var result = _v0.b;
+					if (!list.b) {
+						return _Utils_Tuple2(
+							list,
+							A3(rightStep, rKey, rValue, result));
+					} else {
+						var _v2 = list.a;
+						var lKey = _v2.a;
+						var lValue = _v2.b;
+						var rest = list.b;
+						if (_Utils_cmp(lKey, rKey) < 0) {
+							var $temp$rKey = rKey,
+								$temp$rValue = rValue,
+								$temp$_v0 = _Utils_Tuple2(
+								rest,
+								A3(leftStep, lKey, lValue, result));
+							rKey = $temp$rKey;
+							rValue = $temp$rValue;
+							_v0 = $temp$_v0;
+							continue stepState;
+						} else {
+							if (_Utils_cmp(lKey, rKey) > 0) {
+								return _Utils_Tuple2(
+									list,
+									A3(rightStep, rKey, rValue, result));
+							} else {
+								return _Utils_Tuple2(
+									rest,
+									A4(bothStep, lKey, lValue, rValue, result));
+							}
+						}
+					}
+				}
+			});
+		var _v3 = A3(
+			$elm$core$Dict$foldl,
+			stepState,
+			_Utils_Tuple2(
+				$elm$core$Dict$toList(leftDict),
+				initialResult),
+			rightDict);
+		var leftovers = _v3.a;
+		var intermediateResult = _v3.b;
+		return A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v4, result) {
+					var k = _v4.a;
+					var v = _v4.b;
+					return A3(leftStep, k, v, result);
+				}),
+			intermediateResult,
+			leftovers);
+	});
+var $elm$browser$Browser$Events$Event = F2(
+	function (key, event) {
+		return {event: event, key: key};
+	});
+var $elm$browser$Browser$Events$spawn = F3(
+	function (router, key, _v0) {
+		var node = _v0.a;
+		var name = _v0.b;
+		var actualNode = function () {
+			if (node.$ === 'Document') {
+				return _Browser_doc;
+			} else {
+				return _Browser_window;
+			}
+		}();
+		return A2(
+			$elm$core$Task$map,
+			function (value) {
+				return _Utils_Tuple2(key, value);
+			},
+			A3(
+				_Browser_on,
+				actualNode,
+				name,
+				function (event) {
+					return A2(
+						$elm$core$Platform$sendToSelf,
+						router,
+						A2($elm$browser$Browser$Events$Event, key, event));
+				}));
+	});
+var $elm$core$Dict$union = F2(
+	function (t1, t2) {
+		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
+	});
+var $elm$browser$Browser$Events$onEffects = F3(
+	function (router, subs, state) {
+		var stepRight = F3(
+			function (key, sub, _v6) {
+				var deads = _v6.a;
+				var lives = _v6.b;
+				var news = _v6.c;
+				return _Utils_Tuple3(
+					deads,
+					lives,
+					A2(
+						$elm$core$List$cons,
+						A3($elm$browser$Browser$Events$spawn, router, key, sub),
+						news));
+			});
+		var stepLeft = F3(
+			function (_v4, pid, _v5) {
+				var deads = _v5.a;
+				var lives = _v5.b;
+				var news = _v5.c;
+				return _Utils_Tuple3(
+					A2($elm$core$List$cons, pid, deads),
+					lives,
+					news);
+			});
+		var stepBoth = F4(
+			function (key, pid, _v2, _v3) {
+				var deads = _v3.a;
+				var lives = _v3.b;
+				var news = _v3.c;
+				return _Utils_Tuple3(
+					deads,
+					A3($elm$core$Dict$insert, key, pid, lives),
+					news);
+			});
+		var newSubs = A2($elm$core$List$map, $elm$browser$Browser$Events$addKey, subs);
+		var _v0 = A6(
+			$elm$core$Dict$merge,
+			stepLeft,
+			stepBoth,
+			stepRight,
+			state.pids,
+			$elm$core$Dict$fromList(newSubs),
+			_Utils_Tuple3(_List_Nil, $elm$core$Dict$empty, _List_Nil));
+		var deadPids = _v0.a;
+		var livePids = _v0.b;
+		var makeNewPids = _v0.c;
+		return A2(
+			$elm$core$Task$andThen,
+			function (pids) {
+				return $elm$core$Task$succeed(
+					A2(
+						$elm$browser$Browser$Events$State,
+						newSubs,
+						A2(
+							$elm$core$Dict$union,
+							livePids,
+							$elm$core$Dict$fromList(pids))));
+			},
+			A2(
+				$elm$core$Task$andThen,
+				function (_v1) {
+					return $elm$core$Task$sequence(makeNewPids);
+				},
+				$elm$core$Task$sequence(
+					A2($elm$core$List$map, $elm$core$Process$kill, deadPids))));
+	});
+var $elm$browser$Browser$Events$onSelfMsg = F3(
+	function (router, _v0, state) {
+		var key = _v0.key;
+		var event = _v0.event;
+		var toMessage = function (_v2) {
+			var subKey = _v2.a;
+			var _v3 = _v2.b;
+			var node = _v3.a;
+			var name = _v3.b;
+			var decoder = _v3.c;
+			return _Utils_eq(subKey, key) ? A2(_Browser_decodeEvent, decoder, event) : $elm$core$Maybe$Nothing;
+		};
+		var messages = A2($elm$core$List$filterMap, toMessage, state.subs);
+		return A2(
+			$elm$core$Task$andThen,
+			function (_v1) {
+				return $elm$core$Task$succeed(state);
+			},
+			$elm$core$Task$sequence(
+				A2(
+					$elm$core$List$map,
+					$elm$core$Platform$sendToApp(router),
+					messages)));
+	});
+var $elm$browser$Browser$Events$subMap = F2(
+	function (func, _v0) {
+		var node = _v0.a;
+		var name = _v0.b;
+		var decoder = _v0.c;
+		return A3(
+			$elm$browser$Browser$Events$MySub,
+			node,
+			name,
+			A2($elm$json$Json$Decode$map, func, decoder));
+	});
+_Platform_effectManagers['Browser.Events'] = _Platform_createManager($elm$browser$Browser$Events$init, $elm$browser$Browser$Events$onEffects, $elm$browser$Browser$Events$onSelfMsg, 0, $elm$browser$Browser$Events$subMap);
+var $elm$browser$Browser$Events$subscription = _Platform_leaf('Browser.Events');
+var $elm$browser$Browser$Events$on = F3(
+	function (node, name, decoder) {
+		return $elm$browser$Browser$Events$subscription(
+			A3($elm$browser$Browser$Events$MySub, node, name, decoder));
+	});
+var $elm$browser$Browser$Events$onMouseMove = A2($elm$browser$Browser$Events$on, $elm$browser$Browser$Events$Document, 'mousemove');
+var $elm$browser$Browser$Events$onMouseUp = A2($elm$browser$Browser$Events$on, $elm$browser$Browser$Events$Document, 'mouseup');
+var $author$project$Main$subscriptions = function (model) {
+	var _v0 = model.graphDrag;
+	if (_v0.$ === 'Just') {
+		return $elm$core$Platform$Sub$batch(
+			_List_fromArray(
+				[
+					$elm$browser$Browser$Events$onMouseMove(
+					A3(
+						$elm$json$Json$Decode$map2,
+						$author$project$Main$GraphDragMove,
+						A2($elm$json$Json$Decode$field, 'clientX', $elm$json$Json$Decode$float),
+						A2($elm$json$Json$Decode$field, 'clientY', $elm$json$Json$Decode$float))),
+					$elm$browser$Browser$Events$onMouseUp(
+					A3(
+						$elm$json$Json$Decode$map2,
+						$author$project$Main$GraphDragEnd,
+						A2($elm$json$Json$Decode$field, 'clientX', $elm$json$Json$Decode$float),
+						A2($elm$json$Json$Decode$field, 'clientY', $elm$json$Json$Decode$float)))
+				]));
+	} else {
+		return $elm$core$Platform$Sub$none;
+	}
+};
+var $author$project$Main$Graph = {$: 'Graph'};
 var $author$project$Main$RenderFailed = function (a) {
 	return {$: 'RenderFailed', a: a};
 };
 var $author$project$Main$Rendered = {$: 'Rendered'};
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $elm$core$Basics$abs = function (n) {
+	return (n < 0) ? (-n) : n;
+};
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Basics$clamp = F3(
+	function (low, high, number) {
+		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
+	});
+var $author$project$Main$GroupNode = {$: 'GroupNode'};
+var $author$project$Main$ItemNode = {$: 'ItemNode'};
+var $author$project$Main$nodeW = function (label) {
+	return A2(
+		$elm$core$Basics$max,
+		44,
+		($elm$core$String$length(label) * 6.6) + 20);
+};
+var $author$project$Main$rowPitch = 30;
+var $author$project$Main$columnNodes = F4(
+	function (x, kind, label, ids) {
+		var startY = (-(($elm$core$List$length(ids) - 1) / 2)) * $author$project$Main$rowPitch;
+		return A2(
+			$elm$core$List$indexedMap,
+			F2(
+				function (i, id) {
+					return {
+						id: id,
+						kind: kind,
+						label: label(id),
+						w: $author$project$Main$nodeW(
+							label(id)),
+						x: x,
+						y: startY + (i * $author$project$Main$rowPitch)
+					};
+				}),
+			ids);
+	});
+var $author$project$Main$columnPitch = 240;
+var $author$project$Main$computeLayers = F2(
+	function (names, edges) {
+		var relaxOnce = function (dict) {
+			return A3(
+				$elm$core$List$foldl,
+				F2(
+					function (_v0, d) {
+						var parent = _v0.a;
+						var child = _v0.b;
+						var parentLayer = A2(
+							$elm$core$Maybe$withDefault,
+							0,
+							A2($elm$core$Dict$get, parent, d));
+						var childLayer = A2(
+							$elm$core$Maybe$withDefault,
+							0,
+							A2($elm$core$Dict$get, child, d));
+						return (_Utils_cmp(parentLayer + 1, childLayer) > 0) ? A3($elm$core$Dict$insert, child, parentLayer + 1, d) : d;
+					}),
+				dict,
+				edges);
+		};
+		var iterate = F2(
+			function (n, dict) {
+				iterate:
+				while (true) {
+					if (n <= 0) {
+						return dict;
+					} else {
+						var $temp$n = n - 1,
+							$temp$dict = relaxOnce(dict);
+						n = $temp$n;
+						dict = $temp$dict;
+						continue iterate;
+					}
+				}
+			});
+		return A2(
+			iterate,
+			$elm$core$List$length(names),
+			$elm$core$Dict$fromList(
+				A2(
+					$elm$core$List$map,
+					function (n) {
+						return _Utils_Tuple2(n, 0);
+					},
+					names)));
+	});
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $elm$core$List$concatMap = F2(
+	function (f, list) {
+		return $elm$core$List$concat(
+			A2($elm$core$List$map, f, list));
+	});
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $author$project$Main$groupId = function (name) {
+	return 'g:' + name;
+};
+var $author$project$Main$ifThen = F2(
+	function (cond, maybe) {
+		return cond ? maybe : $elm$core$Maybe$Nothing;
+	});
+var $author$project$Main$itemId = function (name) {
+	return 'i:' + name;
+};
+var $elm$core$Dict$map = F2(
+	function (func, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		} else {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				key,
+				A2(func, key, value),
+				A2($elm$core$Dict$map, func, left),
+				A2($elm$core$Dict$map, func, right));
+		}
+	});
+var $elm$core$List$maximum = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(
+			A3($elm$core$List$foldl, $elm$core$Basics$max, x, xs));
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $elm$core$List$sum = function (numbers) {
+	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
+};
+var $author$project$Main$meanOrZero = function (xs) {
+	if (!xs.b) {
+		return 0;
+	} else {
+		return $elm$core$List$sum(xs) / $elm$core$List$length(xs);
+	}
+};
+var $elm$core$Dict$member = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$get, key, dict);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
+	});
+var $elm$core$Set$member = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return A2($elm$core$Dict$member, key, dict);
+	});
+var $elm$core$Basics$min = F2(
+	function (x, y) {
+		return (_Utils_cmp(x, y) < 0) ? x : y;
+	});
+var $elm$core$List$minimum = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(
+			A3($elm$core$List$foldl, $elm$core$Basics$min, x, xs));
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$Main$nodeHeight = 22;
+var $elm$core$List$sortBy = _List_sortBy;
+var $elm$core$List$sort = function (xs) {
+	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
+};
+var $elm$core$Dict$values = function (dict) {
+	return A3(
+		$elm$core$Dict$foldr,
+		F3(
+			function (key, value, valueList) {
+				return A2($elm$core$List$cons, value, valueList);
+			}),
+		_List_Nil,
+		dict);
+};
+var $author$project$Main$computeLayout = function (groups) {
+	var pad = 18;
+	var labelOf = function (id) {
+		return A2($elm$core$String$dropLeft, 2, id);
+	};
+	var itemEdges = A2(
+		$elm$core$List$concatMap,
+		function (g) {
+			return A2(
+				$elm$core$List$map,
+				function (it) {
+					return _Utils_Tuple2(
+						$author$project$Main$groupId(g.name),
+						$author$project$Main$itemId(it));
+				},
+				g.contents.items);
+		},
+		groups);
+	var groupNameSet = $elm$core$Set$fromList(
+		A2(
+			$elm$core$List$map,
+			function ($) {
+				return $.name;
+			},
+			groups));
+	var groupIds = A2(
+		$elm$core$List$map,
+		A2(
+			$elm$core$Basics$composeR,
+			function ($) {
+				return $.name;
+			},
+			$author$project$Main$groupId),
+		groups);
+	var groupEdges = A2(
+		$elm$core$List$concatMap,
+		function (g) {
+			return A2(
+				$elm$core$List$map,
+				function (r) {
+					return _Utils_Tuple2(
+						$author$project$Main$groupId(g.name),
+						$author$project$Main$groupId(r));
+				},
+				A2(
+					$elm$core$List$filter,
+					function (r) {
+						return A2($elm$core$Set$member, r, groupNameSet);
+					},
+					g.contents.refs));
+		},
+		groups);
+	var groupLayers = A2($author$project$Main$computeLayers, groupIds, groupEdges);
+	var maxGroupLayer = A2(
+		$elm$core$Maybe$withDefault,
+		0,
+		$elm$core$List$maximum(
+			$elm$core$Dict$values(groupLayers)));
+	var groupBuckets = A2(
+		$elm$core$Dict$map,
+		F2(
+			function (_v2, ids) {
+				return $elm$core$List$sort(ids);
+			}),
+		A3(
+			$elm$core$Dict$foldl,
+			F3(
+				function (id, layer, acc) {
+					return A3(
+						$elm$core$Dict$update,
+						layer,
+						function (mb) {
+							return $elm$core$Maybe$Just(
+								A2(
+									$elm$core$List$cons,
+									id,
+									A2($elm$core$Maybe$withDefault, _List_Nil, mb)));
+						},
+						acc);
+				}),
+			$elm$core$Dict$empty,
+			groupLayers));
+	var groupRaw = A2(
+		$elm$core$List$concatMap,
+		function (_v1) {
+			var layer = _v1.a;
+			var ids = _v1.b;
+			return A4($author$project$Main$columnNodes, layer * $author$project$Main$columnPitch, $author$project$Main$GroupNode, labelOf, ids);
+		},
+		$elm$core$Dict$toList(groupBuckets));
+	var groupY = $elm$core$Dict$fromList(
+		A2(
+			$elm$core$List$map,
+			function (n) {
+				return _Utils_Tuple2(n.id, n.y);
+			},
+			groupRaw));
+	var orderedItemIds = A2(
+		$elm$core$List$map,
+		$author$project$Main$itemId,
+		A2(
+			$elm$core$List$sortBy,
+			function (name) {
+				var id = $author$project$Main$itemId(name);
+				var parentYs = A2(
+					$elm$core$List$filterMap,
+					function (_v0) {
+						var p = _v0.a;
+						var c = _v0.b;
+						return A2(
+							$author$project$Main$ifThen,
+							_Utils_eq(c, id),
+							A2($elm$core$Dict$get, p, groupY));
+					},
+					itemEdges);
+				return _Utils_Tuple2(
+					$author$project$Main$meanOrZero(parentYs),
+					name);
+			},
+			$elm$core$Set$toList(
+				$elm$core$Set$fromList(
+					A2(
+						$elm$core$List$concatMap,
+						function (g) {
+							return g.contents.items;
+						},
+						groups)))));
+	var itemRaw = A4($author$project$Main$columnNodes, (maxGroupLayer + 1) * $author$project$Main$columnPitch, $author$project$Main$ItemNode, labelOf, orderedItemIds);
+	var rawNodes = _Utils_ap(groupRaw, itemRaw);
+	var minX = A2(
+		$elm$core$Maybe$withDefault,
+		0,
+		$elm$core$List$minimum(
+			A2(
+				$elm$core$List$map,
+				function ($) {
+					return $.x;
+				},
+				rawNodes)));
+	var minY = A2(
+		$elm$core$Maybe$withDefault,
+		0,
+		$elm$core$List$minimum(
+			A2(
+				$elm$core$List$map,
+				function ($) {
+					return $.y;
+				},
+				rawNodes)));
+	var shifted = A2(
+		$elm$core$List$map,
+		function (n) {
+			return _Utils_update(
+				n,
+				{x: (n.x - minX) + pad, y: (n.y - minY) + pad});
+		},
+		rawNodes);
+	var maxX = A2(
+		$elm$core$Maybe$withDefault,
+		0,
+		$elm$core$List$maximum(
+			A2(
+				$elm$core$List$map,
+				function (n) {
+					return n.x + n.w;
+				},
+				shifted)));
+	var maxY = A2(
+		$elm$core$Maybe$withDefault,
+		0,
+		$elm$core$List$maximum(
+			A2(
+				$elm$core$List$map,
+				function (n) {
+					return n.y + $author$project$Main$nodeHeight;
+				},
+				shifted)));
+	return {
+		edges: _Utils_ap(groupEdges, itemEdges),
+		height: maxY + pad,
+		nodes: shifted,
+		width: maxX + pad
+	};
+};
+var $author$project$Main$fitToView = function (maybeGroups) {
+	if (maybeGroups.$ === 'Nothing') {
+		return {panX: 20, panY: 20, scale: 1};
+	} else {
+		var groups = maybeGroups.a;
+		var layout = $author$project$Main$computeLayout(groups);
+		var gW = A2($elm$core$Basics$max, 1, layout.width);
+		var gH = A2($elm$core$Basics$max, 1, layout.height);
+		var baseW = 900;
+		var baseH = 560;
+		var scale = A3(
+			$elm$core$Basics$clamp,
+			0.15,
+			2,
+			A2($elm$core$Basics$min, baseW / gW, baseH / gH));
+		return {panX: (baseW - (gW * scale)) / 2, panY: (baseH - (gH * scale)) / 2, scale: scale};
+	}
+};
 var $elm$core$Basics$neq = _Utils_notEqual;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$core$Set$remove = F2(
@@ -6395,12 +7107,22 @@ var $author$project$Main$update = F2(
 					}(),
 					$elm$core$Platform$Cmd$none);
 			case 'ViewMode':
-				var mode = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{viewMode: mode}),
-					$elm$core$Platform$Cmd$none);
+				if (msg.a.$ === 'Graph') {
+					var _v2 = msg.a;
+					var fit = $author$project$Main$fitToView(model.fetchResults);
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{graphDrag: $elm$core$Maybe$Nothing, graphPanX: fit.panX, graphPanY: fit.panY, graphScale: fit.scale, graphSelected: $elm$core$Maybe$Nothing, viewMode: $author$project$Main$Graph}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					var mode = msg.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{viewMode: mode}),
+						$elm$core$Platform$Cmd$none);
+				}
 			case 'ItemDone':
 				var item = msg.a;
 				var done = msg.b;
@@ -6433,13 +7155,109 @@ var $author$project$Main$update = F2(
 						model,
 						{itemsOnly: itemsOnly}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'ClearDone':
 				return A2(
 					$author$project$State$updateModel,
 					$author$project$Main$serialiseStateForStorage,
 					_Utils_update(
 						model,
 						{done: $elm$core$Set$empty}));
+			case 'GraphWheel':
+				var deltaY = msg.a;
+				var offsetX = msg.b;
+				var offsetY = msg.c;
+				var worldY = (offsetY - model.graphPanY) / model.graphScale;
+				var worldX = (offsetX - model.graphPanX) / model.graphScale;
+				var factor = (deltaY < 0) ? 1.1 : (1 / 1.1);
+				var newScale = A3($elm$core$Basics$clamp, 0.1, 4, model.graphScale * factor);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{graphPanX: offsetX - (worldX * newScale), graphPanY: offsetY - (worldY * newScale), graphScale: newScale}),
+					$elm$core$Platform$Cmd$none);
+			case 'GraphDragStart':
+				var x = msg.a;
+				var y = msg.b;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							graphDrag: $elm$core$Maybe$Just(
+								{lastX: x, lastY: y, startX: x, startY: y})
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'GraphDragMove':
+				var x = msg.a;
+				var y = msg.b;
+				var _v3 = model.graphDrag;
+				if (_v3.$ === 'Just') {
+					var d = _v3.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								graphDrag: $elm$core$Maybe$Just(
+									_Utils_update(
+										d,
+										{lastX: x, lastY: y})),
+								graphPanX: model.graphPanX + (x - d.lastX),
+								graphPanY: model.graphPanY + (y - d.lastY)
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			case 'GraphDragEnd':
+				var x = msg.a;
+				var y = msg.b;
+				var wasClick = function () {
+					var _v4 = model.graphDrag;
+					if (_v4.$ === 'Just') {
+						var d = _v4.a;
+						return ($elm$core$Basics$abs(x - d.startX) + $elm$core$Basics$abs(y - d.startY)) < 4;
+					} else {
+						return false;
+					}
+				}();
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							graphDrag: $elm$core$Maybe$Nothing,
+							graphSelected: wasClick ? $elm$core$Maybe$Nothing : model.graphSelected
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'GraphNodeClicked':
+				var name = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							graphDrag: $elm$core$Maybe$Nothing,
+							graphSelected: _Utils_eq(
+								model.graphSelected,
+								$elm$core$Maybe$Just(name)) ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(name)
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'GraphZoom':
+				var factor = msg.a;
+				var newScale = A3($elm$core$Basics$clamp, 0.1, 4, model.graphScale * factor);
+				var cy = 280;
+				var worldY = (cy - model.graphPanY) / model.graphScale;
+				var cx = 450;
+				var worldX = (cx - model.graphPanX) / model.graphScale;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{graphPanX: cx - (worldX * newScale), graphPanY: cy - (worldY * newScale), graphScale: newScale}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				var fit = $author$project$Main$fitToView(model.fetchResults);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{graphPanX: fit.panX, graphPanY: fit.panY, graphScale: fit.scale, graphSelected: $elm$core$Maybe$Nothing}),
+					$elm$core$Platform$Cmd$none);
 		}
 	});
 var $author$project$Main$SelectionChanged = function (a) {
@@ -6447,6 +7265,10 @@ var $author$project$Main$SelectionChanged = function (a) {
 };
 var $author$project$Main$ClearDone = {$: 'ClearDone'};
 var $author$project$Main$Done = {$: 'Done'};
+var $author$project$Main$GraphFit = {$: 'GraphFit'};
+var $author$project$Main$GraphZoom = function (a) {
+	return {$: 'GraphZoom', a: a};
+};
 var $author$project$Main$ItemsOnly = function (a) {
 	return {$: 'ItemsOnly', a: a};
 };
@@ -6461,6 +7283,26 @@ var $author$project$Main$ViewMode = function (a) {
 };
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$html$Html$div = _VirtualDom_node('div');
+var $elm$html$Html$span = _VirtualDom_node('span');
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $author$project$Main$legendSwatch = F2(
+	function (fill, stroke) {
+		return A2(
+			$elm$html$Html$span,
+			_List_fromArray(
+				[
+					A2($elm$html$Html$Attributes$style, 'display', 'inline-block'),
+					A2($elm$html$Html$Attributes$style, 'width', '11px'),
+					A2($elm$html$Html$Attributes$style, 'height', '11px'),
+					A2($elm$html$Html$Attributes$style, 'background', fill),
+					A2($elm$html$Html$Attributes$style, 'border', '1px solid ' + stroke),
+					A2($elm$html$Html$Attributes$style, 'border-radius', '2px'),
+					A2($elm$html$Html$Attributes$style, 'margin-right', '3px'),
+					A2($elm$html$Html$Attributes$style, 'vertical-align', 'middle')
+				]),
+			_List_Nil);
+	});
 var $elm$core$Basics$not = _Basics_not;
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
@@ -6482,83 +7324,173 @@ var $elm$html$Html$Events$onClick = function (msg) {
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
 var $author$project$Main$controlsView = function (model) {
-	return A2(
-		$elm$html$Html$div,
-		_List_Nil,
-		_List_fromArray(
-			[
-				function () {
-				var _v0 = model.viewMode;
-				if (_v0.$ === 'ToDo') {
-					return A2(
-						$elm$html$Html$button,
-						_List_fromArray(
-							[
-								$elm$html$Html$Events$onClick(
-								$author$project$Main$ViewMode($author$project$Main$Done))
-							]),
-						_List_fromArray(
-							[
-								$elm$html$Html$text('view done')
-							]));
-				} else {
-					return A2(
-						$elm$html$Html$button,
-						_List_fromArray(
-							[
-								$elm$html$Html$Events$onClick(
-								$author$project$Main$ViewMode($author$project$Main$ToDo))
-							]),
-						_List_fromArray(
-							[
-								$elm$html$Html$text('view todo')
-							]));
-				}
-			}(),
-				A2(
-				$elm$html$Html$button,
-				_List_fromArray(
-					[
-						$elm$html$Html$Events$onClick(
-						$author$project$Main$ShowGroupLinks(!model.showGroupLinks))
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('show group links')
-					])),
-				A2(
-				$elm$html$Html$button,
-				_List_fromArray(
-					[
-						$elm$html$Html$Events$onClick(
-						$author$project$Main$ShowContainerGroups(!model.showContainerGroups))
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('show container groups')
-					])),
-				A2(
-				$elm$html$Html$button,
-				_List_fromArray(
-					[
-						$elm$html$Html$Events$onClick(
-						$author$project$Main$ItemsOnly((model.itemsOnly + 1) % 3))
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('toggle items only')
-					])),
-				A2(
-				$elm$html$Html$button,
-				_List_fromArray(
-					[
-						$elm$html$Html$Events$onClick($author$project$Main$ClearDone)
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('reset')
-					]))
-			]));
+	var _v0 = model.viewMode;
+	if (_v0.$ === 'Graph') {
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$ViewMode($author$project$Main$ToDo))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('list view')
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$GraphZoom(1.25))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('zoom in')
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$GraphZoom(0.8))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('zoom out')
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick($author$project$Main$GraphFit)
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('fit')
+						])),
+					A2(
+					$elm$html$Html$span,
+					_List_fromArray(
+						[
+							A2($elm$html$Html$Attributes$style, 'margin-left', '0.75rem'),
+							A2($elm$html$Html$Attributes$style, 'font-size', '0.85em')
+						]),
+					_List_fromArray(
+						[
+							A2($author$project$Main$legendSwatch, '#e2e8f0', '#a0aec0'),
+							$elm$html$Html$text(' group  '),
+							A2($author$project$Main$legendSwatch, '#c6f6d5', '#68d391'),
+							$elm$html$Html$text(' item')
+						])),
+					A2(
+					$elm$html$Html$span,
+					_List_fromArray(
+						[
+							A2($elm$html$Html$Attributes$style, 'margin-left', '0.75rem'),
+							A2($elm$html$Html$Attributes$style, 'font-size', '0.85em'),
+							A2($elm$html$Html$Attributes$style, 'color', '#666')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('drag to pan · scroll to zoom · click a node to trace its lineage')
+						]))
+				]));
+	} else {
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					function () {
+					var _v1 = model.viewMode;
+					if (_v1.$ === 'Done') {
+						return A2(
+							$elm$html$Html$button,
+							_List_fromArray(
+								[
+									$elm$html$Html$Events$onClick(
+									$author$project$Main$ViewMode($author$project$Main$ToDo))
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('view todo')
+								]));
+					} else {
+						return A2(
+							$elm$html$Html$button,
+							_List_fromArray(
+								[
+									$elm$html$Html$Events$onClick(
+									$author$project$Main$ViewMode($author$project$Main$Done))
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('view done')
+								]));
+					}
+				}(),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$ViewMode($author$project$Main$Graph))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('graph view')
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$ShowGroupLinks(!model.showGroupLinks))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('show group links')
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$ShowContainerGroups(!model.showContainerGroups))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('show container groups')
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$ItemsOnly((model.itemsOnly + 1) % 3))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('toggle items only')
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick($author$project$Main$ClearDone)
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('reset')
+						]))
+				]));
+	}
 };
 var $elm$html$Html$h3 = _VirtualDom_node('h3');
 var $elm$html$Html$Events$alwaysStop = function (x) {
@@ -6593,9 +7525,6 @@ var $elm$html$Html$Events$onInput = function (tagger) {
 			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
 };
 var $elm$html$Html$p = _VirtualDom_node('p');
-var $elm$html$Html$span = _VirtualDom_node('span');
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
 		return A2(
@@ -6659,33 +7588,438 @@ var $author$project$Main$renderStatusMessage = function (status) {
 		return $elm$html$Html$text('');
 	}
 };
+var $elm$svg$Svg$Attributes$d = _VirtualDom_attribute('d');
+var $elm$svg$Svg$trustedNode = _VirtualDom_nodeNS('http://www.w3.org/2000/svg');
+var $elm$svg$Svg$defs = $elm$svg$Svg$trustedNode('defs');
+var $elm$svg$Svg$Attributes$fill = _VirtualDom_attribute('fill');
+var $elm$svg$Svg$g = $elm$svg$Svg$trustedNode('g');
+var $elm$core$String$fromFloat = _String_fromNumber;
+var $author$project$Main$gStr = $elm$core$String$fromFloat;
+var $elm$svg$Svg$Attributes$id = _VirtualDom_attribute('id');
+var $elm$core$Maybe$map2 = F3(
+	function (func, ma, mb) {
+		if (ma.$ === 'Nothing') {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var a = ma.a;
+			if (mb.$ === 'Nothing') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var b = mb.a;
+				return $elm$core$Maybe$Just(
+					A2(func, a, b));
+			}
+		}
+	});
+var $elm$svg$Svg$marker = $elm$svg$Svg$trustedNode('marker');
+var $elm$svg$Svg$Attributes$markerHeight = _VirtualDom_attribute('markerHeight');
+var $elm$svg$Svg$Attributes$markerUnits = _VirtualDom_attribute('markerUnits');
+var $elm$svg$Svg$Attributes$markerWidth = _VirtualDom_attribute('markerWidth');
+var $elm$svg$Svg$Attributes$orient = _VirtualDom_attribute('orient');
+var $author$project$Main$GraphDragStart = F2(
+	function (a, b) {
+		return {$: 'GraphDragStart', a: a, b: b};
+	});
+var $author$project$Main$panStartDecoder = A3(
+	$elm$json$Json$Decode$map2,
+	$author$project$Main$GraphDragStart,
+	A2($elm$json$Json$Decode$field, 'clientX', $elm$json$Json$Decode$float),
+	A2($elm$json$Json$Decode$field, 'clientY', $elm$json$Json$Decode$float));
+var $elm$svg$Svg$path = $elm$svg$Svg$trustedNode('path');
+var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
+	return {$: 'MayPreventDefault', a: a};
+};
+var $elm$html$Html$Events$preventDefaultOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
+	});
+var $author$project$Main$pushAdj = F3(
+	function (key, val, dict) {
+		return A3(
+			$elm$core$Dict$update,
+			key,
+			function (mb) {
+				return $elm$core$Maybe$Just(
+					A2(
+						$elm$core$List$cons,
+						val,
+						A2($elm$core$Maybe$withDefault, _List_Nil, mb)));
+			},
+			dict);
+	});
+var $author$project$Main$reachableHelp = F3(
+	function (adj, frontier, visited) {
+		reachableHelp:
+		while (true) {
+			if (!frontier.b) {
+				return visited;
+			} else {
+				var x = frontier.a;
+				var rest = frontier.b;
+				if (A2($elm$core$Set$member, x, visited)) {
+					var $temp$adj = adj,
+						$temp$frontier = rest,
+						$temp$visited = visited;
+					adj = $temp$adj;
+					frontier = $temp$frontier;
+					visited = $temp$visited;
+					continue reachableHelp;
+				} else {
+					var $temp$adj = adj,
+						$temp$frontier = _Utils_ap(
+						A2(
+							$elm$core$Maybe$withDefault,
+							_List_Nil,
+							A2($elm$core$Dict$get, x, adj)),
+						rest),
+						$temp$visited = A2($elm$core$Set$insert, x, visited);
+					adj = $temp$adj;
+					frontier = $temp$frontier;
+					visited = $temp$visited;
+					continue reachableHelp;
+				}
+			}
+		}
+	});
+var $author$project$Main$reachable = F2(
+	function (adj, start) {
+		return A3(
+			$author$project$Main$reachableHelp,
+			adj,
+			_List_fromArray(
+				[start]),
+			$elm$core$Set$empty);
+	});
+var $elm$svg$Svg$Attributes$refX = _VirtualDom_attribute('refX');
+var $elm$svg$Svg$Attributes$refY = _VirtualDom_attribute('refY');
+var $elm$core$Tuple$second = function (_v0) {
+	var y = _v0.b;
+	return y;
+};
+var $elm$svg$Svg$svg = $elm$svg$Svg$trustedNode('svg');
+var $elm$svg$Svg$Attributes$transform = _VirtualDom_attribute('transform');
+var $elm$core$Set$union = F2(
+	function (_v0, _v1) {
+		var dict1 = _v0.a;
+		var dict2 = _v1.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$union, dict1, dict2));
+	});
+var $elm$svg$Svg$Attributes$markerEnd = _VirtualDom_attribute('marker-end');
+var $elm$svg$Svg$Attributes$opacity = _VirtualDom_attribute('opacity');
+var $elm$svg$Svg$Attributes$stroke = _VirtualDom_attribute('stroke');
+var $elm$svg$Svg$Attributes$strokeWidth = _VirtualDom_attribute('stroke-width');
+var $author$project$Main$viewEdge = F3(
+	function (active, parent, child) {
+		var y2 = child.y + ($author$project$Main$nodeHeight / 2);
+		var y1 = parent.y + ($author$project$Main$nodeHeight / 2);
+		var x2 = child.x;
+		var x1 = parent.x + parent.w;
+		var midX = x1 + ((x2 - x1) / 2);
+		var d = 'M ' + ($author$project$Main$gStr(x1) + (' ' + ($author$project$Main$gStr(y1) + (' C ' + ($author$project$Main$gStr(midX) + (' ' + ($author$project$Main$gStr(y1) + (', ' + ($author$project$Main$gStr(midX) + (' ' + ($author$project$Main$gStr(y2) + (', ' + ($author$project$Main$gStr(x2) + (' ' + $author$project$Main$gStr(y2)))))))))))))));
+		return A2(
+			$elm$svg$Svg$path,
+			_Utils_ap(
+				_List_fromArray(
+					[
+						$elm$svg$Svg$Attributes$d(d),
+						$elm$svg$Svg$Attributes$fill('none'),
+						$elm$svg$Svg$Attributes$stroke(
+						active ? '#5b6b7a' : '#c9d2da'),
+						$elm$svg$Svg$Attributes$strokeWidth(
+						active ? '1.4' : '1'),
+						$elm$svg$Svg$Attributes$opacity(
+						active ? '0.85' : '0.3')
+					]),
+				active ? _List_fromArray(
+					[
+						$elm$svg$Svg$Attributes$markerEnd('url(#arrowhead)')
+					]) : _List_Nil),
+			_List_Nil);
+	});
+var $author$project$Main$GraphNodeClicked = function (a) {
+	return {$: 'GraphNodeClicked', a: a};
+};
+var $author$project$Main$Neighbour = {$: 'Neighbour'};
+var $author$project$Main$Normal = {$: 'Normal'};
+var $author$project$Main$Selected = {$: 'Selected'};
+var $elm$svg$Svg$Attributes$fontFamily = _VirtualDom_attribute('font-family');
+var $elm$svg$Svg$Attributes$fontSize = _VirtualDom_attribute('font-size');
+var $elm$svg$Svg$Attributes$height = _VirtualDom_attribute('height');
+var $author$project$Main$nodeColors = F2(
+	function (kind, state) {
+		var _v0 = _Utils_Tuple2(kind, state);
+		if (_v0.a.$ === 'GroupNode') {
+			switch (_v0.b.$) {
+				case 'Selected':
+					var _v1 = _v0.a;
+					var _v2 = _v0.b;
+					return {fill: '#2b6cb0', stroke: '#1a4971', text: '#ffffff'};
+				case 'Neighbour':
+					var _v3 = _v0.a;
+					var _v4 = _v0.b;
+					return {fill: '#bee3f8', stroke: '#63b3ed', text: '#1a202c'};
+				default:
+					var _v5 = _v0.a;
+					var _v6 = _v0.b;
+					return {fill: '#e2e8f0', stroke: '#a0aec0', text: '#1a202c'};
+			}
+		} else {
+			switch (_v0.b.$) {
+				case 'Selected':
+					var _v7 = _v0.a;
+					var _v8 = _v0.b;
+					return {fill: '#2f855a', stroke: '#22543d', text: '#ffffff'};
+				case 'Neighbour':
+					var _v9 = _v0.a;
+					var _v10 = _v0.b;
+					return {fill: '#9ae6b4', stroke: '#48bb78', text: '#1a202c'};
+				default:
+					var _v11 = _v0.a;
+					var _v12 = _v0.b;
+					return {fill: '#c6f6d5', stroke: '#68d391', text: '#1a202c'};
+			}
+		}
+	});
+var $elm$svg$Svg$rect = $elm$svg$Svg$trustedNode('rect');
+var $elm$svg$Svg$Attributes$rx = _VirtualDom_attribute('rx');
+var $elm$svg$Svg$Attributes$ry = _VirtualDom_attribute('ry');
+var $elm$svg$Svg$text = $elm$virtual_dom$VirtualDom$text;
+var $elm$svg$Svg$Attributes$textAnchor = _VirtualDom_attribute('text-anchor');
+var $elm$svg$Svg$text_ = $elm$svg$Svg$trustedNode('text');
+var $elm$svg$Svg$Attributes$width = _VirtualDom_attribute('width');
+var $elm$svg$Svg$Attributes$x = _VirtualDom_attribute('x');
+var $elm$svg$Svg$Attributes$y = _VirtualDom_attribute('y');
+var $author$project$Main$viewNode = F4(
+	function (selected, active, isNeighbour, n) {
+		var state = _Utils_eq(
+			selected,
+			$elm$core$Maybe$Just(n.id)) ? $author$project$Main$Selected : (isNeighbour ? $author$project$Main$Neighbour : $author$project$Main$Normal);
+		var colors = A2($author$project$Main$nodeColors, n.kind, state);
+		return A2(
+			$elm$svg$Svg$g,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$Events$stopPropagationOn,
+					'mousedown',
+					$elm$json$Json$Decode$succeed(
+						_Utils_Tuple2(
+							$author$project$Main$GraphNodeClicked(n.id),
+							true))),
+					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+					$elm$svg$Svg$Attributes$opacity(
+					active ? '1' : '0.18')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$svg$Svg$rect,
+					_List_fromArray(
+						[
+							$elm$svg$Svg$Attributes$x(
+							$author$project$Main$gStr(n.x)),
+							$elm$svg$Svg$Attributes$y(
+							$author$project$Main$gStr(n.y)),
+							$elm$svg$Svg$Attributes$width(
+							$author$project$Main$gStr(n.w)),
+							$elm$svg$Svg$Attributes$height(
+							$author$project$Main$gStr($author$project$Main$nodeHeight)),
+							$elm$svg$Svg$Attributes$rx('4'),
+							$elm$svg$Svg$Attributes$ry('4'),
+							$elm$svg$Svg$Attributes$fill(colors.fill),
+							$elm$svg$Svg$Attributes$stroke(colors.stroke),
+							$elm$svg$Svg$Attributes$strokeWidth('1')
+						]),
+					_List_Nil),
+					A2(
+					$elm$svg$Svg$text_,
+					_List_fromArray(
+						[
+							$elm$svg$Svg$Attributes$x(
+							$author$project$Main$gStr(n.x + (n.w / 2))),
+							$elm$svg$Svg$Attributes$y(
+							$author$project$Main$gStr((n.y + ($author$project$Main$nodeHeight / 2)) + 4)),
+							$elm$svg$Svg$Attributes$textAnchor('middle'),
+							$elm$svg$Svg$Attributes$fontSize('11'),
+							$elm$svg$Svg$Attributes$fontFamily('monospace'),
+							$elm$svg$Svg$Attributes$fill(colors.text),
+							A2($elm$html$Html$Attributes$style, 'pointer-events', 'none')
+						]),
+					_List_fromArray(
+						[
+							$elm$svg$Svg$text(n.label)
+						]))
+				]));
+	});
+var $author$project$Main$GraphWheel = F3(
+	function (a, b, c) {
+		return {$: 'GraphWheel', a: a, b: b, c: c};
+	});
+var $elm$json$Json$Decode$map3 = _Json_map3;
+var $author$project$Main$wheelDecoder = A4(
+	$elm$json$Json$Decode$map3,
+	F3(
+		function (deltaY, offsetX, offsetY) {
+			return _Utils_Tuple2(
+				A3($author$project$Main$GraphWheel, deltaY, offsetX, offsetY),
+				true);
+		}),
+	A2($elm$json$Json$Decode$field, 'deltaY', $elm$json$Json$Decode$float),
+	A2($elm$json$Json$Decode$field, 'offsetX', $elm$json$Json$Decode$float),
+	A2($elm$json$Json$Decode$field, 'offsetY', $elm$json$Json$Decode$float));
+var $author$project$Main$graphView = F2(
+	function (model, groups) {
+		var transform = 'translate(' + ($author$project$Main$gStr(model.graphPanX) + (',' + ($author$project$Main$gStr(model.graphPanY) + (') scale(' + ($author$project$Main$gStr(model.graphScale) + ')')))));
+		var layout = $author$project$Main$computeLayout(groups);
+		var nodeDict = $elm$core$Dict$fromList(
+			A2(
+				$elm$core$List$map,
+				function (n) {
+					return _Utils_Tuple2(n.id, n);
+				},
+				layout.nodes));
+		var parentsAdj = A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v4, d) {
+					var parent = _v4.a;
+					var child = _v4.b;
+					return A3($author$project$Main$pushAdj, child, parent, d);
+				}),
+			$elm$core$Dict$empty,
+			layout.edges);
+		var childrenAdj = A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v3, d) {
+					var parent = _v3.a;
+					var child = _v3.b;
+					return A3($author$project$Main$pushAdj, parent, child, d);
+				}),
+			$elm$core$Dict$empty,
+			layout.edges);
+		var focused = function () {
+			var _v2 = model.graphSelected;
+			if (_v2.$ === 'Nothing') {
+				return $elm$core$Set$empty;
+			} else {
+				var s = _v2.a;
+				return A2(
+					$elm$core$Set$union,
+					A2($author$project$Main$reachable, parentsAdj, s),
+					A2($author$project$Main$reachable, childrenAdj, s));
+			}
+		}();
+		var edgeActive = function (_v1) {
+			var parent = _v1.a;
+			var child = _v1.b;
+			return _Utils_eq(model.graphSelected, $elm$core$Maybe$Nothing) || (A2($elm$core$Set$member, parent, focused) && A2($elm$core$Set$member, child, focused));
+		};
+		var edgeEls = A2(
+			$elm$core$List$filterMap,
+			function (edge) {
+				return A3(
+					$elm$core$Maybe$map2,
+					F2(
+						function (parent, child) {
+							return A3(
+								$author$project$Main$viewEdge,
+								edgeActive(edge),
+								parent,
+								child);
+						}),
+					A2($elm$core$Dict$get, edge.a, nodeDict),
+					A2($elm$core$Dict$get, edge.b, nodeDict));
+			},
+			layout.edges);
+		var nodeActive = function (id) {
+			return _Utils_eq(model.graphSelected, $elm$core$Maybe$Nothing) || A2($elm$core$Set$member, id, focused);
+		};
+		var nodeEls = A2(
+			$elm$core$List$map,
+			function (n) {
+				return A4(
+					$author$project$Main$viewNode,
+					model.graphSelected,
+					nodeActive(n.id),
+					A2($elm$core$Set$member, n.id, focused),
+					n);
+			},
+			layout.nodes);
+		return A2(
+			$elm$svg$Svg$svg,
+			_List_fromArray(
+				[
+					A2($elm$html$Html$Attributes$style, 'width', '100%'),
+					A2($elm$html$Html$Attributes$style, 'height', '72vh'),
+					A2($elm$html$Html$Attributes$style, 'border', '1px solid #ddd'),
+					A2($elm$html$Html$Attributes$style, 'background', '#fafafa'),
+					A2($elm$html$Html$Attributes$style, 'display', 'block'),
+					A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
+					A2($elm$html$Html$Attributes$style, 'touch-action', 'none'),
+					A2(
+					$elm$html$Html$Attributes$style,
+					'cursor',
+					function () {
+						var _v0 = model.graphDrag;
+						if (_v0.$ === 'Just') {
+							return 'grabbing';
+						} else {
+							return 'grab';
+						}
+					}()),
+					A2($elm$html$Html$Events$on, 'mousedown', $author$project$Main$panStartDecoder),
+					A2($elm$html$Html$Events$preventDefaultOn, 'wheel', $author$project$Main$wheelDecoder)
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$svg$Svg$defs,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A2(
+							$elm$svg$Svg$marker,
+							_List_fromArray(
+								[
+									$elm$svg$Svg$Attributes$id('arrowhead'),
+									$elm$svg$Svg$Attributes$markerWidth('7'),
+									$elm$svg$Svg$Attributes$markerHeight('7'),
+									$elm$svg$Svg$Attributes$refX('6'),
+									$elm$svg$Svg$Attributes$refY('3'),
+									$elm$svg$Svg$Attributes$orient('auto'),
+									$elm$svg$Svg$Attributes$markerUnits('strokeWidth')
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$elm$svg$Svg$path,
+									_List_fromArray(
+										[
+											$elm$svg$Svg$Attributes$d('M0,0 L6,3 L0,6 Z'),
+											$elm$svg$Svg$Attributes$fill('#5b6b7a')
+										]),
+									_List_Nil)
+								]))
+						])),
+					A2(
+					$elm$svg$Svg$g,
+					_List_fromArray(
+						[
+							$elm$svg$Svg$Attributes$transform(transform)
+						]),
+					_Utils_ap(edgeEls, nodeEls))
+				]));
+	});
 var $author$project$Main$ItemDone = F2(
 	function (a, b) {
 		return {$: 'ItemDone', a: a, b: b};
 	});
 var $elm$html$Html$a = _VirtualDom_node('a');
-var $elm$core$List$append = F2(
-	function (xs, ys) {
-		if (!ys.b) {
-			return xs;
-		} else {
-			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
-		}
-	});
-var $elm$core$List$concat = function (lists) {
-	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
-};
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
 var $elm$html$Html$h4 = _VirtualDom_node('h4');
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
@@ -6749,24 +8083,6 @@ var $elm$core$List$member = F2(
 			},
 			xs);
 	});
-var $elm$core$Dict$member = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$get, key, dict);
-		if (_v0.$ === 'Just') {
-			return true;
-		} else {
-			return false;
-		}
-	});
-var $elm$core$Set$member = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return A2($elm$core$Dict$member, key, dict);
-	});
-var $elm$core$List$sortBy = _List_sortBy;
-var $elm$core$List$sort = function (xs) {
-	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
-};
 var $author$project$Main$groupsView = F2(
 	function (model, groups) {
 		var parentsOf = function (name) {
@@ -6793,10 +8109,10 @@ var $author$project$Main$groupsView = F2(
 						$elm$html$Html$text(
 						'Viewing ' + function () {
 							var _v0 = model.viewMode;
-							if (_v0.$ === 'ToDo') {
-								return 'to do';
-							} else {
+							if (_v0.$ === 'Done') {
 								return 'done';
+							} else {
+								return 'to do';
 							}
 						}())
 					])),
@@ -6823,10 +8139,10 @@ var $author$project$Main$groupsView = F2(
 													itemKey,
 													function () {
 														var _v3 = model.viewMode;
-														if (_v3.$ === 'ToDo') {
-															return true;
-														} else {
+														if (_v3.$ === 'Done') {
 															return false;
+														} else {
+															return true;
 														}
 													}()))
 											]),
@@ -6840,10 +8156,10 @@ var $author$project$Main$groupsView = F2(
 								function (item) {
 									return function () {
 										var _v2 = model.viewMode;
-										if (_v2.$ === 'ToDo') {
-											return $elm$core$Basics$not;
-										} else {
+										if (_v2.$ === 'Done') {
 											return $elm$core$Basics$identity;
+										} else {
+											return $elm$core$Basics$not;
 										}
 									}()(
 										A2($elm$core$Set$member, item, model.done));
@@ -6993,7 +8309,15 @@ var $author$project$Main$resultsView = function (model) {
 					]);
 			} else {
 				var groups = _v0.a;
-				return A2($author$project$Main$groupsView, model, groups);
+				var _v1 = model.viewMode;
+				if (_v1.$ === 'Graph') {
+					return _List_fromArray(
+						[
+							A2($author$project$Main$graphView, model, groups)
+						]);
+				} else {
+					return A2($author$project$Main$groupsView, model, groups);
+				}
 			}
 		}());
 };
@@ -7074,14 +8398,7 @@ var $author$project$Main$view = function (model) {
 	};
 };
 var $author$project$Main$main = $elm$browser$Browser$document(
-	{
-		init: $author$project$Main$init,
-		subscriptions: function (_v0) {
-			return $elm$core$Platform$Sub$none;
-		},
-		update: $author$project$Main$update,
-		view: $author$project$Main$view
-	});
+	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
 _Platform_export({'Main':{'init':$author$project$Main$main(
 	A2(
 		$elm$json$Json$Decode$andThen,

@@ -1,6 +1,8 @@
 module Main exposing (..)
 
 import Browser
+import Browser.Events
+import Dict exposing (Dict)
 import Html exposing (Html, a, button, div, h3, h4, p, span, text, textarea)
 import Html.Attributes exposing (href, id, rows, style, value)
 import Html.Events exposing (onClick, onInput)
@@ -9,6 +11,8 @@ import Json.Decode
 import Json.Encode
 import Set
 import State
+import Svg
+import Svg.Attributes as SA
 
 
 
@@ -20,7 +24,7 @@ main =
         { init = init
         , update = update
         , view = view
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         }
 
 
@@ -60,12 +64,21 @@ type alias Model =
     -- renderStatus reflects the outcome of the most recent /selection/ request,
     -- surfaced as a marker next to the Selection header.
     , renderStatus : RenderStatus
+
+    -- Graph-view viewport: pan/zoom of the SVG group graph, the in-flight pan
+    -- drag (if any), and the node the user has clicked to focus on.
+    , graphScale : Float
+    , graphPanX : Float
+    , graphPanY : Float
+    , graphDrag : Maybe { startX : Float, startY : Float, lastX : Float, lastY : Float }
+    , graphSelected : Maybe String
     }
 
 
 type ViewMode
     = ToDo
     | Done
+    | Graph
 
 
 type RenderStatus
@@ -165,6 +178,11 @@ defaultModel =
     , selectionText = defaultSelectionText
     , requestId = 0
     , renderStatus = Rendering
+    , graphScale = 1
+    , graphPanX = 20
+    , graphPanY = 20
+    , graphDrag = Nothing
+    , graphSelected = Nothing
     }
 
 
@@ -209,6 +227,13 @@ type Msg
     | ItemsOnly Int
     | ClearDone
     | SelectionChanged String
+    | GraphWheel Float Float Float
+    | GraphDragStart Float Float
+    | GraphDragMove Float Float
+    | GraphDragEnd Float Float
+    | GraphNodeClicked String
+    | GraphZoom Float
+    | GraphFit
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -245,6 +270,23 @@ update msg model =
                 , Cmd.none
                 )
 
+        ViewMode Graph ->
+            -- Entering the graph view: frame the whole graph to fit the viewport.
+            let
+                fit =
+                    fitToView model.fetchResults
+            in
+            ( { model
+                | viewMode = Graph
+                , graphScale = fit.scale
+                , graphPanX = fit.panX
+                , graphPanY = fit.panY
+                , graphSelected = Nothing
+                , graphDrag = Nothing
+              }
+            , Cmd.none
+            )
+
         ViewMode mode ->
             ( { model | viewMode = mode }, Cmd.none )
 
@@ -270,6 +312,123 @@ update msg model =
 
         ClearDone ->
             State.updateModel serialiseStateForStorage { model | done = Set.empty }
+
+        GraphWheel deltaY offsetX offsetY ->
+            -- Zoom towards the cursor: keep the graph point under the pointer fixed.
+            let
+                factor =
+                    if deltaY < 0 then
+                        1.1
+
+                    else
+                        1 / 1.1
+
+                newScale =
+                    clamp 0.1 4 (model.graphScale * factor)
+
+                worldX =
+                    (offsetX - model.graphPanX) / model.graphScale
+
+                worldY =
+                    (offsetY - model.graphPanY) / model.graphScale
+            in
+            ( { model
+                | graphScale = newScale
+                , graphPanX = offsetX - worldX * newScale
+                , graphPanY = offsetY - worldY * newScale
+              }
+            , Cmd.none
+            )
+
+        GraphDragStart x y ->
+            -- Grabbing empty canvas starts a pan. The focus is only cleared on a
+            -- click with no movement (see GraphDragEnd), so panning keeps it.
+            ( { model | graphDrag = Just { startX = x, startY = y, lastX = x, lastY = y } }, Cmd.none )
+
+        GraphDragMove x y ->
+            case model.graphDrag of
+                Just d ->
+                    ( { model
+                        | graphPanX = model.graphPanX + (x - d.lastX)
+                        , graphPanY = model.graphPanY + (y - d.lastY)
+                        , graphDrag = Just { d | lastX = x, lastY = y }
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        GraphDragEnd x y ->
+            -- A background press that didn't move is a click: clear the focus.
+            -- A press that moved was a pan: leave the focused node selected.
+            let
+                wasClick =
+                    case model.graphDrag of
+                        Just d ->
+                            abs (x - d.startX) + abs (y - d.startY) < 4
+
+                        Nothing ->
+                            False
+            in
+            ( { model
+                | graphDrag = Nothing
+                , graphSelected =
+                    if wasClick then
+                        Nothing
+
+                    else
+                        model.graphSelected
+              }
+            , Cmd.none
+            )
+
+        GraphNodeClicked name ->
+            -- Toggle focus: clicking the focused node again clears the focus.
+            ( { model
+                | graphSelected =
+                    if model.graphSelected == Just name then
+                        Nothing
+
+                    else
+                        Just name
+                , graphDrag = Nothing
+              }
+            , Cmd.none
+            )
+
+        GraphZoom factor ->
+            -- Button zoom, centred on a fixed point near the middle of the canvas.
+            let
+                newScale =
+                    clamp 0.1 4 (model.graphScale * factor)
+
+                cx =
+                    450
+
+                cy =
+                    280
+
+                worldX =
+                    (cx - model.graphPanX) / model.graphScale
+
+                worldY =
+                    (cy - model.graphPanY) / model.graphScale
+            in
+            ( { model
+                | graphScale = newScale
+                , graphPanX = cx - worldX * newScale
+                , graphPanY = cy - worldY * newScale
+              }
+            , Cmd.none
+            )
+
+        GraphFit ->
+            let
+                fit =
+                    fitToView model.fetchResults
+            in
+            ( { model | graphScale = fit.scale, graphPanX = fit.panX, graphPanY = fit.panY, graphSelected = Nothing }, Cmd.none )
 
 
 serialiseStateForStorage : Model -> String
@@ -299,6 +458,34 @@ fetch id selectionText =
         , timeout = Just 5000
         , tracker = Nothing
         }
+
+
+
+-- SUBSCRIPTIONS
+
+
+{-| While a graph pan is in progress, track the mouse globally so panning
+continues even if the pointer leaves the SVG, and ends on mouse-up.
+-}
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.graphDrag of
+        Just _ ->
+            Sub.batch
+                [ Browser.Events.onMouseMove
+                    (Json.Decode.map2 GraphDragMove
+                        (Json.Decode.field "clientX" Json.Decode.float)
+                        (Json.Decode.field "clientY" Json.Decode.float)
+                    )
+                , Browser.Events.onMouseUp
+                    (Json.Decode.map2 GraphDragEnd
+                        (Json.Decode.field "clientX" Json.Decode.float)
+                        (Json.Decode.field "clientY" Json.Decode.float)
+                    )
+                ]
+
+        Nothing ->
+            Sub.none
 
 
 
@@ -368,18 +555,37 @@ renderStatusMessage status =
 
 controlsView : Model -> Html Msg
 controlsView model =
-    div []
-        [ case model.viewMode of
-            ToDo ->
-                button [ onClick <| ViewMode Done ] [ text "view done" ]
+    case model.viewMode of
+        Graph ->
+            div []
+                [ button [ onClick <| ViewMode ToDo ] [ text "list view" ]
+                , button [ onClick <| GraphZoom 1.25 ] [ text "zoom in" ]
+                , button [ onClick <| GraphZoom 0.8 ] [ text "zoom out" ]
+                , button [ onClick GraphFit ] [ text "fit" ]
+                , span [ style "margin-left" "0.75rem", style "font-size" "0.85em" ]
+                    [ legendSwatch "#e2e8f0" "#a0aec0"
+                    , text " group  "
+                    , legendSwatch "#c6f6d5" "#68d391"
+                    , text " item"
+                    ]
+                , span [ style "margin-left" "0.75rem", style "font-size" "0.85em", style "color" "#666" ]
+                    [ text "drag to pan · scroll to zoom · click a node to trace its lineage" ]
+                ]
 
-            Done ->
-                button [ onClick <| ViewMode ToDo ] [ text "view todo" ]
-        , button [ onClick <| ShowGroupLinks (not model.showGroupLinks) ] [ text "show group links" ]
-        , button [ onClick <| ShowContainerGroups (not model.showContainerGroups) ] [ text "show container groups" ]
-        , button [ onClick <| ItemsOnly (remainderBy 3 (model.itemsOnly + 1)) ] [ text "toggle items only" ]
-        , button [ onClick <| ClearDone ] [ text "reset" ]
-        ]
+        _ ->
+            div []
+                [ case model.viewMode of
+                    Done ->
+                        button [ onClick <| ViewMode ToDo ] [ text "view todo" ]
+
+                    _ ->
+                        button [ onClick <| ViewMode Done ] [ text "view done" ]
+                , button [ onClick <| ViewMode Graph ] [ text "graph view" ]
+                , button [ onClick <| ShowGroupLinks (not model.showGroupLinks) ] [ text "show group links" ]
+                , button [ onClick <| ShowContainerGroups (not model.showContainerGroups) ] [ text "show container groups" ]
+                , button [ onClick <| ItemsOnly (remainderBy 3 (model.itemsOnly + 1)) ] [ text "toggle items only" ]
+                , button [ onClick <| ClearDone ] [ text "reset" ]
+                ]
 
 
 resultsView : Model -> Html Msg
@@ -392,7 +598,12 @@ resultsView model =
                 [ text "Editing selection…" ]
 
             Just groups ->
-                groupsView model groups
+                case model.viewMode of
+                    Graph ->
+                        [ graphView model groups ]
+
+                    _ ->
+                        groupsView model groups
         )
 
 
@@ -410,11 +621,11 @@ groupsView model groups =
         [ text
             ("Viewing "
                 ++ (case model.viewMode of
-                        ToDo ->
-                            "to do"
-
                         Done ->
                             "done"
+
+                        _ ->
+                            "to do"
                    )
             )
         ]
@@ -431,11 +642,11 @@ groupsView model groups =
                                             (\item ->
                                                 Set.member item model.done
                                                     |> (case model.viewMode of
-                                                            ToDo ->
-                                                                not
-
                                                             Done ->
                                                                 identity
+
+                                                            _ ->
+                                                                not
                                                        )
                                             )
 
@@ -445,11 +656,11 @@ groupsView model groups =
                                         , Html.Events.onClick
                                             (ItemDone itemKey
                                                 (case model.viewMode of
-                                                    ToDo ->
-                                                        True
-
                                                     Done ->
                                                         False
+
+                                                    _ ->
+                                                        True
                                                 )
                                             )
                                         ]
@@ -586,3 +797,586 @@ expectGroups toMsg =
                     Json.Decode.decodeString decodeGroups body
                         |> Result.mapError
                             (\err -> "Data received was not in the correct format: " ++ Json.Decode.errorToString err)
+
+
+
+--- GRAPH VIEW
+--
+-- A whole-graph view of the resolved groups and their items. Groups and items
+-- are both nodes (coloured differently); each `ref` is a directed edge
+-- parent -> child ("parent includes child") and each item is an edge
+-- group -> item. Group nodes are laid out in columns by depth (longest path
+-- from a root); every item node sits in a single far-right column, aligned.
+-- The whole thing is a pan/zoomable SVG, and clicking a node dims everything
+-- not adjacent to it.
+
+
+nodeHeight : Float
+nodeHeight =
+    22
+
+
+{-| String.fromFloat, abbreviated because SVG coordinate strings use it a lot. -}
+gStr : Float -> String
+gStr =
+    String.fromFloat
+
+
+type NodeKind
+    = GroupNode
+    | ItemNode
+
+
+type NodeState
+    = Selected
+    | Neighbour
+    | Normal
+
+
+type alias GNode =
+    -- id is unique across kinds ("g:"/"i:" prefixed); label is the display name.
+    { id : String, label : String, kind : NodeKind, x : Float, y : Float, w : Float }
+
+
+type alias GLayout =
+    { nodes : List GNode
+
+    -- edges are ( parentId, childId ): a group includes a child group or item.
+    , edges : List ( String, String )
+    , width : Float
+    , height : Float
+    }
+
+
+groupId : String -> String
+groupId name =
+    "g:" ++ name
+
+
+itemId : String -> String
+itemId name =
+    "i:" ++ name
+
+
+{-| Longest-path layering: a node's layer is one more than the deepest of its
+parents (the groups that include it), so roots sit in column 0. Relaxing over
+every edge `n` times converges for a DAG and stays bounded if a cycle sneaks in.
+-}
+computeLayers : List String -> List ( String, String ) -> Dict String Int
+computeLayers names edges =
+    let
+        relaxOnce dict =
+            List.foldl
+                (\( parent, child ) d ->
+                    let
+                        parentLayer =
+                            Dict.get parent d |> Maybe.withDefault 0
+
+                        childLayer =
+                            Dict.get child d |> Maybe.withDefault 0
+                    in
+                    if parentLayer + 1 > childLayer then
+                        Dict.insert child (parentLayer + 1) d
+
+                    else
+                        d
+                )
+                dict
+                edges
+
+        iterate n dict =
+            if n <= 0 then
+                dict
+
+            else
+                iterate (n - 1) (relaxOnce dict)
+    in
+    iterate (List.length names) (names |> List.map (\n -> ( n, 0 )) |> Dict.fromList)
+
+
+columnPitch : Float
+columnPitch =
+    240
+
+
+rowPitch : Float
+rowPitch =
+    30
+
+
+{-| Width of a node box sized to its label (roughly monospace character width). -}
+nodeW : String -> Float
+nodeW label =
+    max 44 (toFloat (String.length label) * 6.6 + 20)
+
+
+{-| Lay a column of node ids out vertically, centred on y = 0. -}
+columnNodes : Float -> NodeKind -> (String -> String) -> List String -> List GNode
+columnNodes x kind label ids =
+    let
+        startY =
+            -(toFloat (List.length ids - 1) / 2) * rowPitch
+    in
+    ids
+        |> List.indexedMap
+            (\i id ->
+                { id = id, label = label id, kind = kind, x = x, y = startY + toFloat i * rowPitch, w = nodeW (label id) }
+            )
+
+
+computeLayout : List Group -> GLayout
+computeLayout groups =
+    let
+        pad =
+            18
+
+        groupNameSet =
+            Set.fromList (List.map .name groups)
+
+        groupIds =
+            List.map (.name >> groupId) groups
+
+        -- Group -> group edges, from refs the server actually returned.
+        groupEdges =
+            groups
+                |> List.concatMap
+                    (\g ->
+                        g.contents.refs
+                            |> List.filter (\r -> Set.member r groupNameSet)
+                            |> List.map (\r -> ( groupId g.name, groupId r ))
+                    )
+
+        groupLayers =
+            computeLayers groupIds groupEdges
+
+        maxGroupLayer =
+            groupLayers |> Dict.values |> List.maximum |> Maybe.withDefault 0
+
+        -- Group ids bucketed by layer, alphabetical within each column.
+        groupBuckets =
+            Dict.foldl
+                (\id layer acc -> Dict.update layer (\mb -> Just (id :: Maybe.withDefault [] mb)) acc)
+                Dict.empty
+                groupLayers
+                |> Dict.map (\_ ids -> List.sort ids)
+
+        -- Strip the "g:"/"i:" id prefix back to the display name.
+        labelOf id =
+            String.dropLeft 2 id
+
+        groupRaw =
+            groupBuckets
+                |> Dict.toList
+                |> List.concatMap
+                    (\( layer, ids ) -> columnNodes (toFloat layer * columnPitch) GroupNode labelOf ids)
+
+        groupY =
+            groupRaw |> List.map (\n -> ( n.id, n.y )) |> Dict.fromList
+
+        -- Group -> item edges (deduped item nodes: one per unique item name).
+        itemEdges =
+            groups
+                |> List.concatMap (\g -> g.contents.items |> List.map (\it -> ( groupId g.name, itemId it )))
+
+        -- Order items in the far-right column by the mean vertical position of
+        -- their parent groups, then name, so items sit near their group(s).
+        orderedItemIds =
+            groups
+                |> List.concatMap (\g -> g.contents.items)
+                |> Set.fromList
+                |> Set.toList
+                |> List.sortBy
+                    (\name ->
+                        let
+                            id =
+                                itemId name
+
+                            parentYs =
+                                itemEdges |> List.filterMap (\( p, c ) -> ifThen (c == id) (Dict.get p groupY))
+                        in
+                        ( meanOrZero parentYs, name )
+                    )
+                |> List.map itemId
+
+        itemRaw =
+            columnNodes (toFloat (maxGroupLayer + 1) * columnPitch) ItemNode labelOf orderedItemIds
+
+        rawNodes =
+            groupRaw ++ itemRaw
+
+        minX =
+            rawNodes |> List.map .x |> List.minimum |> Maybe.withDefault 0
+
+        minY =
+            rawNodes |> List.map .y |> List.minimum |> Maybe.withDefault 0
+
+        -- Shift everything into the positive quadrant with a margin.
+        shifted =
+            rawNodes |> List.map (\n -> { n | x = n.x - minX + pad, y = n.y - minY + pad })
+
+        maxX =
+            shifted |> List.map (\n -> n.x + n.w) |> List.maximum |> Maybe.withDefault 0
+
+        maxY =
+            shifted |> List.map (\n -> n.y + nodeHeight) |> List.maximum |> Maybe.withDefault 0
+    in
+    { nodes = shifted, edges = groupEdges ++ itemEdges, width = maxX + pad, height = maxY + pad }
+
+
+ifThen : Bool -> Maybe a -> Maybe a
+ifThen cond maybe =
+    if cond then
+        maybe
+
+    else
+        Nothing
+
+
+{-| Prepend `val` to the list stored at `key` (creating it if absent). -}
+pushAdj : String -> String -> Dict String (List String) -> Dict String (List String)
+pushAdj key val dict =
+    Dict.update key (\mb -> Just (val :: Maybe.withDefault [] mb)) dict
+
+
+{-| Every node reachable from `start` along `adj` (inclusive of `start`),
+breadth/depth-first with a visited set so cycles terminate. -}
+reachable : Dict String (List String) -> String -> Set.Set String
+reachable adj start =
+    reachableHelp adj [ start ] Set.empty
+
+
+reachableHelp : Dict String (List String) -> List String -> Set.Set String -> Set.Set String
+reachableHelp adj frontier visited =
+    case frontier of
+        [] ->
+            visited
+
+        x :: rest ->
+            if Set.member x visited then
+                reachableHelp adj rest visited
+
+            else
+                reachableHelp adj (Maybe.withDefault [] (Dict.get x adj) ++ rest) (Set.insert x visited)
+
+
+meanOrZero : List Float -> Float
+meanOrZero xs =
+    case xs of
+        [] ->
+            0
+
+        _ ->
+            List.sum xs / toFloat (List.length xs)
+
+
+{-| A small coloured square used in the graph legend. -}
+legendSwatch : String -> String -> Html Msg
+legendSwatch fill stroke =
+    span
+        [ style "display" "inline-block"
+        , style "width" "11px"
+        , style "height" "11px"
+        , style "background" fill
+        , style "border" ("1px solid " ++ stroke)
+        , style "border-radius" "2px"
+        , style "margin-right" "3px"
+        , style "vertical-align" "middle"
+        ]
+        []
+
+
+{-| Scale/pan that frames the whole graph within a nominal viewport. The real
+SVG pixel size is not known to Elm, so this uses a fixed baseline that lands the
+graph sensibly on typical screens; the user can pan/zoom from there.
+-}
+fitToView : Maybe (List Group) -> { scale : Float, panX : Float, panY : Float }
+fitToView maybeGroups =
+    case maybeGroups of
+        Nothing ->
+            { scale = 1, panX = 20, panY = 20 }
+
+        Just groups ->
+            let
+                layout =
+                    computeLayout groups
+
+                baseW =
+                    900
+
+                baseH =
+                    560
+
+                gW =
+                    max 1 layout.width
+
+                gH =
+                    max 1 layout.height
+
+                scale =
+                    clamp 0.15 2 (min (baseW / gW) (baseH / gH))
+            in
+            { scale = scale
+            , panX = (baseW - gW * scale) / 2
+            , panY = (baseH - gH * scale) / 2
+            }
+
+
+graphView : Model -> List Group -> Html Msg
+graphView model groups =
+    let
+        layout =
+            computeLayout groups
+
+        nodeDict =
+            layout.nodes |> List.map (\n -> ( n.id, n )) |> Dict.fromList
+
+        -- Adjacency for walking the include-graph up (to parents) and down (to
+        -- children/items), built once from the edge list.
+        childrenAdj =
+            List.foldl (\( parent, child ) d -> pushAdj parent child d) Dict.empty layout.edges
+
+        parentsAdj =
+            List.foldl (\( parent, child ) d -> pushAdj child parent d) Dict.empty layout.edges
+
+        -- Focusing a node lights it plus its whole lineage: every ancestor
+        -- (parent, that parent's parents, ... up to the roots) and every
+        -- descendant. For an item, which has no children, this is exactly the
+        -- chain of groups it belongs to.
+        focused =
+            case model.graphSelected of
+                Nothing ->
+                    Set.empty
+
+                Just s ->
+                    Set.union (reachable parentsAdj s) (reachable childrenAdj s)
+
+        nodeActive id =
+            model.graphSelected == Nothing || Set.member id focused
+
+        edgeActive ( parent, child ) =
+            model.graphSelected == Nothing || (Set.member parent focused && Set.member child focused)
+
+        transform =
+            "translate("
+                ++ gStr model.graphPanX
+                ++ ","
+                ++ gStr model.graphPanY
+                ++ ") scale("
+                ++ gStr model.graphScale
+                ++ ")"
+
+        edgeEls =
+            layout.edges
+                |> List.filterMap
+                    (\edge ->
+                        Maybe.map2 (\parent child -> viewEdge (edgeActive edge) parent child)
+                            (Dict.get (Tuple.first edge) nodeDict)
+                            (Dict.get (Tuple.second edge) nodeDict)
+                    )
+
+        nodeEls =
+            layout.nodes
+                |> List.map (\n -> viewNode model.graphSelected (nodeActive n.id) (Set.member n.id focused) n)
+    in
+    Svg.svg
+        [ style "width" "100%"
+        , style "height" "72vh"
+        , style "border" "1px solid #ddd"
+        , style "background" "#fafafa"
+        , style "display" "block"
+        , style "user-select" "none"
+        , style "touch-action" "none"
+        , style "cursor"
+            (case model.graphDrag of
+                Just _ ->
+                    "grabbing"
+
+                Nothing ->
+                    "grab"
+            )
+        , Html.Events.on "mousedown" panStartDecoder
+        , Html.Events.preventDefaultOn "wheel" wheelDecoder
+        ]
+        [ Svg.defs []
+            [ Svg.marker
+                [ SA.id "arrowhead"
+                , SA.markerWidth "7"
+                , SA.markerHeight "7"
+                , SA.refX "6"
+                , SA.refY "3"
+                , SA.orient "auto"
+                , SA.markerUnits "strokeWidth"
+                ]
+                [ Svg.path [ SA.d "M0,0 L6,3 L0,6 Z", SA.fill "#5b6b7a" ] [] ]
+            ]
+        , Svg.g [ SA.transform transform ] (edgeEls ++ nodeEls)
+        ]
+
+
+viewEdge : Bool -> GNode -> GNode -> Svg.Svg Msg
+viewEdge active parent child =
+    let
+        x1 =
+            parent.x + parent.w
+
+        y1 =
+            parent.y + nodeHeight / 2
+
+        x2 =
+            child.x
+
+        y2 =
+            child.y + nodeHeight / 2
+
+        midX =
+            x1 + (x2 - x1) / 2
+
+        d =
+            "M "
+                ++ gStr x1
+                ++ " "
+                ++ gStr y1
+                ++ " C "
+                ++ gStr midX
+                ++ " "
+                ++ gStr y1
+                ++ ", "
+                ++ gStr midX
+                ++ " "
+                ++ gStr y2
+                ++ ", "
+                ++ gStr x2
+                ++ " "
+                ++ gStr y2
+    in
+    Svg.path
+        ([ SA.d d
+         , SA.fill "none"
+         , SA.stroke
+            (if active then
+                "#5b6b7a"
+
+             else
+                "#c9d2da"
+            )
+         , SA.strokeWidth
+            (if active then
+                "1.4"
+
+             else
+                "1"
+            )
+         , SA.opacity
+            (if active then
+                "0.85"
+
+             else
+                "0.3"
+            )
+         ]
+            ++ (if active then
+                    [ SA.markerEnd "url(#arrowhead)" ]
+
+                else
+                    []
+               )
+        )
+        []
+
+
+{-| Fill/stroke/text colours per node kind and state. Groups are blue-grey,
+items green, so the two are distinguishable at a glance. -}
+nodeColors : NodeKind -> NodeState -> { fill : String, stroke : String, text : String }
+nodeColors kind state =
+    case ( kind, state ) of
+        ( GroupNode, Selected ) ->
+            { fill = "#2b6cb0", stroke = "#1a4971", text = "#ffffff" }
+
+        ( GroupNode, Neighbour ) ->
+            { fill = "#bee3f8", stroke = "#63b3ed", text = "#1a202c" }
+
+        ( GroupNode, Normal ) ->
+            { fill = "#e2e8f0", stroke = "#a0aec0", text = "#1a202c" }
+
+        ( ItemNode, Selected ) ->
+            { fill = "#2f855a", stroke = "#22543d", text = "#ffffff" }
+
+        ( ItemNode, Neighbour ) ->
+            { fill = "#9ae6b4", stroke = "#48bb78", text = "#1a202c" }
+
+        ( ItemNode, Normal ) ->
+            { fill = "#c6f6d5", stroke = "#68d391", text = "#1a202c" }
+
+
+viewNode : Maybe String -> Bool -> Bool -> GNode -> Svg.Svg Msg
+viewNode selected active isNeighbour n =
+    let
+        state =
+            if selected == Just n.id then
+                Selected
+
+            else if isNeighbour then
+                Neighbour
+
+            else
+                Normal
+
+        colors =
+            nodeColors n.kind state
+    in
+    Svg.g
+        [ Html.Events.stopPropagationOn "mousedown" (Json.Decode.succeed ( GraphNodeClicked n.id, True ))
+        , style "cursor" "pointer"
+        , SA.opacity
+            (if active then
+                "1"
+
+             else
+                "0.18"
+            )
+        ]
+        [ Svg.rect
+            [ SA.x (gStr n.x)
+            , SA.y (gStr n.y)
+            , SA.width (gStr n.w)
+            , SA.height (gStr nodeHeight)
+            , SA.rx "4"
+            , SA.ry "4"
+            , SA.fill colors.fill
+            , SA.stroke colors.stroke
+            , SA.strokeWidth "1"
+            ]
+            []
+        , Svg.text_
+            [ SA.x (gStr (n.x + n.w / 2))
+            , SA.y (gStr (n.y + nodeHeight / 2 + 4))
+            , SA.textAnchor "middle"
+            , SA.fontSize "11"
+            , SA.fontFamily "monospace"
+            , SA.fill colors.text
+            , style "pointer-events" "none"
+            ]
+            [ Svg.text n.label ]
+        ]
+
+
+{-| A `mousedown` on empty canvas seeds a pan with the pointer's screen position.
+Node mousedowns stop propagation, so this only fires for background grabs.
+-}
+panStartDecoder : Json.Decode.Decoder Msg
+panStartDecoder =
+    Json.Decode.map2 GraphDragStart
+        (Json.Decode.field "clientX" Json.Decode.float)
+        (Json.Decode.field "clientY" Json.Decode.float)
+
+
+{-| Wheel-zoom, returning `True` to preventDefault so the page does not scroll.
+offsetX/offsetY are the pointer position in SVG user units (no viewBox is set,
+so 1 user unit == 1 CSS pixel).
+-}
+wheelDecoder : Json.Decode.Decoder ( Msg, Bool )
+wheelDecoder =
+    Json.Decode.map3 (\deltaY offsetX offsetY -> ( GraphWheel deltaY offsetX offsetY, True ))
+        (Json.Decode.field "deltaY" Json.Decode.float)
+        (Json.Decode.field "offsetX" Json.Decode.float)
+        (Json.Decode.field "offsetY" Json.Decode.float)
