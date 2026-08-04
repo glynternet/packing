@@ -12,7 +12,6 @@ import (
 
 	"github.com/glynternet/packing/pkg/api"
 	"github.com/glynternet/packing/pkg/client"
-	"github.com/glynternet/packing/pkg/cmd"
 	"github.com/glynternet/packing/pkg/graph"
 	"github.com/glynternet/packing/pkg/inline"
 	"github.com/glynternet/packing/pkg/list"
@@ -62,6 +61,14 @@ Each line is one of:
 Blank lines are ignored. The file is sent to the packing server, which
 recursively expands every ref: against its groups directory. The resulting
 list is rendered using --renderer.`,
+		// Bind this command's flags to viper here rather than at tree-build time.
+		// viper is a global singleton, so binding every command's flags eagerly
+		// makes the last-bound command's flags win for shared keys (server-host,
+		// server-port), silently ignoring this command's --server-* flags. PreRunE
+		// runs only for the command actually being executed.
+		PreRunE: func(c *cobra.Command, _ []string) error {
+			return viper.BindPFlags(c.Flags())
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			selection := args[0]
 
@@ -102,7 +109,6 @@ list is rendered using --renderer.`,
 	selection.Flags().BoolVar(&inlineSingleItemGroups, "inline-single-item-groups", true,
 		"Inline references that resolve to a single item into their parent groups instead of showing a standalone group. Use --inline-single-item-groups=false to keep them as groups.")
 	selection.Flags().StringVar(&renderer, keyRenderer, "html", "renderer to use: "+strings.Join(supportedRenderers, ", "))
-	cmd.MustBindPFlags(logger, selection)
 	rootCmd.AddCommand(selection)
 
 	ref := &cobra.Command{
@@ -115,6 +121,11 @@ Each <reference> is the name (key) of a group hosted by the server — i.e.
 the filename of a group in the server's groups directory. Unlike "selection",
 this does not read a local file; it looks up the given names, expands them,
 and prints the result as JSON.`,
+		// See the note on the selection command: bind per-command in PreRunE so
+		// this command's --server-* flags are not clobbered by another command's.
+		PreRunE: func(c *cobra.Command, _ []string) error {
+			return viper.BindPFlags(c.Flags())
+		},
 		RunE: func(cmd *cobra.Command, keys []string) error {
 			addr := viper.GetString(keyServerHost) + ":" +
 				strconv.FormatUint(uint64(viper.GetInt64(keyServerPort)), 10)
@@ -138,7 +149,6 @@ and prints the result as JSON.`,
 	}
 	ref.Flags().String(keyServerHost, defaultAddr, "packing server host, e.g. http://localhost")
 	ref.Flags().Uint(keyServerPort, 3865, "packing server port")
-	cmd.MustBindPFlags(logger, ref)
 	rootCmd.AddCommand(ref)
 }
 
