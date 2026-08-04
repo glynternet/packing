@@ -55,10 +55,11 @@ type alias Model =
     -- groups that only bundle other groups and have no items of their own.
     , showContainerGroups : Bool
 
-    -- inlineSingleItems folds references that resolve to a single item into the
-    -- groups that reference them, so a shared one-item group shows as that item
-    -- inside each parent instead of a standalone group. Drives list and graph.
-    , inlineSingleItems : Bool
+    -- inlineSingletons folds "singleton" groups — whose entire content is a
+    -- single member (one item, or one ref forming a passthrough chain) — into
+    -- whatever references them, instead of showing a standalone group. Drives
+    -- both the list and the graph.
+    , inlineSingletons : Bool
     , itemsOnly : Int
     , selectionText : String
 
@@ -179,7 +180,7 @@ defaultModel =
     , done = Set.empty
     , showGroupLinks = False
     , showContainerGroups = False
-    , inlineSingleItems = True
+    , inlineSingletons = True
     , itemsOnly = 0
     , selectionText = defaultSelectionText
     , requestId = 0
@@ -230,7 +231,7 @@ type Msg
     | ItemDone String Bool
     | ShowGroupLinks Bool
     | ShowContainerGroups Bool
-    | ToggleInlineSingleItems Bool
+    | ToggleInlineSingletons Bool
     | ItemsOnly Int
     | ClearDone
     | SelectionChanged String
@@ -241,6 +242,7 @@ type Msg
     | GraphNodeClicked String
     | GraphZoom Float
     | GraphFit
+    | ClearGraphFocus
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -314,10 +316,10 @@ update msg model =
         ShowContainerGroups show ->
             ( { model | showContainerGroups = show }, Cmd.none )
 
-        ToggleInlineSingleItems enabled ->
+        ToggleInlineSingletons enabled ->
             let
                 base =
-                    { model | inlineSingleItems = enabled }
+                    { model | inlineSingletons = enabled }
             in
             case model.viewMode of
                 Graph ->
@@ -391,8 +393,8 @@ update msg model =
                     ( model, Cmd.none )
 
         GraphDragEnd x y ->
-            -- A background press that didn't move is a click: clear the focus.
-            -- A press that moved was a pan: leave the focused node selected.
+            -- A background press that didn't move is a click: clear the focus and
+            -- refit the full graph. A press that moved was a pan: keep the focus.
             let
                 wasClick =
                     case model.graphDrag of
@@ -402,28 +404,52 @@ update msg model =
                         Nothing ->
                             False
             in
-            ( { model
-                | graphDrag = Nothing
-                , graphSelected =
-                    if wasClick then
-                        Nothing
+            if wasClick && model.graphSelected /= Nothing then
+                let
+                    fit =
+                        fitToView (effectiveResults model)
+                in
+                ( { model
+                    | graphDrag = Nothing
+                    , graphSelected = Nothing
+                    , graphScale = fit.scale
+                    , graphPanX = fit.panX
+                    , graphPanY = fit.panY
+                  }
+                , Cmd.none
+                )
 
-                    else
-                        model.graphSelected
-              }
-            , Cmd.none
-            )
+            else
+                ( { model | graphDrag = Nothing }, Cmd.none )
 
         GraphNodeClicked name ->
             -- Toggle focus: clicking the focused node again clears the focus.
-            ( { model
-                | graphSelected =
+            -- Selecting refits to that node's lineage; deselecting refits full.
+            let
+                newSelected =
                     if model.graphSelected == Just name then
                         Nothing
 
                     else
                         Just name
+
+                viewGroups =
+                    case newSelected of
+                        Just sel ->
+                            effectiveResults model |> Maybe.map (lineageGroups sel)
+
+                        Nothing ->
+                            effectiveResults model
+
+                fit =
+                    fitToView viewGroups
+            in
+            ( { model
+                | graphSelected = newSelected
                 , graphDrag = Nothing
+                , graphScale = fit.scale
+                , graphPanX = fit.panX
+                , graphPanY = fit.panY
               }
             , Cmd.none
             )
@@ -455,6 +481,14 @@ update msg model =
             )
 
         GraphFit ->
+            let
+                fit =
+                    fitToView (effectiveResults model)
+            in
+            ( { model | graphScale = fit.scale, graphPanX = fit.panX, graphPanY = fit.panY, graphSelected = Nothing }, Cmd.none )
+
+        ClearGraphFocus ->
+            -- Reset the lineage filter and refit the full graph.
             let
                 fit =
                     fitToView (effectiveResults model)
@@ -584,16 +618,16 @@ renderStatusMessage status =
             text ""
 
 
-{-| Label for the inline-single-items toggle, reflecting the current state
+{-| Label for the inline-singletons toggle, reflecting the current state
 (mirrors the stateful "view done"/"view todo" button).
 -}
 inlineToggleLabel : Bool -> String
 inlineToggleLabel enabled =
     if enabled then
-        "single items: inlined"
+        "singletons: inlined"
 
     else
-        "single items: grouped"
+        "singletons: grouped"
 
 
 controlsView : Model -> Html Msg
@@ -605,8 +639,8 @@ controlsView model =
                 , button [ onClick <| GraphZoom 1.25 ] [ text "zoom in" ]
                 , button [ onClick <| GraphZoom 0.8 ] [ text "zoom out" ]
                 , button [ onClick GraphFit ] [ text "fit" ]
-                , button [ onClick <| ToggleInlineSingleItems (not model.inlineSingleItems) ]
-                    [ text (inlineToggleLabel model.inlineSingleItems) ]
+                , button [ onClick <| ToggleInlineSingletons (not model.inlineSingletons) ]
+                    [ text (inlineToggleLabel model.inlineSingletons) ]
                 , span [ style "margin-left" "0.75rem", style "font-size" "0.85em" ]
                     [ legendSwatch "#e2e8f0" "#a0aec0"
                     , text " group  "
@@ -614,7 +648,7 @@ controlsView model =
                     , text " item"
                     ]
                 , span [ style "margin-left" "0.75rem", style "font-size" "0.85em", style "color" "#666" ]
-                    [ text "drag to pan · scroll to zoom · click a node to trace its lineage" ]
+                    [ text "drag to pan · scroll to zoom · click a node to focus its lineage · click empty space or ✕ to reset" ]
                 ]
 
         _ ->
@@ -628,8 +662,8 @@ controlsView model =
                 , button [ onClick <| ViewMode Graph ] [ text "graph view" ]
                 , button [ onClick <| ShowGroupLinks (not model.showGroupLinks) ] [ text "show group links" ]
                 , button [ onClick <| ShowContainerGroups (not model.showContainerGroups) ] [ text "show container groups" ]
-                , button [ onClick <| ToggleInlineSingleItems (not model.inlineSingleItems) ]
-                    [ text (inlineToggleLabel model.inlineSingleItems) ]
+                , button [ onClick <| ToggleInlineSingletons (not model.inlineSingletons) ]
+                    [ text (inlineToggleLabel model.inlineSingletons) ]
                 , button [ onClick <| ItemsOnly (remainderBy 3 (model.itemsOnly + 1)) ] [ text "toggle items only" ]
                 , button [ onClick <| ClearDone ] [ text "reset" ]
                 ]
@@ -647,7 +681,7 @@ resultsView model =
             Just groups ->
                 case model.viewMode of
                     Graph ->
-                        [ graphView model groups ]
+                        [ graphFocusBanner model.graphSelected, graphView model (graphGroups model groups) ]
 
                     _ ->
                         groupsView model groups
@@ -655,16 +689,18 @@ resultsView model =
 
 
 {-| The rendered groups after applying view transforms that both the list and
-graph share. When inlineSingleItems is on, references that resolve to a single
-item are folded into the groups that reference them (see collapseSingleItemGroups).
+graph share. When inlineSingletons is on, singleton groups are folded away:
+collapsePassthroughRefs first rewrites single-ref passthrough chains down to
+their terminal, then collapseSingleItemGroups inlines single-item groups (so a
+chain ending in a single item composes into that item).
 -}
 effectiveResults : Model -> Maybe (List Group)
 effectiveResults model =
     model.fetchResults
         |> Maybe.map
             (\groups ->
-                if model.inlineSingleItems then
-                    collapseSingleItemGroups groups
+                if model.inlineSingletons then
+                    groups |> collapsePassthroughRefs |> collapseSingleItemGroups
 
                 else
                     groups
@@ -714,6 +750,88 @@ collapseSingleItemGroups groups =
                         }
                 }
             )
+
+
+{-| Collapse chains of "passthrough" groups — a group whose entire content is a
+single ref — to their terminal (the first name in the chain that is not itself a
+passthrough). Every ref pointing at a passthrough head is rewritten to that
+terminal, and the resolvable passthrough groups are dropped. A chain that cycles
+is left intact (never rewritten, never dropped) so resolution always terminates.
+
+Runs before collapseSingleItemGroups so the two compose: a chain terminating in
+a single-item group gets its refs rewritten to that group, which the single-item
+step then inlines. Mirrors Go `pkg/inline.PassthroughRefs`.
+-}
+collapsePassthroughRefs : List Group -> List Group
+collapsePassthroughRefs groups =
+    let
+        -- name -> its single ref, for every passthrough group.
+        passthrough =
+            groups
+                |> List.filterMap
+                    (\g ->
+                        case ( g.contents.refs, g.contents.items ) of
+                            ( [ only ], [] ) ->
+                                Just ( g.name, only )
+
+                            _ ->
+                                Nothing
+                    )
+                |> Dict.fromList
+
+        -- Follow the chain from a passthrough; `Just terminal` on reaching a
+        -- non-passthrough, `Nothing` on a cycle.
+        walk current visited =
+            case Dict.get current passthrough of
+                Nothing ->
+                    Just current
+
+                Just next ->
+                    if Set.member current visited then
+                        Nothing
+
+                    else
+                        walk next (Set.insert current visited)
+
+        -- `Just terminal` only when `name` is a passthrough that resolves.
+        resolve name =
+            if Dict.member name passthrough then
+                walk name Set.empty
+
+            else
+                Nothing
+    in
+    groups
+        |> List.filter (\g -> resolve g.name == Nothing)
+        |> List.map
+            (\g ->
+                { g
+                    | contents =
+                        { refs =
+                            g.contents.refs
+                                |> List.map (\r -> resolve r |> Maybe.withDefault r)
+                                |> dedupRefs
+                        , items = g.contents.items
+                        }
+                }
+            )
+
+
+{-| Deduplicate a list of strings, keeping the first occurrence's order. -}
+dedupRefs : List String -> List String
+dedupRefs refs =
+    List.foldl
+        (\r ( seen, acc ) ->
+            if Set.member r seen then
+                ( seen, acc )
+
+            else
+                ( Set.insert r seen, r :: acc )
+        )
+        ( Set.empty, [] )
+        refs
+        |> Tuple.second
+        |> List.reverse
 
 
 groupsView : Model -> List Group -> List (Html Msg)
@@ -1230,6 +1348,83 @@ fitToView maybeGroups =
             }
 
 
+{-| Restrict `groups` to the lineage — ancestors ∪ descendants, inclusive — of
+the node id `selectedId`: keep only the groups in the lineage and, on those, only
+the refs and items that are themselves in the lineage. Re-running computeLayout on
+the result yields just the focused subgraph. Always apply this to the full
+effectiveResults list, never to an already-filtered subset.
+-}
+lineageGroups : String -> List Group -> List Group
+lineageGroups selectedId groups =
+    let
+        edges =
+            (computeLayout groups).edges
+
+        childrenAdj =
+            List.foldl (\( p, c ) d -> pushAdj p c d) Dict.empty edges
+
+        parentsAdj =
+            List.foldl (\( p, c ) d -> pushAdj c p d) Dict.empty edges
+
+        focused =
+            Set.union (reachable parentsAdj selectedId) (reachable childrenAdj selectedId)
+    in
+    groups
+        |> List.filter (\g -> Set.member (groupId g.name) focused)
+        |> List.map
+            (\g ->
+                { g
+                    | contents =
+                        { refs = g.contents.refs |> List.filter (\r -> Set.member (groupId r) focused)
+                        , items = g.contents.items |> List.filter (\it -> Set.member (itemId it) focused)
+                        }
+                }
+            )
+
+
+{-| The group list to feed the graph: the whole thing, or — when a node is
+focused — just that node's lineage. -}
+graphGroups : Model -> List Group -> List Group
+graphGroups model groups =
+    case model.graphSelected of
+        Nothing ->
+            groups
+
+        Just sel ->
+            lineageGroups sel groups
+
+
+{-| When a graph node is focused, a pill above the graph names the focused node
+and offers a reset; nothing is shown otherwise. The node id carries a "g:"/"i:"
+kind prefix, dropped here to show the plain name. -}
+graphFocusBanner : Maybe String -> Html Msg
+graphFocusBanner selected =
+    case selected of
+        Nothing ->
+            text ""
+
+        Just nodeId ->
+            div
+                [ style "display" "inline-flex"
+                , style "align-items" "center"
+                , style "gap" "0.4rem"
+                , style "margin" "0 0 0.5rem 0"
+                , style "padding" "0.2rem 0.3rem 0.2rem 0.7rem"
+                , style "background" "#ebf8ff"
+                , style "border" "1px solid #90cdf4"
+                , style "border-radius" "999px"
+                , style "font-size" "0.85em"
+                ]
+                [ text ("Showing lineage of \u{2018}" ++ String.dropLeft 2 nodeId ++ "\u{2019}")
+                , button
+                    [ onClick ClearGraphFocus
+                    , style "cursor" "pointer"
+                    , Html.Attributes.title "Show the whole graph"
+                    ]
+                    [ text "✕" ]
+                ]
+
+
 graphView : Model -> List Group -> Html Msg
 graphView model groups =
     let
@@ -1238,32 +1433,6 @@ graphView model groups =
 
         nodeDict =
             layout.nodes |> List.map (\n -> ( n.id, n )) |> Dict.fromList
-
-        -- Adjacency for walking the include-graph up (to parents) and down (to
-        -- children/items), built once from the edge list.
-        childrenAdj =
-            List.foldl (\( parent, child ) d -> pushAdj parent child d) Dict.empty layout.edges
-
-        parentsAdj =
-            List.foldl (\( parent, child ) d -> pushAdj child parent d) Dict.empty layout.edges
-
-        -- Focusing a node lights it plus its whole lineage: every ancestor
-        -- (parent, that parent's parents, ... up to the roots) and every
-        -- descendant. For an item, which has no children, this is exactly the
-        -- chain of groups it belongs to.
-        focused =
-            case model.graphSelected of
-                Nothing ->
-                    Set.empty
-
-                Just s ->
-                    Set.union (reachable parentsAdj s) (reachable childrenAdj s)
-
-        nodeActive id =
-            model.graphSelected == Nothing || Set.member id focused
-
-        edgeActive ( parent, child ) =
-            model.graphSelected == Nothing || (Set.member parent focused && Set.member child focused)
 
         transform =
             "translate("
@@ -1274,18 +1443,21 @@ graphView model groups =
                 ++ gStr model.graphScale
                 ++ ")"
 
+        -- The list is already filtered to the focused lineage (see graphGroups),
+        -- so every node/edge renders active; the selected node is still
+        -- highlighted via the graphSelected match in viewNode.
         edgeEls =
             layout.edges
                 |> List.filterMap
                     (\edge ->
-                        Maybe.map2 (\parent child -> viewEdge (edgeActive edge) parent child)
+                        Maybe.map2 (\parent child -> viewEdge True parent child)
                             (Dict.get (Tuple.first edge) nodeDict)
                             (Dict.get (Tuple.second edge) nodeDict)
                     )
 
         nodeEls =
             layout.nodes
-                |> List.map (\n -> viewNode model.graphSelected (nodeActive n.id) (Set.member n.id focused) n)
+                |> List.map (\n -> viewNode model.graphSelected True False n)
     in
     Svg.svg
         [ style "width" "100%"

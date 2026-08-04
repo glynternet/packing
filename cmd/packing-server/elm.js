@@ -5351,7 +5351,7 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, fetchResults: $elm$core$Maybe$Nothing, graphDrag: $elm$core$Maybe$Nothing, graphPanX: 20, graphPanY: 20, graphScale: 1, graphSelected: $elm$core$Maybe$Nothing, inlineSingleItems: true, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, viewMode: $author$project$Main$ToDo};
+var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, fetchResults: $elm$core$Maybe$Nothing, graphDrag: $elm$core$Maybe$Nothing, graphPanX: 20, graphPanY: 20, graphScale: 1, graphSelected: $elm$core$Maybe$Nothing, inlineSingletons: true, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, viewMode: $author$project$Main$ToDo};
 var $author$project$Main$FetchedResults = F2(
 	function (a, b) {
 		return {$: 'FetchedResults', a: a, b: b};
@@ -6609,6 +6609,120 @@ var $elm$core$Basics$clamp = F3(
 	function (low, high, number) {
 		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
 	});
+var $elm$core$Dict$member = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$get, key, dict);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
+	});
+var $elm$core$Set$member = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return A2($elm$core$Dict$member, key, dict);
+	});
+var $elm$core$Tuple$second = function (_v0) {
+	var y = _v0.b;
+	return y;
+};
+var $author$project$Main$dedupRefs = function (refs) {
+	return $elm$core$List$reverse(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (r, _v0) {
+					var seen = _v0.a;
+					var acc = _v0.b;
+					return A2($elm$core$Set$member, r, seen) ? _Utils_Tuple2(seen, acc) : _Utils_Tuple2(
+						A2($elm$core$Set$insert, r, seen),
+						A2($elm$core$List$cons, r, acc));
+				}),
+			_Utils_Tuple2($elm$core$Set$empty, _List_Nil),
+			refs).b);
+};
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $author$project$Main$collapsePassthroughRefs = function (groups) {
+	var passthrough = $elm$core$Dict$fromList(
+		A2(
+			$elm$core$List$filterMap,
+			function (g) {
+				var _v1 = _Utils_Tuple2(g.contents.refs, g.contents.items);
+				if ((_v1.a.b && (!_v1.a.b.b)) && (!_v1.b.b)) {
+					var _v2 = _v1.a;
+					var only = _v2.a;
+					return $elm$core$Maybe$Just(
+						_Utils_Tuple2(g.name, only));
+				} else {
+					return $elm$core$Maybe$Nothing;
+				}
+			},
+			groups));
+	var walk = F2(
+		function (current, visited) {
+			walk:
+			while (true) {
+				var _v0 = A2($elm$core$Dict$get, current, passthrough);
+				if (_v0.$ === 'Nothing') {
+					return $elm$core$Maybe$Just(current);
+				} else {
+					var next = _v0.a;
+					if (A2($elm$core$Set$member, current, visited)) {
+						return $elm$core$Maybe$Nothing;
+					} else {
+						var $temp$current = next,
+							$temp$visited = A2($elm$core$Set$insert, current, visited);
+						current = $temp$current;
+						visited = $temp$visited;
+						continue walk;
+					}
+				}
+			}
+		});
+	var resolve = function (name) {
+		return A2($elm$core$Dict$member, name, passthrough) ? A2(walk, name, $elm$core$Set$empty) : $elm$core$Maybe$Nothing;
+	};
+	return A2(
+		$elm$core$List$map,
+		function (g) {
+			return _Utils_update(
+				g,
+				{
+					contents: {
+						items: g.contents.items,
+						refs: $author$project$Main$dedupRefs(
+							A2(
+								$elm$core$List$map,
+								function (r) {
+									return A2(
+										$elm$core$Maybe$withDefault,
+										r,
+										resolve(r));
+								},
+								g.contents.refs))
+					}
+				});
+		},
+		A2(
+			$elm$core$List$filter,
+			function (g) {
+				return _Utils_eq(
+					resolve(g.name),
+					$elm$core$Maybe$Nothing);
+			},
+			groups));
+};
 var $elm$core$List$append = F2(
 	function (xs, ys) {
 		if (!ys.b) {
@@ -6624,31 +6738,6 @@ var $elm$core$List$concatMap = F2(
 	function (f, list) {
 		return $elm$core$List$concat(
 			A2($elm$core$List$map, f, list));
-	});
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
-var $elm$core$Dict$member = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$get, key, dict);
-		if (_v0.$ === 'Just') {
-			return true;
-		} else {
-			return false;
-		}
-	});
-var $elm$core$Set$member = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return A2($elm$core$Dict$member, key, dict);
 	});
 var $elm$core$Basics$not = _Basics_not;
 var $author$project$Main$collapseSingleItemGroups = function (groups) {
@@ -6714,7 +6803,8 @@ var $author$project$Main$effectiveResults = function (model) {
 	return A2(
 		$elm$core$Maybe$map,
 		function (groups) {
-			return model.inlineSingleItems ? $author$project$Main$collapseSingleItemGroups(groups) : groups;
+			return model.inlineSingletons ? $author$project$Main$collapseSingleItemGroups(
+				$author$project$Main$collapsePassthroughRefs(groups)) : groups;
 		},
 		model.fetchResults);
 };
@@ -7075,6 +7165,135 @@ var $author$project$Main$fitToView = function (maybeGroups) {
 		return {panX: (baseW - (gW * scale)) / 2, panY: (baseH - (gH * scale)) / 2, scale: scale};
 	}
 };
+var $author$project$Main$pushAdj = F3(
+	function (key, val, dict) {
+		return A3(
+			$elm$core$Dict$update,
+			key,
+			function (mb) {
+				return $elm$core$Maybe$Just(
+					A2(
+						$elm$core$List$cons,
+						val,
+						A2($elm$core$Maybe$withDefault, _List_Nil, mb)));
+			},
+			dict);
+	});
+var $author$project$Main$reachableHelp = F3(
+	function (adj, frontier, visited) {
+		reachableHelp:
+		while (true) {
+			if (!frontier.b) {
+				return visited;
+			} else {
+				var x = frontier.a;
+				var rest = frontier.b;
+				if (A2($elm$core$Set$member, x, visited)) {
+					var $temp$adj = adj,
+						$temp$frontier = rest,
+						$temp$visited = visited;
+					adj = $temp$adj;
+					frontier = $temp$frontier;
+					visited = $temp$visited;
+					continue reachableHelp;
+				} else {
+					var $temp$adj = adj,
+						$temp$frontier = _Utils_ap(
+						A2(
+							$elm$core$Maybe$withDefault,
+							_List_Nil,
+							A2($elm$core$Dict$get, x, adj)),
+						rest),
+						$temp$visited = A2($elm$core$Set$insert, x, visited);
+					adj = $temp$adj;
+					frontier = $temp$frontier;
+					visited = $temp$visited;
+					continue reachableHelp;
+				}
+			}
+		}
+	});
+var $author$project$Main$reachable = F2(
+	function (adj, start) {
+		return A3(
+			$author$project$Main$reachableHelp,
+			adj,
+			_List_fromArray(
+				[start]),
+			$elm$core$Set$empty);
+	});
+var $elm$core$Set$union = F2(
+	function (_v0, _v1) {
+		var dict1 = _v0.a;
+		var dict2 = _v1.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$union, dict1, dict2));
+	});
+var $author$project$Main$lineageGroups = F2(
+	function (selectedId, groups) {
+		var edges = $author$project$Main$computeLayout(groups).edges;
+		var parentsAdj = A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v1, d) {
+					var p = _v1.a;
+					var c = _v1.b;
+					return A3($author$project$Main$pushAdj, c, p, d);
+				}),
+			$elm$core$Dict$empty,
+			edges);
+		var childrenAdj = A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, d) {
+					var p = _v0.a;
+					var c = _v0.b;
+					return A3($author$project$Main$pushAdj, p, c, d);
+				}),
+			$elm$core$Dict$empty,
+			edges);
+		var focused = A2(
+			$elm$core$Set$union,
+			A2($author$project$Main$reachable, parentsAdj, selectedId),
+			A2($author$project$Main$reachable, childrenAdj, selectedId));
+		return A2(
+			$elm$core$List$map,
+			function (g) {
+				return _Utils_update(
+					g,
+					{
+						contents: {
+							items: A2(
+								$elm$core$List$filter,
+								function (it) {
+									return A2(
+										$elm$core$Set$member,
+										$author$project$Main$itemId(it),
+										focused);
+								},
+								g.contents.items),
+							refs: A2(
+								$elm$core$List$filter,
+								function (r) {
+									return A2(
+										$elm$core$Set$member,
+										$author$project$Main$groupId(r),
+										focused);
+								},
+								g.contents.refs)
+						}
+					});
+			},
+			A2(
+				$elm$core$List$filter,
+				function (g) {
+					return A2(
+						$elm$core$Set$member,
+						$author$project$Main$groupId(g.name),
+						focused);
+				},
+				groups));
+	});
 var $elm$core$Basics$neq = _Utils_notEqual;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$core$Set$remove = F2(
@@ -7217,11 +7436,11 @@ var $author$project$Main$update = F2(
 						model,
 						{showContainerGroups: show}),
 					$elm$core$Platform$Cmd$none);
-			case 'ToggleInlineSingleItems':
+			case 'ToggleInlineSingletons':
 				var enabled = msg.a;
 				var base = _Utils_update(
 					model,
-					{inlineSingleItems: enabled});
+					{inlineSingletons: enabled});
 				var _v3 = model.viewMode;
 				if (_v3.$ === 'Graph') {
 					var fit = $author$project$Main$fitToView(
@@ -7305,25 +7524,42 @@ var $author$project$Main$update = F2(
 						return false;
 					}
 				}();
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							graphDrag: $elm$core$Maybe$Nothing,
-							graphSelected: wasClick ? $elm$core$Maybe$Nothing : model.graphSelected
-						}),
-					$elm$core$Platform$Cmd$none);
+				if (wasClick && (!_Utils_eq(model.graphSelected, $elm$core$Maybe$Nothing))) {
+					var fit = $author$project$Main$fitToView(
+						$author$project$Main$effectiveResults(model));
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{graphDrag: $elm$core$Maybe$Nothing, graphPanX: fit.panX, graphPanY: fit.panY, graphScale: fit.scale, graphSelected: $elm$core$Maybe$Nothing}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{graphDrag: $elm$core$Maybe$Nothing}),
+						$elm$core$Platform$Cmd$none);
+				}
 			case 'GraphNodeClicked':
 				var name = msg.a;
+				var newSelected = _Utils_eq(
+					model.graphSelected,
+					$elm$core$Maybe$Just(name)) ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(name);
+				var viewGroups = function () {
+					if (newSelected.$ === 'Just') {
+						var sel = newSelected.a;
+						return A2(
+							$elm$core$Maybe$map,
+							$author$project$Main$lineageGroups(sel),
+							$author$project$Main$effectiveResults(model));
+					} else {
+						return $author$project$Main$effectiveResults(model);
+					}
+				}();
+				var fit = $author$project$Main$fitToView(viewGroups);
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{
-							graphDrag: $elm$core$Maybe$Nothing,
-							graphSelected: _Utils_eq(
-								model.graphSelected,
-								$elm$core$Maybe$Just(name)) ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(name)
-						}),
+						{graphDrag: $elm$core$Maybe$Nothing, graphPanX: fit.panX, graphPanY: fit.panY, graphScale: fit.scale, graphSelected: newSelected}),
 					$elm$core$Platform$Cmd$none);
 			case 'GraphZoom':
 				var factor = msg.a;
@@ -7336,6 +7572,14 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{graphPanX: cx - (worldX * newScale), graphPanY: cy - (worldY * newScale), graphScale: newScale}),
+					$elm$core$Platform$Cmd$none);
+			case 'GraphFit':
+				var fit = $author$project$Main$fitToView(
+					$author$project$Main$effectiveResults(model));
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{graphPanX: fit.panX, graphPanY: fit.panY, graphScale: fit.scale, graphSelected: $elm$core$Maybe$Nothing}),
 					$elm$core$Platform$Cmd$none);
 			default:
 				var fit = $author$project$Main$fitToView(
@@ -7365,8 +7609,8 @@ var $author$project$Main$ShowContainerGroups = function (a) {
 var $author$project$Main$ShowGroupLinks = function (a) {
 	return {$: 'ShowGroupLinks', a: a};
 };
-var $author$project$Main$ToggleInlineSingleItems = function (a) {
-	return {$: 'ToggleInlineSingleItems', a: a};
+var $author$project$Main$ToggleInlineSingletons = function (a) {
+	return {$: 'ToggleInlineSingletons', a: a};
 };
 var $author$project$Main$ViewMode = function (a) {
 	return {$: 'ViewMode', a: a};
@@ -7374,7 +7618,7 @@ var $author$project$Main$ViewMode = function (a) {
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $author$project$Main$inlineToggleLabel = function (enabled) {
-	return enabled ? 'single items: inlined' : 'single items: grouped';
+	return enabled ? 'singletons: inlined' : 'singletons: grouped';
 };
 var $elm$html$Html$span = _VirtualDom_node('span');
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
@@ -7471,12 +7715,12 @@ var $author$project$Main$controlsView = function (model) {
 					_List_fromArray(
 						[
 							$elm$html$Html$Events$onClick(
-							$author$project$Main$ToggleInlineSingleItems(!model.inlineSingleItems))
+							$author$project$Main$ToggleInlineSingletons(!model.inlineSingletons))
 						]),
 					_List_fromArray(
 						[
 							$elm$html$Html$text(
-							$author$project$Main$inlineToggleLabel(model.inlineSingleItems))
+							$author$project$Main$inlineToggleLabel(model.inlineSingletons))
 						])),
 					A2(
 					$elm$html$Html$span,
@@ -7502,7 +7746,7 @@ var $author$project$Main$controlsView = function (model) {
 						]),
 					_List_fromArray(
 						[
-							$elm$html$Html$text('drag to pan · scroll to zoom · click a node to trace its lineage')
+							$elm$html$Html$text('drag to pan · scroll to zoom · click a node to focus its lineage · click empty space or ✕ to reset')
 						]))
 				]));
 	} else {
@@ -7577,12 +7821,12 @@ var $author$project$Main$controlsView = function (model) {
 					_List_fromArray(
 						[
 							$elm$html$Html$Events$onClick(
-							$author$project$Main$ToggleInlineSingleItems(!model.inlineSingleItems))
+							$author$project$Main$ToggleInlineSingletons(!model.inlineSingletons))
 						]),
 					_List_fromArray(
 						[
 							$elm$html$Html$text(
-							$author$project$Main$inlineToggleLabel(model.inlineSingleItems))
+							$author$project$Main$inlineToggleLabel(model.inlineSingletons))
 						])),
 					A2(
 					$elm$html$Html$button,
@@ -7704,6 +7948,55 @@ var $author$project$Main$renderStatusMessage = function (status) {
 		return $elm$html$Html$text('');
 	}
 };
+var $author$project$Main$ClearGraphFocus = {$: 'ClearGraphFocus'};
+var $author$project$Main$graphFocusBanner = function (selected) {
+	if (selected.$ === 'Nothing') {
+		return $elm$html$Html$text('');
+	} else {
+		var nodeId = selected.a;
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					A2($elm$html$Html$Attributes$style, 'display', 'inline-flex'),
+					A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
+					A2($elm$html$Html$Attributes$style, 'gap', '0.4rem'),
+					A2($elm$html$Html$Attributes$style, 'margin', '0 0 0.5rem 0'),
+					A2($elm$html$Html$Attributes$style, 'padding', '0.2rem 0.3rem 0.2rem 0.7rem'),
+					A2($elm$html$Html$Attributes$style, 'background', '#ebf8ff'),
+					A2($elm$html$Html$Attributes$style, 'border', '1px solid #90cdf4'),
+					A2($elm$html$Html$Attributes$style, 'border-radius', '999px'),
+					A2($elm$html$Html$Attributes$style, 'font-size', '0.85em')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text(
+					'Showing lineage of \u2018' + (A2($elm$core$String$dropLeft, 2, nodeId) + '\u2019')),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick($author$project$Main$ClearGraphFocus),
+							A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+							$elm$html$Html$Attributes$title('Show the whole graph')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('✕')
+						]))
+				]));
+	}
+};
+var $author$project$Main$graphGroups = F2(
+	function (model, groups) {
+		var _v0 = model.graphSelected;
+		if (_v0.$ === 'Nothing') {
+			return groups;
+		} else {
+			var sel = _v0.a;
+			return A2($author$project$Main$lineageGroups, sel, groups);
+		}
+	});
 var $elm$svg$Svg$Attributes$d = _VirtualDom_attribute('d');
 var $elm$svg$Svg$trustedNode = _VirtualDom_nodeNS('http://www.w3.org/2000/svg');
 var $elm$svg$Svg$defs = $elm$svg$Svg$trustedNode('defs');
@@ -7752,78 +8045,10 @@ var $elm$html$Html$Events$preventDefaultOn = F2(
 			event,
 			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
 	});
-var $author$project$Main$pushAdj = F3(
-	function (key, val, dict) {
-		return A3(
-			$elm$core$Dict$update,
-			key,
-			function (mb) {
-				return $elm$core$Maybe$Just(
-					A2(
-						$elm$core$List$cons,
-						val,
-						A2($elm$core$Maybe$withDefault, _List_Nil, mb)));
-			},
-			dict);
-	});
-var $author$project$Main$reachableHelp = F3(
-	function (adj, frontier, visited) {
-		reachableHelp:
-		while (true) {
-			if (!frontier.b) {
-				return visited;
-			} else {
-				var x = frontier.a;
-				var rest = frontier.b;
-				if (A2($elm$core$Set$member, x, visited)) {
-					var $temp$adj = adj,
-						$temp$frontier = rest,
-						$temp$visited = visited;
-					adj = $temp$adj;
-					frontier = $temp$frontier;
-					visited = $temp$visited;
-					continue reachableHelp;
-				} else {
-					var $temp$adj = adj,
-						$temp$frontier = _Utils_ap(
-						A2(
-							$elm$core$Maybe$withDefault,
-							_List_Nil,
-							A2($elm$core$Dict$get, x, adj)),
-						rest),
-						$temp$visited = A2($elm$core$Set$insert, x, visited);
-					adj = $temp$adj;
-					frontier = $temp$frontier;
-					visited = $temp$visited;
-					continue reachableHelp;
-				}
-			}
-		}
-	});
-var $author$project$Main$reachable = F2(
-	function (adj, start) {
-		return A3(
-			$author$project$Main$reachableHelp,
-			adj,
-			_List_fromArray(
-				[start]),
-			$elm$core$Set$empty);
-	});
 var $elm$svg$Svg$Attributes$refX = _VirtualDom_attribute('refX');
 var $elm$svg$Svg$Attributes$refY = _VirtualDom_attribute('refY');
-var $elm$core$Tuple$second = function (_v0) {
-	var y = _v0.b;
-	return y;
-};
 var $elm$svg$Svg$svg = $elm$svg$Svg$trustedNode('svg');
 var $elm$svg$Svg$Attributes$transform = _VirtualDom_attribute('transform');
-var $elm$core$Set$union = F2(
-	function (_v0, _v1) {
-		var dict1 = _v0.a;
-		var dict2 = _v1.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A2($elm$core$Dict$union, dict1, dict2));
-	});
 var $elm$svg$Svg$Attributes$markerEnd = _VirtualDom_attribute('marker-end');
 var $elm$svg$Svg$Attributes$opacity = _VirtualDom_attribute('opacity');
 var $elm$svg$Svg$Attributes$stroke = _VirtualDom_attribute('stroke');
@@ -7998,43 +8223,12 @@ var $author$project$Main$graphView = F2(
 					return _Utils_Tuple2(n.id, n);
 				},
 				layout.nodes));
-		var parentsAdj = A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v4, d) {
-					var parent = _v4.a;
-					var child = _v4.b;
-					return A3($author$project$Main$pushAdj, child, parent, d);
-				}),
-			$elm$core$Dict$empty,
-			layout.edges);
-		var childrenAdj = A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v3, d) {
-					var parent = _v3.a;
-					var child = _v3.b;
-					return A3($author$project$Main$pushAdj, parent, child, d);
-				}),
-			$elm$core$Dict$empty,
-			layout.edges);
-		var focused = function () {
-			var _v2 = model.graphSelected;
-			if (_v2.$ === 'Nothing') {
-				return $elm$core$Set$empty;
-			} else {
-				var s = _v2.a;
-				return A2(
-					$elm$core$Set$union,
-					A2($author$project$Main$reachable, parentsAdj, s),
-					A2($author$project$Main$reachable, childrenAdj, s));
-			}
-		}();
-		var edgeActive = function (_v1) {
-			var parent = _v1.a;
-			var child = _v1.b;
-			return _Utils_eq(model.graphSelected, $elm$core$Maybe$Nothing) || (A2($elm$core$Set$member, parent, focused) && A2($elm$core$Set$member, child, focused));
-		};
+		var nodeEls = A2(
+			$elm$core$List$map,
+			function (n) {
+				return A4($author$project$Main$viewNode, model.graphSelected, true, false, n);
+			},
+			layout.nodes);
 		var edgeEls = A2(
 			$elm$core$List$filterMap,
 			function (edge) {
@@ -8042,30 +8236,12 @@ var $author$project$Main$graphView = F2(
 					$elm$core$Maybe$map2,
 					F2(
 						function (parent, child) {
-							return A3(
-								$author$project$Main$viewEdge,
-								edgeActive(edge),
-								parent,
-								child);
+							return A3($author$project$Main$viewEdge, true, parent, child);
 						}),
 					A2($elm$core$Dict$get, edge.a, nodeDict),
 					A2($elm$core$Dict$get, edge.b, nodeDict));
 			},
 			layout.edges);
-		var nodeActive = function (id) {
-			return _Utils_eq(model.graphSelected, $elm$core$Maybe$Nothing) || A2($elm$core$Set$member, id, focused);
-		};
-		var nodeEls = A2(
-			$elm$core$List$map,
-			function (n) {
-				return A4(
-					$author$project$Main$viewNode,
-					model.graphSelected,
-					nodeActive(n.id),
-					A2($elm$core$Set$member, n.id, focused),
-					n);
-			},
-			layout.nodes);
 		return A2(
 			$elm$svg$Svg$svg,
 			_List_fromArray(
@@ -8429,7 +8605,11 @@ var $author$project$Main$resultsView = function (model) {
 				if (_v1.$ === 'Graph') {
 					return _List_fromArray(
 						[
-							A2($author$project$Main$graphView, model, groups)
+							$author$project$Main$graphFocusBanner(model.graphSelected),
+							A2(
+							$author$project$Main$graphView,
+							model,
+							A2($author$project$Main$graphGroups, model, groups))
 						]);
 				} else {
 					return A2($author$project$Main$groupsView, model, groups);
