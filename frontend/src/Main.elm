@@ -54,6 +54,11 @@ type alias Model =
     -- showContainerGroups mirrors the CLI's --include-empty-parent-groups: show
     -- groups that only bundle other groups and have no items of their own.
     , showContainerGroups : Bool
+
+    -- inlineSingleItems folds references that resolve to a single item into the
+    -- groups that reference them, so a shared one-item group shows as that item
+    -- inside each parent instead of a standalone group. Drives list and graph.
+    , inlineSingleItems : Bool
     , itemsOnly : Int
     , selectionText : String
 
@@ -174,6 +179,7 @@ defaultModel =
     , done = Set.empty
     , showGroupLinks = False
     , showContainerGroups = False
+    , inlineSingleItems = True
     , itemsOnly = 0
     , selectionText = defaultSelectionText
     , requestId = 0
@@ -224,6 +230,7 @@ type Msg
     | ItemDone String Bool
     | ShowGroupLinks Bool
     | ShowContainerGroups Bool
+    | ToggleInlineSingleItems Bool
     | ItemsOnly Int
     | ClearDone
     | SelectionChanged String
@@ -274,7 +281,7 @@ update msg model =
             -- Entering the graph view: frame the whole graph to fit the viewport.
             let
                 fit =
-                    fitToView model.fetchResults
+                    fitToView (effectiveResults model)
             in
             ( { model
                 | viewMode = Graph
@@ -306,6 +313,30 @@ update msg model =
 
         ShowContainerGroups show ->
             ( { model | showContainerGroups = show }, Cmd.none )
+
+        ToggleInlineSingleItems enabled ->
+            let
+                base =
+                    { model | inlineSingleItems = enabled }
+            in
+            case model.viewMode of
+                Graph ->
+                    -- Toggling changes which nodes exist, so refit the viewport.
+                    let
+                        fit =
+                            fitToView (effectiveResults base)
+                    in
+                    ( { base
+                        | graphScale = fit.scale
+                        , graphPanX = fit.panX
+                        , graphPanY = fit.panY
+                        , graphSelected = Nothing
+                      }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( base, Cmd.none )
 
         ItemsOnly itemsOnly ->
             ( { model | itemsOnly = itemsOnly }, Cmd.none )
@@ -426,7 +457,7 @@ update msg model =
         GraphFit ->
             let
                 fit =
-                    fitToView model.fetchResults
+                    fitToView (effectiveResults model)
             in
             ( { model | graphScale = fit.scale, graphPanX = fit.panX, graphPanY = fit.panY, graphSelected = Nothing }, Cmd.none )
 
@@ -553,6 +584,18 @@ renderStatusMessage status =
             text ""
 
 
+{-| Label for the inline-single-items toggle, reflecting the current state
+(mirrors the stateful "view done"/"view todo" button).
+-}
+inlineToggleLabel : Bool -> String
+inlineToggleLabel enabled =
+    if enabled then
+        "single items: inlined"
+
+    else
+        "single items: grouped"
+
+
 controlsView : Model -> Html Msg
 controlsView model =
     case model.viewMode of
@@ -562,6 +605,8 @@ controlsView model =
                 , button [ onClick <| GraphZoom 1.25 ] [ text "zoom in" ]
                 , button [ onClick <| GraphZoom 0.8 ] [ text "zoom out" ]
                 , button [ onClick GraphFit ] [ text "fit" ]
+                , button [ onClick <| ToggleInlineSingleItems (not model.inlineSingleItems) ]
+                    [ text (inlineToggleLabel model.inlineSingleItems) ]
                 , span [ style "margin-left" "0.75rem", style "font-size" "0.85em" ]
                     [ legendSwatch "#e2e8f0" "#a0aec0"
                     , text " group  "
@@ -583,6 +628,8 @@ controlsView model =
                 , button [ onClick <| ViewMode Graph ] [ text "graph view" ]
                 , button [ onClick <| ShowGroupLinks (not model.showGroupLinks) ] [ text "show group links" ]
                 , button [ onClick <| ShowContainerGroups (not model.showContainerGroups) ] [ text "show container groups" ]
+                , button [ onClick <| ToggleInlineSingleItems (not model.inlineSingleItems) ]
+                    [ text (inlineToggleLabel model.inlineSingleItems) ]
                 , button [ onClick <| ItemsOnly (remainderBy 3 (model.itemsOnly + 1)) ] [ text "toggle items only" ]
                 , button [ onClick <| ClearDone ] [ text "reset" ]
                 ]
@@ -593,7 +640,7 @@ resultsView model =
     -- Errors are surfaced by the render-status marker next to the Selection
     -- header, so this panel only shows the last successfully rendered groups.
     div []
-        (case model.fetchResults of
+        (case effectiveResults model of
             Nothing ->
                 [ text "Editing selection…" ]
 
@@ -605,6 +652,68 @@ resultsView model =
                     _ ->
                         groupsView model groups
         )
+
+
+{-| The rendered groups after applying view transforms that both the list and
+graph share. When inlineSingleItems is on, references that resolve to a single
+item are folded into the groups that reference them (see collapseSingleItemGroups).
+-}
+effectiveResults : Model -> Maybe (List Group)
+effectiveResults model =
+    model.fetchResults
+        |> Maybe.map
+            (\groups ->
+                if model.inlineSingleItems then
+                    collapseSingleItemGroups groups
+
+                else
+                    groups
+            )
+
+
+{-| Fold every reference that resolves to a single item into the groups that
+reference it: drop the standalone one-item group and append its item to each
+referencing group (removing the ref). A one-item group with no parent is left
+as-is so its item is never lost. Because the inlined item keeps the item's own
+name, its done-state is shared across every group it lands in.
+
+Single-pass: the collapsible set is taken from the input, so a group that only
+becomes single-item as a result of another collapsing is not itself collapsed.
+-}
+collapseSingleItemGroups : List Group -> List Group
+collapseSingleItemGroups groups =
+    let
+        referenced =
+            groups |> List.concatMap (.contents >> .refs) |> Set.fromList
+
+        collapsible =
+            groups
+                |> List.filterMap
+                    (\g ->
+                        case ( g.contents.refs, g.contents.items ) of
+                            ( [], [ only ] ) ->
+                                if Set.member g.name referenced then
+                                    Just ( g.name, only )
+
+                                else
+                                    Nothing
+
+                            _ ->
+                                Nothing
+                    )
+                |> Dict.fromList
+    in
+    groups
+        |> List.filter (\g -> not (Dict.member g.name collapsible))
+        |> List.map
+            (\g ->
+                { g
+                    | contents =
+                        { refs = g.contents.refs |> List.filter (\r -> not (Dict.member r collapsible))
+                        , items = g.contents.items ++ (g.contents.refs |> List.filterMap (\r -> Dict.get r collapsible))
+                        }
+                }
+            )
 
 
 groupsView : Model -> List Group -> List (Html Msg)

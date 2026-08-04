@@ -5351,7 +5351,7 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, fetchResults: $elm$core$Maybe$Nothing, graphDrag: $elm$core$Maybe$Nothing, graphPanX: 20, graphPanY: 20, graphScale: 1, graphSelected: $elm$core$Maybe$Nothing, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, viewMode: $author$project$Main$ToDo};
+var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, fetchResults: $elm$core$Maybe$Nothing, graphDrag: $elm$core$Maybe$Nothing, graphPanX: 20, graphPanY: 20, graphScale: 1, graphSelected: $elm$core$Maybe$Nothing, inlineSingleItems: true, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, viewMode: $author$project$Main$ToDo};
 var $author$project$Main$FetchedResults = F2(
 	function (a, b) {
 		return {$: 'FetchedResults', a: a, b: b};
@@ -6609,6 +6609,115 @@ var $elm$core$Basics$clamp = F3(
 	function (low, high, number) {
 		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
 	});
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $elm$core$List$concatMap = F2(
+	function (f, list) {
+		return $elm$core$List$concat(
+			A2($elm$core$List$map, f, list));
+	});
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $elm$core$Dict$member = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$get, key, dict);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
+	});
+var $elm$core$Set$member = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return A2($elm$core$Dict$member, key, dict);
+	});
+var $elm$core$Basics$not = _Basics_not;
+var $author$project$Main$collapseSingleItemGroups = function (groups) {
+	var referenced = $elm$core$Set$fromList(
+		A2(
+			$elm$core$List$concatMap,
+			A2(
+				$elm$core$Basics$composeR,
+				function ($) {
+					return $.contents;
+				},
+				function ($) {
+					return $.refs;
+				}),
+			groups));
+	var collapsible = $elm$core$Dict$fromList(
+		A2(
+			$elm$core$List$filterMap,
+			function (g) {
+				var _v0 = _Utils_Tuple2(g.contents.refs, g.contents.items);
+				if (((!_v0.a.b) && _v0.b.b) && (!_v0.b.b.b)) {
+					var _v1 = _v0.b;
+					var only = _v1.a;
+					return A2($elm$core$Set$member, g.name, referenced) ? $elm$core$Maybe$Just(
+						_Utils_Tuple2(g.name, only)) : $elm$core$Maybe$Nothing;
+				} else {
+					return $elm$core$Maybe$Nothing;
+				}
+			},
+			groups));
+	return A2(
+		$elm$core$List$map,
+		function (g) {
+			return _Utils_update(
+				g,
+				{
+					contents: {
+						items: _Utils_ap(
+							g.contents.items,
+							A2(
+								$elm$core$List$filterMap,
+								function (r) {
+									return A2($elm$core$Dict$get, r, collapsible);
+								},
+								g.contents.refs)),
+						refs: A2(
+							$elm$core$List$filter,
+							function (r) {
+								return !A2($elm$core$Dict$member, r, collapsible);
+							},
+							g.contents.refs)
+					}
+				});
+		},
+		A2(
+			$elm$core$List$filter,
+			function (g) {
+				return !A2($elm$core$Dict$member, g.name, collapsible);
+			},
+			groups));
+};
+var $author$project$Main$effectiveResults = function (model) {
+	return A2(
+		$elm$core$Maybe$map,
+		function (groups) {
+			return model.inlineSingleItems ? $author$project$Main$collapseSingleItemGroups(groups) : groups;
+		},
+		model.fetchResults);
+};
 var $author$project$Main$GroupNode = {$: 'GroupNode'};
 var $author$project$Main$ItemNode = {$: 'ItemNode'};
 var $author$project$Main$nodeW = function (label) {
@@ -6686,33 +6795,6 @@ var $author$project$Main$computeLayers = F2(
 					},
 					names)));
 	});
-var $elm$core$List$append = F2(
-	function (xs, ys) {
-		if (!ys.b) {
-			return xs;
-		} else {
-			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
-		}
-	});
-var $elm$core$List$concat = function (lists) {
-	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
-};
-var $elm$core$List$concatMap = F2(
-	function (f, list) {
-		return $elm$core$List$concat(
-			A2($elm$core$List$map, f, list));
-	});
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
 var $author$project$Main$groupId = function (name) {
 	return 'g:' + name;
 };
@@ -6762,20 +6844,6 @@ var $author$project$Main$meanOrZero = function (xs) {
 		return $elm$core$List$sum(xs) / $elm$core$List$length(xs);
 	}
 };
-var $elm$core$Dict$member = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$get, key, dict);
-		if (_v0.$ === 'Just') {
-			return true;
-		} else {
-			return false;
-		}
-	});
-var $elm$core$Set$member = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return A2($elm$core$Dict$member, key, dict);
-	});
 var $elm$core$Basics$min = F2(
 	function (x, y) {
 		return (_Utils_cmp(x, y) < 0) ? x : y;
@@ -7109,7 +7177,8 @@ var $author$project$Main$update = F2(
 			case 'ViewMode':
 				if (msg.a.$ === 'Graph') {
 					var _v2 = msg.a;
-					var fit = $author$project$Main$fitToView(model.fetchResults);
+					var fit = $author$project$Main$fitToView(
+						$author$project$Main$effectiveResults(model));
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -7148,6 +7217,23 @@ var $author$project$Main$update = F2(
 						model,
 						{showContainerGroups: show}),
 					$elm$core$Platform$Cmd$none);
+			case 'ToggleInlineSingleItems':
+				var enabled = msg.a;
+				var base = _Utils_update(
+					model,
+					{inlineSingleItems: enabled});
+				var _v3 = model.viewMode;
+				if (_v3.$ === 'Graph') {
+					var fit = $author$project$Main$fitToView(
+						$author$project$Main$effectiveResults(base));
+					return _Utils_Tuple2(
+						_Utils_update(
+							base,
+							{graphPanX: fit.panX, graphPanY: fit.panY, graphScale: fit.scale, graphSelected: $elm$core$Maybe$Nothing}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(base, $elm$core$Platform$Cmd$none);
+				}
 			case 'ItemsOnly':
 				var itemsOnly = msg.a;
 				return _Utils_Tuple2(
@@ -7189,9 +7275,9 @@ var $author$project$Main$update = F2(
 			case 'GraphDragMove':
 				var x = msg.a;
 				var y = msg.b;
-				var _v3 = model.graphDrag;
-				if (_v3.$ === 'Just') {
-					var d = _v3.a;
+				var _v4 = model.graphDrag;
+				if (_v4.$ === 'Just') {
+					var d = _v4.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -7211,9 +7297,9 @@ var $author$project$Main$update = F2(
 				var x = msg.a;
 				var y = msg.b;
 				var wasClick = function () {
-					var _v4 = model.graphDrag;
-					if (_v4.$ === 'Just') {
-						var d = _v4.a;
+					var _v5 = model.graphDrag;
+					if (_v5.$ === 'Just') {
+						var d = _v5.a;
 						return ($elm$core$Basics$abs(x - d.startX) + $elm$core$Basics$abs(y - d.startY)) < 4;
 					} else {
 						return false;
@@ -7252,7 +7338,8 @@ var $author$project$Main$update = F2(
 						{graphPanX: cx - (worldX * newScale), graphPanY: cy - (worldY * newScale), graphScale: newScale}),
 					$elm$core$Platform$Cmd$none);
 			default:
-				var fit = $author$project$Main$fitToView(model.fetchResults);
+				var fit = $author$project$Main$fitToView(
+					$author$project$Main$effectiveResults(model));
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -7278,11 +7365,17 @@ var $author$project$Main$ShowContainerGroups = function (a) {
 var $author$project$Main$ShowGroupLinks = function (a) {
 	return {$: 'ShowGroupLinks', a: a};
 };
+var $author$project$Main$ToggleInlineSingleItems = function (a) {
+	return {$: 'ToggleInlineSingleItems', a: a};
+};
 var $author$project$Main$ViewMode = function (a) {
 	return {$: 'ViewMode', a: a};
 };
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$html$Html$div = _VirtualDom_node('div');
+var $author$project$Main$inlineToggleLabel = function (enabled) {
+	return enabled ? 'single items: inlined' : 'single items: grouped';
+};
 var $elm$html$Html$span = _VirtualDom_node('span');
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
@@ -7303,7 +7396,6 @@ var $author$project$Main$legendSwatch = F2(
 				]),
 			_List_Nil);
 	});
-var $elm$core$Basics$not = _Basics_not;
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
 };
@@ -7373,6 +7465,18 @@ var $author$project$Main$controlsView = function (model) {
 					_List_fromArray(
 						[
 							$elm$html$Html$text('fit')
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$ToggleInlineSingleItems(!model.inlineSingleItems))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Main$inlineToggleLabel(model.inlineSingleItems))
 						])),
 					A2(
 					$elm$html$Html$span,
@@ -7467,6 +7571,18 @@ var $author$project$Main$controlsView = function (model) {
 					_List_fromArray(
 						[
 							$elm$html$Html$text('show container groups')
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$ToggleInlineSingleItems(!model.inlineSingleItems))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Main$inlineToggleLabel(model.inlineSingleItems))
 						])),
 					A2(
 					$elm$html$Html$button,
@@ -8301,7 +8417,7 @@ var $author$project$Main$resultsView = function (model) {
 		$elm$html$Html$div,
 		_List_Nil,
 		function () {
-			var _v0 = model.fetchResults;
+			var _v0 = $author$project$Main$effectiveResults(model);
 			if (_v0.$ === 'Nothing') {
 				return _List_fromArray(
 					[

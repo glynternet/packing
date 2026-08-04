@@ -14,6 +14,7 @@ import (
 	"github.com/glynternet/packing/pkg/client"
 	"github.com/glynternet/packing/pkg/cmd"
 	"github.com/glynternet/packing/pkg/graph"
+	"github.com/glynternet/packing/pkg/inline"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/pkg/render"
 	"github.com/glynternet/pkg/log"
@@ -38,6 +39,7 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	var (
 		includeEmptyParentGroups bool
 		includeGroupReferences   bool
+		inlineSingleItemGroups   bool
 		renderer                 string
 	)
 
@@ -78,6 +80,10 @@ list is rendered using --renderer.`,
 				return errors.Wrap(err, "getting graph")
 			}
 
+			if inlineSingleItemGroups {
+				gs = inline.SingleItemGroups(gs)
+			}
+
 			render, err := getRenderer(renderer, includeEmptyParentGroups, includeGroupReferences)
 			if err != nil {
 				return errors.Wrap(err, "getting renderer")
@@ -93,6 +99,8 @@ list is rendered using --renderer.`,
 		"Provide this flag to render groups that consist only of groups.")
 	selection.Flags().BoolVar(&includeGroupReferences, "include-group-references", false,
 		"Provide this flag to render references to groups that contain other groups.")
+	selection.Flags().BoolVar(&inlineSingleItemGroups, "inline-single-item-groups", true,
+		"Inline references that resolve to a single item into their parent groups instead of showing a standalone group. Use --inline-single-item-groups=false to keep them as groups.")
 	selection.Flags().StringVar(&renderer, keyRenderer, "html", "renderer to use: "+strings.Join(supportedRenderers, ", "))
 	cmd.MustBindPFlags(logger, selection)
 	rootCmd.AddCommand(selection)
