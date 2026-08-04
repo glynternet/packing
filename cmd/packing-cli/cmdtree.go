@@ -38,7 +38,7 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 	var (
 		includeEmptyParentGroups bool
 		includeGroupReferences   bool
-		inlineSingleItemGroups   bool
+		inlineSingletonGroups    bool
 		renderer                 string
 	)
 
@@ -87,7 +87,8 @@ list is rendered using --renderer.`,
 				return errors.Wrap(err, "getting graph")
 			}
 
-			if inlineSingleItemGroups {
+			if inlineSingletonGroups {
+				gs = inline.PassthroughRefs(gs)
 				gs = inline.SingleItemGroups(gs)
 			}
 
@@ -106,8 +107,8 @@ list is rendered using --renderer.`,
 		"Provide this flag to render groups that consist only of groups.")
 	selection.Flags().BoolVar(&includeGroupReferences, "include-group-references", false,
 		"Provide this flag to render references to groups that contain other groups.")
-	selection.Flags().BoolVar(&inlineSingleItemGroups, "inline-single-item-groups", true,
-		"Inline references that resolve to a single item into their parent groups instead of showing a standalone group. Use --inline-single-item-groups=false to keep them as groups.")
+	selection.Flags().BoolVar(&inlineSingletonGroups, "inline-singleton-groups", true,
+		"Inline singleton groups — groups whose entire content is a single member (one item or one reference) — folding them into whatever references them instead of showing a standalone group. Use --inline-singleton-groups=false to keep them as groups.")
 	selection.Flags().StringVar(&renderer, keyRenderer, "html", "renderer to use: "+strings.Join(supportedRenderers, ", "))
 	rootCmd.AddCommand(selection)
 
