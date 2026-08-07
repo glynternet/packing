@@ -1025,10 +1025,13 @@ dedupRefs refs =
         |> List.reverse
 
 
-{-| Names of the groups that are fully done: every item they contain — their own
-and those of every group they reference, transitively — is in `done`. A group
-with no items at all is vacuously done, so a container whose sub-groups are all
-finished sinks alongside them. Only meaningful in Mark mode.
+{-| Names of the groups that are fully done: every item the group itself lists is
+in `done`. The groups it references do not count — they are drawn as groups in
+their own right, so a group is finished as soon as the items shown under it are,
+however much work is left in its sub-groups. A group with no items of its own has
+nothing of its own to finish, so it falls back to everything below it,
+transitively: a container only sinks once its sub-groups have. Only meaningful in
+Mark mode.
 -}
 doneGroupNames : Set.Set String -> List Group -> Set.Set String
 doneGroupNames done groups =
@@ -1045,9 +1048,19 @@ doneGroupNames done groups =
             reachable refAdj name
                 |> Set.toList
                 |> List.concatMap (\n -> Dict.get n itemsOf |> Maybe.withDefault [])
+
+        allDone =
+            List.all (\item -> Set.member item done)
+
+        isDone g =
+            if List.isEmpty g.contents.items then
+                allDone (itemsBelow g.name)
+
+            else
+                allDone g.contents.items
     in
     groups
-        |> List.filter (\g -> itemsBelow g.name |> List.all (\item -> Set.member item done))
+        |> List.filter isDone
         |> List.map .name
         |> Set.fromList
 

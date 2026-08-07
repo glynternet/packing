@@ -8528,6 +8528,13 @@ var $elm$core$List$all = F2(
 			A2($elm$core$Basics$composeL, $elm$core$Basics$not, isOkay),
 			list);
 	});
+var $elm$core$List$isEmpty = function (xs) {
+	if (!xs.b) {
+		return true;
+	} else {
+		return false;
+	}
+};
 var $author$project$Main$doneGroupNames = F2(
 	function (done, groups) {
 		var refAdj = $elm$core$Dict$fromList(
@@ -8556,23 +8563,21 @@ var $author$project$Main$doneGroupNames = F2(
 				$elm$core$Set$toList(
 					A2($author$project$Main$reachable, refAdj, name)));
 		};
+		var allDone = $elm$core$List$all(
+			function (item) {
+				return A2($elm$core$Set$member, item, done);
+			});
+		var isDone = function (g) {
+			return $elm$core$List$isEmpty(g.contents.items) ? allDone(
+				itemsBelow(g.name)) : allDone(g.contents.items);
+		};
 		return $elm$core$Set$fromList(
 			A2(
 				$elm$core$List$map,
 				function ($) {
 					return $.name;
 				},
-				A2(
-					$elm$core$List$filter,
-					function (g) {
-						return A2(
-							$elm$core$List$all,
-							function (item) {
-								return A2($elm$core$Set$member, item, done);
-							},
-							itemsBelow(g.name));
-					},
-					groups)));
+				A2($elm$core$List$filter, isDone, groups)));
 	});
 var $elm$html$Html$h4 = _VirtualDom_node('h4');
 var $elm$html$Html$Attributes$href = function (url) {
@@ -8600,13 +8605,6 @@ var $elm$core$List$intersperse = F2(
 			return A2($elm$core$List$cons, hd, spersed);
 		}
 	});
-var $elm$core$List$isEmpty = function (xs) {
-	if (!xs.b) {
-		return true;
-	} else {
-		return false;
-	}
-};
 var $elm$core$List$member = F2(
 	function (x, xs) {
 		return A2(
