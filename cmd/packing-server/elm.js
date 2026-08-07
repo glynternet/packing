@@ -5342,6 +5342,7 @@ var $elm$core$Basics$composeR = F3(
 			f(x));
 	});
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
+var $author$project$Main$Mark = {$: 'Mark'};
 var $author$project$Main$Rendering = {$: 'Rendering'};
 var $author$project$Main$ToDo = {$: 'ToDo'};
 var $author$project$Main$defaultSelectionText = 'ref: battery_pack\nref: board_games\nref: camera\nref: clothing\nref: clothing_bottoms\nref: clothing_cold\nref: clothing_general\nref: clothing_gym\nref: clothing_hot\nref: clothing_shoes\nref: clothing_sunny\nref: clothing_tops\nref: clothing_underwear\nref: clothing_wet\nref: cycling_bike\nref: cycling_clothing\nref: cycling_clothing_cold\nref: cycling_clothing_essential\nref: cycling_clothing_mild\nref: cycling_fluids\nref: cycling_food\nref: cycling_garmin\nref: cycling_guest_bike\nref: cycling_lights\nref: cycling_lock\nref: cycling_tools_ride\nref: cycling_tools_workshop_portable\nref: earplugs\nref: flight\nref: hiking\nref: hiking_boots_socks\nref: hygene_essentials\nref: hygene_teeth_essentials\nref: hygene_teeth_medium_or_longtrip\nref: keyboard_mouse\nref: keys_phone_wallet\nref: laptop\nref: music_player\nref: outdoors\nref: phone\nref: phone_accessories\nref: phone_and_accessories\nref: remote_workstation\nref: smart_watch\nref: sun\nref: sunglasses\nref: sunscreen\nref: swimming_shorts\nref: towel\nref: travel_documents\nref: travel_utils\nref: water_bottle\nref: work_remotely_essentials\n\nShave before going\nChange cassette before going\n\n# Add this to some group\nPower meter medals\n\n# Add this to Bay Area location\nBart card\n';
@@ -5351,7 +5352,21 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, fetchResults: $elm$core$Maybe$Nothing, graphDrag: $elm$core$Maybe$Nothing, graphPanX: 20, graphPanY: 20, graphScale: 1, graphSelected: $elm$core$Maybe$Nothing, inlineSingletons: true, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, simplifyNote: $elm$core$Maybe$Nothing, viewMode: $author$project$Main$ToDo};
+var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, doneDisplay: $author$project$Main$Mark, fetchResults: $elm$core$Maybe$Nothing, graphDrag: $elm$core$Maybe$Nothing, graphPanX: 20, graphPanY: 20, graphScale: 1, graphSelected: $elm$core$Maybe$Nothing, inlineSingletons: true, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, simplifyNote: $elm$core$Maybe$Nothing, viewMode: $author$project$Main$ToDo};
+var $author$project$Main$Hide = {$: 'Hide'};
+var $author$project$Main$doneDisplayKey = function (display) {
+	if (display.$ === 'Hide') {
+		return 'hidden';
+	} else {
+		return 'marked';
+	}
+};
+var $author$project$Main$doneDisplayFromKey = function (key) {
+	return _Utils_eq(
+		key,
+		$elm$core$Maybe$Just(
+			$author$project$Main$doneDisplayKey($author$project$Main$Hide))) ? $author$project$Main$Hide : $author$project$Main$Mark;
+};
 var $author$project$Main$FetchedResults = F2(
 	function (a, b) {
 		return {$: 'FetchedResults', a: a, b: b};
@@ -6229,10 +6244,11 @@ var $author$project$Main$plzResult = function (res) {
 		return err;
 	}
 };
-var $author$project$Main$StoredState = F2(
-	function (done, selection) {
-		return {done: done, selection: selection};
+var $author$project$Main$StoredState = F3(
+	function (done, selection, doneDisplay) {
+		return {done: done, doneDisplay: doneDisplay, selection: selection};
 	});
+var $elm$json$Json$Decode$map3 = _Json_map3;
 var $elm$json$Json$Decode$maybe = function (decoder) {
 	return $elm$json$Json$Decode$oneOf(
 		_List_fromArray(
@@ -6241,8 +6257,8 @@ var $elm$json$Json$Decode$maybe = function (decoder) {
 				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
 			]));
 };
-var $author$project$Main$storedStateDecoder = A3(
-	$elm$json$Json$Decode$map2,
+var $author$project$Main$storedStateDecoder = A4(
+	$elm$json$Json$Decode$map3,
 	$author$project$Main$StoredState,
 	A2(
 		$elm$json$Json$Decode$field,
@@ -6252,7 +6268,9 @@ var $author$project$Main$storedStateDecoder = A3(
 			_List_Nil,
 			$elm$json$Json$Decode$list($elm$json$Json$Decode$string))),
 	$elm$json$Json$Decode$maybe(
-		A2($elm$json$Json$Decode$field, 'selection', $elm$json$Json$Decode$string)));
+		A2($elm$json$Json$Decode$field, 'selection', $elm$json$Json$Decode$string)),
+	$elm$json$Json$Decode$maybe(
+		A2($elm$json$Json$Decode$field, 'doneDisplay', $elm$json$Json$Decode$string)));
 var $author$project$Main$init = function (flags) {
 	var loaded = A2(
 		$elm$core$Maybe$withDefault,
@@ -6276,6 +6294,7 @@ var $author$project$Main$init = function (flags) {
 									$author$project$Main$defaultModel,
 									{
 										done: $elm$core$Set$fromList(stored.done),
+										doneDisplay: $author$project$Main$doneDisplayFromKey(stored.doneDisplay),
 										selectionText: A2($elm$core$Maybe$withDefault, $author$project$Main$defaultSelectionText, stored.selection)
 									});
 							}),
@@ -6593,6 +6612,7 @@ var $author$project$Main$subscriptions = function (model) {
 		return $elm$core$Platform$Sub$none;
 	}
 };
+var $author$project$Main$Done = {$: 'Done'};
 var $author$project$Main$Graph = {$: 'Graph'};
 var $author$project$Main$RenderFailed = function (a) {
 	return {$: 'RenderFailed', a: a};
@@ -7341,7 +7361,11 @@ var $author$project$Main$serialiseStateForStorage = function (model) {
 						model.done)),
 					_Utils_Tuple2(
 					'selection',
-					$elm$json$Json$Encode$string(model.selectionText))
+					$elm$json$Json$Encode$string(model.selectionText)),
+					_Utils_Tuple2(
+					'doneDisplay',
+					$elm$json$Json$Encode$string(
+						$author$project$Main$doneDisplayKey(model.doneDisplay)))
 				])));
 };
 var $author$project$Main$Simplified = function (a) {
@@ -7351,7 +7375,6 @@ var $author$project$Main$SimplifyResponse = F3(
 	function (selection, removedRefs, removedItems) {
 		return {removedItems: removedItems, removedRefs: removedRefs, selection: selection};
 	});
-var $elm$json$Json$Decode$map3 = _Json_map3;
 var $author$project$Main$decodeSimplify = A4(
 	$elm$json$Json$Decode$map3,
 	$author$project$Main$SimplifyResponse,
@@ -7558,6 +7581,17 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(base, $elm$core$Platform$Cmd$none);
 				}
+			case 'SetDoneDisplay':
+				var display = msg.a;
+				return A2(
+					$author$project$State$updateModel,
+					$author$project$Main$serialiseStateForStorage,
+					_Utils_update(
+						model,
+						{
+							doneDisplay: display,
+							viewMode: (_Utils_eq(display, $author$project$Main$Mark) && _Utils_eq(model.viewMode, $author$project$Main$Done)) ? $author$project$Main$ToDo : model.viewMode
+						}));
 			case 'ItemsOnly':
 				var itemsOnly = msg.a;
 				return _Utils_Tuple2(
@@ -7702,13 +7736,15 @@ var $author$project$Main$SelectionChanged = function (a) {
 var $author$project$Main$SimplifyClicked = {$: 'SimplifyClicked'};
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $author$project$Main$ClearDone = {$: 'ClearDone'};
-var $author$project$Main$Done = {$: 'Done'};
 var $author$project$Main$GraphFit = {$: 'GraphFit'};
 var $author$project$Main$GraphZoom = function (a) {
 	return {$: 'GraphZoom', a: a};
 };
 var $author$project$Main$ItemsOnly = function (a) {
 	return {$: 'ItemsOnly', a: a};
+};
+var $author$project$Main$SetDoneDisplay = function (a) {
+	return {$: 'SetDoneDisplay', a: a};
 };
 var $author$project$Main$ShowContainerGroups = function (a) {
 	return {$: 'ShowContainerGroups', a: a};
@@ -7723,6 +7759,13 @@ var $author$project$Main$ViewMode = function (a) {
 	return {$: 'ViewMode', a: a};
 };
 var $elm$html$Html$div = _VirtualDom_node('div');
+var $author$project$Main$doneDisplayLabel = function (display) {
+	if (display.$ === 'Hide') {
+		return 'done: hidden';
+	} else {
+		return 'done: marked';
+	}
+};
 var $author$project$Main$inlineToggleLabel = function (enabled) {
 	return enabled ? 'singletons: inlined' : 'singletons: grouped';
 };
@@ -7762,6 +7805,13 @@ var $elm$html$Html$Events$onClick = function (msg) {
 		$elm$html$Html$Events$on,
 		'click',
 		$elm$json$Json$Decode$succeed(msg));
+};
+var $author$project$Main$otherDoneDisplay = function (display) {
+	if (display.$ === 'Hide') {
+		return $author$project$Main$Mark;
+	} else {
+		return $author$project$Main$Hide;
+	}
 };
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
@@ -7859,103 +7909,131 @@ var $author$project$Main$controlsView = function (model) {
 		return A2(
 			$elm$html$Html$div,
 			_List_Nil,
-			_List_fromArray(
-				[
+			_Utils_ap(
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onClick(
+								$author$project$Main$SetDoneDisplay(
+									$author$project$Main$otherDoneDisplay(model.doneDisplay)))
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text(
+								$author$project$Main$doneDisplayLabel(model.doneDisplay))
+							]))
+					]),
+				_Utils_ap(
 					function () {
-					var _v1 = model.viewMode;
-					if (_v1.$ === 'Done') {
-						return A2(
+						var _v1 = model.doneDisplay;
+						if (_v1.$ === 'Hide') {
+							return _List_fromArray(
+								[
+									function () {
+									var _v2 = model.viewMode;
+									if (_v2.$ === 'Done') {
+										return A2(
+											$elm$html$Html$button,
+											_List_fromArray(
+												[
+													$elm$html$Html$Events$onClick(
+													$author$project$Main$ViewMode($author$project$Main$ToDo))
+												]),
+											_List_fromArray(
+												[
+													$elm$html$Html$text('view todo')
+												]));
+									} else {
+										return A2(
+											$elm$html$Html$button,
+											_List_fromArray(
+												[
+													$elm$html$Html$Events$onClick(
+													$author$project$Main$ViewMode($author$project$Main$Done))
+												]),
+											_List_fromArray(
+												[
+													$elm$html$Html$text('view done')
+												]));
+									}
+								}()
+								]);
+						} else {
+							return _List_Nil;
+						}
+					}(),
+					_List_fromArray(
+						[
+							A2(
 							$elm$html$Html$button,
 							_List_fromArray(
 								[
 									$elm$html$Html$Events$onClick(
-									$author$project$Main$ViewMode($author$project$Main$ToDo))
+									$author$project$Main$ViewMode($author$project$Main$Graph))
 								]),
 							_List_fromArray(
 								[
-									$elm$html$Html$text('view todo')
-								]));
-					} else {
-						return A2(
+									$elm$html$Html$text('graph view')
+								])),
+							A2(
 							$elm$html$Html$button,
 							_List_fromArray(
 								[
 									$elm$html$Html$Events$onClick(
-									$author$project$Main$ViewMode($author$project$Main$Done))
+									$author$project$Main$ShowGroupLinks(!model.showGroupLinks))
 								]),
 							_List_fromArray(
 								[
-									$elm$html$Html$text('view done')
-								]));
-					}
-				}(),
-					A2(
-					$elm$html$Html$button,
-					_List_fromArray(
-						[
-							$elm$html$Html$Events$onClick(
-							$author$project$Main$ViewMode($author$project$Main$Graph))
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('graph view')
-						])),
-					A2(
-					$elm$html$Html$button,
-					_List_fromArray(
-						[
-							$elm$html$Html$Events$onClick(
-							$author$project$Main$ShowGroupLinks(!model.showGroupLinks))
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('show group links')
-						])),
-					A2(
-					$elm$html$Html$button,
-					_List_fromArray(
-						[
-							$elm$html$Html$Events$onClick(
-							$author$project$Main$ShowContainerGroups(!model.showContainerGroups))
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('show container groups')
-						])),
-					A2(
-					$elm$html$Html$button,
-					_List_fromArray(
-						[
-							$elm$html$Html$Events$onClick(
-							$author$project$Main$ToggleInlineSingletons(!model.inlineSingletons))
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							$author$project$Main$inlineToggleLabel(model.inlineSingletons))
-						])),
-					A2(
-					$elm$html$Html$button,
-					_List_fromArray(
-						[
-							$elm$html$Html$Events$onClick(
-							$author$project$Main$ItemsOnly((model.itemsOnly + 1) % 3))
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('toggle items only')
-						])),
-					A2(
-					$elm$html$Html$button,
-					_List_fromArray(
-						[
-							$elm$html$Html$Events$onClick($author$project$Main$ClearDone)
-						]),
-					_List_fromArray(
-						[
-							$elm$html$Html$text('reset')
-						]))
-				]));
+									$elm$html$Html$text('show group links')
+								])),
+							A2(
+							$elm$html$Html$button,
+							_List_fromArray(
+								[
+									$elm$html$Html$Events$onClick(
+									$author$project$Main$ShowContainerGroups(!model.showContainerGroups))
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('show container groups')
+								])),
+							A2(
+							$elm$html$Html$button,
+							_List_fromArray(
+								[
+									$elm$html$Html$Events$onClick(
+									$author$project$Main$ToggleInlineSingletons(!model.inlineSingletons))
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text(
+									$author$project$Main$inlineToggleLabel(model.inlineSingletons))
+								])),
+							A2(
+							$elm$html$Html$button,
+							_List_fromArray(
+								[
+									$elm$html$Html$Events$onClick(
+									$author$project$Main$ItemsOnly((model.itemsOnly + 1) % 3))
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('toggle items only')
+								])),
+							A2(
+							$elm$html$Html$button,
+							_List_fromArray(
+								[
+									$elm$html$Html$Events$onClick($author$project$Main$ClearDone)
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('reset')
+								]))
+						]))));
 	}
 };
 var $elm$html$Html$h3 = _VirtualDom_node('h3');
@@ -8417,6 +8495,85 @@ var $author$project$Main$ItemDone = F2(
 		return {$: 'ItemDone', a: a, b: b};
 	});
 var $elm$html$Html$a = _VirtualDom_node('a');
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $elm$core$List$all = F2(
+	function (isOkay, list) {
+		return !A2(
+			$elm$core$List$any,
+			A2($elm$core$Basics$composeL, $elm$core$Basics$not, isOkay),
+			list);
+	});
+var $author$project$Main$doneGroupNames = F2(
+	function (done, groups) {
+		var refAdj = $elm$core$Dict$fromList(
+			A2(
+				$elm$core$List$map,
+				function (g) {
+					return _Utils_Tuple2(g.name, g.contents.refs);
+				},
+				groups));
+		var itemsOf = $elm$core$Dict$fromList(
+			A2(
+				$elm$core$List$map,
+				function (g) {
+					return _Utils_Tuple2(g.name, g.contents.items);
+				},
+				groups));
+		var itemsBelow = function (name) {
+			return A2(
+				$elm$core$List$concatMap,
+				function (n) {
+					return A2(
+						$elm$core$Maybe$withDefault,
+						_List_Nil,
+						A2($elm$core$Dict$get, n, itemsOf));
+				},
+				$elm$core$Set$toList(
+					A2($author$project$Main$reachable, refAdj, name)));
+		};
+		return $elm$core$Set$fromList(
+			A2(
+				$elm$core$List$map,
+				function ($) {
+					return $.name;
+				},
+				A2(
+					$elm$core$List$filter,
+					function (g) {
+						return A2(
+							$elm$core$List$all,
+							function (item) {
+								return A2($elm$core$Set$member, item, done);
+							},
+							itemsBelow(g.name));
+					},
+					groups)));
+	});
 var $elm$html$Html$h4 = _VirtualDom_node('h4');
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
@@ -8450,27 +8607,6 @@ var $elm$core$List$isEmpty = function (xs) {
 		return false;
 	}
 };
-var $elm$core$List$any = F2(
-	function (isOkay, list) {
-		any:
-		while (true) {
-			if (!list.b) {
-				return false;
-			} else {
-				var x = list.a;
-				var xs = list.b;
-				if (isOkay(x)) {
-					return true;
-				} else {
-					var $temp$isOkay = isOkay,
-						$temp$list = xs;
-					isOkay = $temp$isOkay;
-					list = $temp$list;
-					continue any;
-				}
-			}
-		}
-	});
 var $elm$core$List$member = F2(
 	function (x, xs) {
 		return A2(
@@ -8480,6 +8616,40 @@ var $elm$core$List$member = F2(
 			},
 			xs);
 	});
+var $elm$core$List$partition = F2(
+	function (pred, list) {
+		var step = F2(
+			function (x, _v0) {
+				var trues = _v0.a;
+				var falses = _v0.b;
+				return pred(x) ? _Utils_Tuple2(
+					A2($elm$core$List$cons, x, trues),
+					falses) : _Utils_Tuple2(
+					trues,
+					A2($elm$core$List$cons, x, falses));
+			});
+		return A3(
+			$elm$core$List$foldr,
+			step,
+			_Utils_Tuple2(_List_Nil, _List_Nil),
+			list);
+	});
+var $author$project$Main$viewingLabel = function (model) {
+	var _v0 = _Utils_Tuple2(model.doneDisplay, model.viewMode);
+	if (_v0.a.$ === 'Mark') {
+		var _v1 = _v0.a;
+		return 'all';
+	} else {
+		if (_v0.b.$ === 'Done') {
+			var _v2 = _v0.a;
+			var _v3 = _v0.b;
+			return 'done';
+		} else {
+			var _v4 = _v0.a;
+			return 'to do';
+		}
+	}
+};
 var $author$project$Main$groupsView = F2(
 	function (model, groups) {
 		var parentsOf = function (name) {
@@ -8496,6 +8666,17 @@ var $author$project$Main$groupsView = F2(
 						},
 						groups)));
 		};
+		var doneGroups = function () {
+			var _v8 = model.doneDisplay;
+			if (_v8.$ === 'Mark') {
+				return A2($author$project$Main$doneGroupNames, model.done, groups);
+			} else {
+				return $elm$core$Set$empty;
+			}
+		}();
+		var isDoneGroup = function (group) {
+			return A2($elm$core$Set$member, group.name, doneGroups);
+		};
 		return A2(
 			$elm$core$List$cons,
 			A2(
@@ -8504,74 +8685,105 @@ var $author$project$Main$groupsView = F2(
 				_List_fromArray(
 					[
 						$elm$html$Html$text(
-						'Viewing ' + function () {
-							var _v0 = model.viewMode;
-							if (_v0.$ === 'Done') {
-								return 'done';
-							} else {
-								return 'to do';
-							}
-						}())
+						'Viewing ' + $author$project$Main$viewingLabel(model))
 					])),
 			A2(
 				$elm$core$List$map,
 				function (group) {
 					return A2(
 						$elm$html$Html$div,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$id(group.name)
-							]),
+						A2(
+							$elm$core$List$cons,
+							$elm$html$Html$Attributes$id(group.name),
+							isDoneGroup(group) ? _List_fromArray(
+								[
+									A2($elm$html$Html$Attributes$style, 'opacity', '0.5')
+								]) : _List_Nil),
 						function () {
 							var toClickableItem = F2(
-								function (itemKey, itemText) {
+								function (_v7, itemText) {
+									var itemKey = _v7.a;
+									var faded = _v7.b;
 									return A2(
 										$elm$html$Html$p,
-										_List_fromArray(
-											[
-												A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
-												$elm$html$Html$Events$onClick(
-												A2(
-													$author$project$Main$ItemDone,
-													itemKey,
-													function () {
-														var _v3 = model.viewMode;
-														if (_v3.$ === 'Done') {
-															return false;
-														} else {
-															return true;
-														}
-													}()))
-											]),
+										_Utils_ap(
+											_List_fromArray(
+												[
+													A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+													$elm$html$Html$Events$onClick(
+													A2(
+														$author$project$Main$ItemDone,
+														itemKey,
+														!A2($elm$core$Set$member, itemKey, model.done)))
+												]),
+											faded ? _List_fromArray(
+												[
+													A2($elm$html$Html$Attributes$style, 'opacity', '0.45'),
+													A2($elm$html$Html$Attributes$style, 'color', '#555')
+												]) : _List_Nil),
 										_List_fromArray(
 											[
 												$elm$html$Html$text(itemText)
 											]));
 								});
-							var items = A2(
-								$elm$core$List$filter,
+							var _v0 = A2(
+								$elm$core$List$partition,
 								function (item) {
-									return function () {
-										var _v2 = model.viewMode;
-										if (_v2.$ === 'Done') {
-											return $elm$core$Basics$identity;
-										} else {
-											return $elm$core$Basics$not;
-										}
-									}()(
-										A2($elm$core$Set$member, item, model.done));
+									return !A2($elm$core$Set$member, item, model.done);
 								},
 								group.contents.items);
+							var todoItems = _v0.a;
+							var doneItems = _v0.b;
+							var items = function () {
+								var _v2 = _Utils_Tuple2(model.doneDisplay, model.viewMode);
+								if (_v2.a.$ === 'Mark') {
+									var _v3 = _v2.a;
+									return _Utils_ap(
+										A2(
+											$elm$core$List$map,
+											function (item) {
+												return _Utils_Tuple2(item, false);
+											},
+											todoItems),
+										A2(
+											$elm$core$List$map,
+											function (item) {
+												return _Utils_Tuple2(
+													item,
+													!isDoneGroup(group));
+											},
+											doneItems));
+								} else {
+									if (_v2.b.$ === 'Done') {
+										var _v4 = _v2.a;
+										var _v5 = _v2.b;
+										return A2(
+											$elm$core$List$map,
+											function (item) {
+												return _Utils_Tuple2(item, false);
+											},
+											doneItems);
+									} else {
+										var _v6 = _v2.a;
+										return A2(
+											$elm$core$List$map,
+											function (item) {
+												return _Utils_Tuple2(item, false);
+											},
+											todoItems);
+									}
+								}
+							}();
 							if (model.itemsOnly > 0) {
 								return A2(
 									$elm$core$List$map,
-									function (itemKey) {
+									function (item) {
 										return A2(
 											toClickableItem,
-											itemKey,
+											item,
 											_Utils_ap(
 												(model.itemsOnly === 1) ? (group.name + ':') : '',
-												itemKey));
+												item.a));
 									},
 									items);
 							} else {
@@ -8663,8 +8875,8 @@ var $author$project$Main$groupsView = F2(
 											]),
 										A2(
 											$elm$core$List$map,
-											function (key) {
-												return A2(toClickableItem, key, key);
+											function (item) {
+												return A2(toClickableItem, item, item.a);
 											},
 											items)));
 								return (isContainer && (!model.showContainerGroups)) ? _List_Nil : (((!isContainer) && $elm$core$List$isEmpty(groupDisplayContents)) ? _List_Nil : $elm$core$List$concat(
@@ -8688,8 +8900,10 @@ var $author$project$Main$groupsView = F2(
 				},
 				A2(
 					$elm$core$List$sortBy,
-					function ($) {
-						return $.name;
+					function (g) {
+						return _Utils_Tuple2(
+							isDoneGroup(g) ? 1 : 0,
+							g.name);
 					},
 					groups)));
 	});

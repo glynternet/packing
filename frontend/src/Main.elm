@@ -39,6 +39,7 @@ type alias Flags =
 type alias StoredState =
     { done : List String
     , selection : Maybe String
+    , doneDisplay : Maybe String
     }
 
 
@@ -60,6 +61,12 @@ type alias Model =
     -- whatever references them, instead of showing a standalone group. Drives
     -- both the list and the graph.
     , inlineSingletons : Bool
+
+    -- doneDisplay decides what the list view does with done items and groups:
+    -- Hide takes them off the page, which is what makes the ToDo/Done split
+    -- below meaningful; Mark keeps them on a single combined list — faded and
+    -- sorted last — and the ToDo/Done distinction is ignored.
+    , doneDisplay : DoneDisplay
     , itemsOnly : Int
     , selectionText : String
 
@@ -90,6 +97,38 @@ type ViewMode
     = ToDo
     | Done
     | Graph
+
+
+{-| How the list view treats items and groups that are done.
+-}
+type DoneDisplay
+    = -- done items and groups leave the page; the ToDo/Done pages apply
+      Hide
+      -- done items and groups stay on the page, faded and sorted last
+    | Mark
+
+
+{-| The stored-state spelling of a DoneDisplay, and back. Kept as a pair so the
+encoder and decoder cannot drift; an unrecognised (or absent) value reads as the
+default, Mark.
+-}
+doneDisplayKey : DoneDisplay -> String
+doneDisplayKey display =
+    case display of
+        Hide ->
+            "hidden"
+
+        Mark ->
+            "marked"
+
+
+doneDisplayFromKey : Maybe String -> DoneDisplay
+doneDisplayFromKey key =
+    if key == Just (doneDisplayKey Hide) then
+        Hide
+
+    else
+        Mark
 
 
 type RenderStatus
@@ -186,6 +225,7 @@ defaultModel =
     , showGroupLinks = False
     , showContainerGroups = False
     , inlineSingletons = True
+    , doneDisplay = Mark
     , itemsOnly = 0
     , selectionText = defaultSelectionText
     , simplifyNote = Nothing
@@ -213,6 +253,7 @@ init flags =
                                 { defaultModel
                                     | done = Set.fromList stored.done
                                     , selectionText = stored.selection |> Maybe.withDefault defaultSelectionText
+                                    , doneDisplay = doneDisplayFromKey stored.doneDisplay
                                 }
                             )
                         >> plzResult
@@ -238,6 +279,7 @@ type Msg
     | ShowGroupLinks Bool
     | ShowContainerGroups Bool
     | ToggleInlineSingletons Bool
+    | SetDoneDisplay DoneDisplay
     | ItemsOnly Int
     | ClearDone
     | SelectionChanged String
@@ -378,6 +420,21 @@ update msg model =
 
                 _ ->
                     ( base, Cmd.none )
+
+        SetDoneDisplay display ->
+            -- Mark shows a single combined list, so the Done page is meaningless
+            -- there: drop back to ToDo rather than leave the user on it (and
+            -- land them back on it when they later switch to Hide).
+            State.updateModel serialiseStateForStorage
+                { model
+                    | doneDisplay = display
+                    , viewMode =
+                        if display == Mark && model.viewMode == Done then
+                            ToDo
+
+                        else
+                            model.viewMode
+                }
 
         ItemsOnly itemsOnly ->
             ( { model | itemsOnly = itemsOnly }, Cmd.none )
@@ -540,15 +597,17 @@ serialiseStateForStorage model =
     Json.Encode.object
         [ ( "done", model.done |> (Set.toList >> Json.Encode.list Json.Encode.string) )
         , ( "selection", Json.Encode.string model.selectionText )
+        , ( "doneDisplay", Json.Encode.string (doneDisplayKey model.doneDisplay) )
         ]
         |> Json.Encode.encode 2
 
 
 storedStateDecoder : Json.Decode.Decoder StoredState
 storedStateDecoder =
-    Json.Decode.map2 StoredState
+    Json.Decode.map3 StoredState
         (Json.Decode.field "done" (decodedWithNullAsDefault [] (Json.Decode.list Json.Decode.string)))
         (Json.Decode.maybe (Json.Decode.field "selection" Json.Decode.string))
+        (Json.Decode.maybe (Json.Decode.field "doneDisplay" Json.Decode.string))
 
 
 fetch : Int -> String -> Cmd Msg
@@ -724,6 +783,31 @@ inlineToggleLabel enabled =
         "singletons: grouped"
 
 
+{-| Label for the done-display toggle, reflecting the current state (mirrors
+inlineToggleLabel).
+-}
+doneDisplayLabel : DoneDisplay -> String
+doneDisplayLabel display =
+    case display of
+        Hide ->
+            "done: hidden"
+
+        Mark ->
+            "done: marked"
+
+
+{-| The done display the toggle button switches to.
+-}
+otherDoneDisplay : DoneDisplay -> DoneDisplay
+otherDoneDisplay display =
+    case display of
+        Hide ->
+            Mark
+
+        Mark ->
+            Hide
+
+
 controlsView : Model -> Html Msg
 controlsView model =
     case model.viewMode of
@@ -747,20 +831,33 @@ controlsView model =
 
         _ ->
             div []
-                [ case model.viewMode of
-                    Done ->
-                        button [ onClick <| ViewMode ToDo ] [ text "view todo" ]
+                ([ button [ onClick <| SetDoneDisplay (otherDoneDisplay model.doneDisplay) ]
+                    [ text (doneDisplayLabel model.doneDisplay) ]
+                 ]
+                    -- The todo/done pages only exist while done work is hidden;
+                    -- Mark puts both on one page.
+                    ++ (case model.doneDisplay of
+                            Hide ->
+                                [ case model.viewMode of
+                                    Done ->
+                                        button [ onClick <| ViewMode ToDo ] [ text "view todo" ]
 
-                    _ ->
-                        button [ onClick <| ViewMode Done ] [ text "view done" ]
-                , button [ onClick <| ViewMode Graph ] [ text "graph view" ]
-                , button [ onClick <| ShowGroupLinks (not model.showGroupLinks) ] [ text "show group links" ]
-                , button [ onClick <| ShowContainerGroups (not model.showContainerGroups) ] [ text "show container groups" ]
-                , button [ onClick <| ToggleInlineSingletons (not model.inlineSingletons) ]
-                    [ text (inlineToggleLabel model.inlineSingletons) ]
-                , button [ onClick <| ItemsOnly (remainderBy 3 (model.itemsOnly + 1)) ] [ text "toggle items only" ]
-                , button [ onClick <| ClearDone ] [ text "reset" ]
-                ]
+                                    _ ->
+                                        button [ onClick <| ViewMode Done ] [ text "view done" ]
+                                ]
+
+                            Mark ->
+                                []
+                       )
+                    ++ [ button [ onClick <| ViewMode Graph ] [ text "graph view" ]
+                       , button [ onClick <| ShowGroupLinks (not model.showGroupLinks) ] [ text "show group links" ]
+                       , button [ onClick <| ShowContainerGroups (not model.showContainerGroups) ] [ text "show container groups" ]
+                       , button [ onClick <| ToggleInlineSingletons (not model.inlineSingletons) ]
+                            [ text (inlineToggleLabel model.inlineSingletons) ]
+                       , button [ onClick <| ItemsOnly (remainderBy 3 (model.itemsOnly + 1)) ] [ text "toggle items only" ]
+                       , button [ onClick <| ClearDone ] [ text "reset" ]
+                       ]
+                )
 
 
 resultsView : Model -> Html Msg
@@ -928,6 +1025,47 @@ dedupRefs refs =
         |> List.reverse
 
 
+{-| Names of the groups that are fully done: every item they contain — their own
+and those of every group they reference, transitively — is in `done`. A group
+with no items at all is vacuously done, so a container whose sub-groups are all
+finished sinks alongside them. Only meaningful in Mark mode.
+-}
+doneGroupNames : Set.Set String -> List Group -> Set.Set String
+doneGroupNames done groups =
+    let
+        refAdj =
+            groups |> List.map (\g -> ( g.name, g.contents.refs )) |> Dict.fromList
+
+        itemsOf =
+            groups |> List.map (\g -> ( g.name, g.contents.items )) |> Dict.fromList
+
+        -- Every item below `name`, its own included. reachable carries a visited
+        -- set, so a ref cycle terminates.
+        itemsBelow name =
+            reachable refAdj name
+                |> Set.toList
+                |> List.concatMap (\n -> Dict.get n itemsOf |> Maybe.withDefault [])
+    in
+    groups
+        |> List.filter (\g -> itemsBelow g.name |> List.all (\item -> Set.member item done))
+        |> List.map .name
+        |> Set.fromList
+
+
+{-| The slice of the list currently on screen, for the heading. -}
+viewingLabel : Model -> String
+viewingLabel model =
+    case ( model.doneDisplay, model.viewMode ) of
+        ( Mark, _ ) ->
+            "all"
+
+        ( Hide, Done ) ->
+            "done"
+
+        ( Hide, _ ) ->
+            "to do"
+
+
 groupsView : Model -> List Group -> List (Html Msg)
 groupsView model groups =
     let
@@ -937,68 +1075,94 @@ groupsView model groups =
                 |> List.filter (\g -> List.member name g.contents.refs)
                 |> List.map .name
                 |> List.sort
-    in
-    h3 []
-        [ text
-            ("Viewing "
-                ++ (case model.viewMode of
-                        Done ->
-                            "done"
 
-                        _ ->
-                            "to do"
-                   )
-            )
-        ]
+        -- Computed once for the whole render, not per group.
+        doneGroups =
+            case model.doneDisplay of
+                Mark ->
+                    doneGroupNames model.done groups
+
+                Hide ->
+                    -- Nothing sinks or fades while done work is off the page.
+                    Set.empty
+
+        isDoneGroup group =
+            Set.member group.name doneGroups
+    in
+    h3 [] [ text ("Viewing " ++ viewingLabel model) ]
         :: (groups
-                |> List.sortBy .name
+                -- Done groups sort below the rest, alphabetical within each half.
+                |> List.sortBy
+                    (\g ->
+                        ( if isDoneGroup g then
+                            1
+
+                          else
+                            0
+                        , g.name
+                        )
+                    )
                 |> List.map
                     (\group ->
                         -- id is the group name so nested-group refs can link to it (href="#name")
-                        div [ id group.name ]
+                        div
+                            (id group.name
+                                :: (if isDoneGroup group then
+                                        -- The block as a whole recedes; its items
+                                        -- are not faded again on top of that.
+                                        [ style "opacity" "0.5" ]
+
+                                    else
+                                        []
+                                   )
+                            )
                             (let
-                                items =
+                                ( todoItems, doneItems ) =
                                     group.contents.items
-                                        |> List.filter
-                                            (\item ->
-                                                Set.member item model.done
-                                                    |> (case model.viewMode of
-                                                            Done ->
-                                                                identity
+                                        |> List.partition (\item -> not (Set.member item model.done))
 
-                                                            _ ->
-                                                                not
-                                                       )
-                                            )
+                                -- The items to show, each paired with whether to
+                                -- render it faded.
+                                items =
+                                    case ( model.doneDisplay, model.viewMode ) of
+                                        ( Mark, _ ) ->
+                                            List.map (\item -> ( item, False )) todoItems
+                                                ++ List.map (\item -> ( item, not (isDoneGroup group) )) doneItems
 
-                                toClickableItem itemKey itemText =
+                                        ( Hide, Done ) ->
+                                            -- Everything on this page is done, so
+                                            -- fading it all would say nothing.
+                                            doneItems |> List.map (\item -> ( item, False ))
+
+                                        ( Hide, _ ) ->
+                                            todoItems |> List.map (\item -> ( item, False ))
+
+                                toClickableItem ( itemKey, faded ) itemText =
                                     p
-                                        [ style "cursor" "pointer"
-                                        , Html.Events.onClick
-                                            (ItemDone itemKey
-                                                (case model.viewMode of
-                                                    Done ->
-                                                        False
+                                        ([ style "cursor" "pointer"
+                                         , Html.Events.onClick (ItemDone itemKey (not (Set.member itemKey model.done)))
+                                         ]
+                                            ++ (if faded then
+                                                    [ style "opacity" "0.45", style "color" "#555" ]
 
-                                                    _ ->
-                                                        True
-                                                )
-                                            )
-                                        ]
+                                                else
+                                                    []
+                                               )
+                                        )
                                         [ text itemText ]
                              in
                              if model.itemsOnly > 0 then
                                 items
                                     |> List.map
-                                        (\itemKey ->
-                                            toClickableItem itemKey
+                                        (\item ->
+                                            toClickableItem item
                                                 ((if model.itemsOnly == 1 then
                                                     group.name ++ ":"
 
                                                   else
                                                     ""
                                                  )
-                                                    ++ itemKey
+                                                    ++ Tuple.first item
                                                 )
                                         )
 
@@ -1037,7 +1201,7 @@ groupsView model groups =
                                                 else
                                                     [ h4 [] [ text "items" ] ]
                                                         ++ (items
-                                                                |> List.map (\key -> toClickableItem key key)
+                                                                |> List.map (\item -> toClickableItem item (Tuple.first item))
                                                            )
                                                )
                                 in
