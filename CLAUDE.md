@@ -24,7 +24,7 @@ Build and test are driven by Make (dubplate-generated Makefiles) and plain `go`.
 ```sh
 make binaries            # build both binaries into ./build/<version>/<os>-<arch>/
 make binary APP_NAME=packing-server   # build a single binary
-make install-all         # build + copy both binaries to $HOME/bin
+make installs            # go install both binaries (version-stamped) to $GOPATH/bin
 make frontend            # elm make src/Main.elm -> cmd/packing-server/elm.js
 
 go test ./...                                 # run all tests
@@ -89,8 +89,9 @@ the server** or the embedded JS is stale.
 - **Generated main.go**: `cmd/*/main.go` are dubplate boilerplate marked
   `Code generated ... DO NOT EDIT`. Put command wiring in each command's `cmdtree.go`
   inside `buildCmdTree`.
-- **Config**: viper with env prefix `PACKING` and a `-`→`_` key replacer, e.g. the
-  `--server-host` flag maps to `PACKING_SERVER_HOST`. Server default port is `3865`.
+- **Config**: cobra flags only — there is no env-var or config-file support. Each command that
+  talks to the server owns a `serverAddr` holding its own `--server-host`/`--server-port`, so
+  commands cannot read each other's values. Server default port is `3865`.
 - **Trailing slash**: `client.GetGroups` posts to `/groups/` (with the slash) on purpose —
   without it the server returns 405 via redirect.
 - **proto is unused**: `pkg/api/proto` holds `.proto` files and a `go:generate` directive,
