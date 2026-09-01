@@ -14,7 +14,6 @@ import (
 	"github.com/glynternet/packing/internal/load"
 	"github.com/glynternet/packing/internal/service"
 	"github.com/glynternet/packing/pkg/api"
-	"github.com/glynternet/packing/pkg/cmd"
 	"github.com/glynternet/packing/pkg/list"
 	"github.com/glynternet/packing/pkg/simplify"
 	"github.com/glynternet/packing/pkg/storage"
@@ -22,7 +21,6 @@ import (
 	"github.com/glynternet/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const index = `<html>
@@ -54,13 +52,16 @@ app.ports.storeState.subscribe(state => {
 var elmJS []byte
 
 func buildCmdTree(logger log.Logger, _ io.Writer, rootCmd *cobra.Command) {
-	viper.SetEnvPrefix("packing")
-
 	const (
 		keyPackingGroups = "groups-dir"
 		keyPort          = "port"
 
 		defaultGroupsDir = "."
+	)
+
+	var (
+		groupsDirFlag string
+		port          uint
 	)
 
 	serve := &cobra.Command{
@@ -80,7 +81,7 @@ each file's name is the key used to reference it (ref:<name>). It exposes:
 
 Point packing-cli at this server with --server-host / --server-port.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			groupsDir := strings.TrimSpace(viper.GetString(keyPackingGroups))
+			groupsDir := strings.TrimSpace(groupsDirFlag)
 			if groupsDir == "" {
 				groupsDir = defaultGroupsDir
 				if err := logger.Log(
@@ -103,14 +104,13 @@ Point packing-cli at this server with --server-host / --server-port.`,
 					},
 				}}
 
-			addr := ":" + strconv.FormatUint(uint64(viper.GetInt64(keyPort)), 10)
+			addr := ":" + strconv.FormatUint(uint64(port), 10)
 			return errors.Wrap(serve(logger, s.GetGroups, addr), "serving groups service")
 		},
 	}
 
-	serve.Flags().String(keyPackingGroups, "", "directory of group files to serve; each filename is its reference key (defaults to the current directory)")
-	serve.Flags().Uint(keyPort, 3865, "port to listen on")
-	cmd.MustBindPFlags(logger, serve)
+	serve.Flags().StringVar(&groupsDirFlag, keyPackingGroups, "", "directory of group files to serve; each filename is its reference key (defaults to the current directory)")
+	serve.Flags().UintVar(&port, keyPort, 3865, "port to listen on")
 	rootCmd.AddCommand(serve)
 }
 

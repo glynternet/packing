@@ -22,19 +22,35 @@ import (
 	"github.com/gomarkdown/markdown/parser"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-const defaultAddr = "http://localhost"
+const (
+	defaultAddr = "http://localhost"
+	defaultPort = 3865
+
+	keyServerHost = "server-host"
+	keyServerPort = "server-port"
+)
+
+// serverAddr is the packing server location for a single command. Every command
+// that talks to the server registers its own flags into its own serverAddr, so
+// their --server-* values cannot interfere with each other.
+type serverAddr struct {
+	host string
+	port uint
+}
+
+func (s *serverAddr) registerFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&s.host, keyServerHost, defaultAddr, "packing server host, e.g. http://localhost")
+	cmd.Flags().UintVar(&s.port, keyServerPort, defaultPort, "packing server port")
+}
+
+func (s serverAddr) String() string {
+	return s.host + ":" + strconv.FormatUint(uint64(s.port), 10)
+}
 
 func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
-	viper.SetEnvPrefix("packing")
-
-	const (
-		keyServerHost = "server-host"
-		keyServerPort = "server-port"
-		keyRenderer   = "renderer"
-	)
+	const keyRenderer = "renderer"
 
 	var (
 		includeEmptyParentGroups bool
@@ -42,6 +58,10 @@ func buildCmdTree(logger log.Logger, w io.Writer, rootCmd *cobra.Command) {
 		inlineSingletonGroups    bool
 		renderer                 string
 		simplifyInPlace          bool
+
+		selectionServer serverAddr
+		refServer       serverAddr
+		simplifyServer  serverAddr
 	)
 
 	supportedRenderers, getRenderer := rendererFactory()
@@ -63,14 +83,6 @@ Each line is one of:
 Blank lines are ignored. The file is sent to the packing server, which
 recursively expands every ref: against its groups directory. The resulting
 list is rendered using --renderer.`,
-		// Bind this command's flags to viper here rather than at tree-build time.
-		// viper is a global singleton, so binding every command's flags eagerly
-		// makes the last-bound command's flags win for shared keys (server-host,
-		// server-port), silently ignoring this command's --server-* flags. PreRunE
-		// runs only for the command actually being executed.
-		PreRunE: func(c *cobra.Command, _ []string) error {
-			return viper.BindPFlags(c.Flags())
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			selection := args[0]
 
@@ -82,9 +94,7 @@ list is rendered using --renderer.`,
 			if err != nil {
 				return errors.Wrap(err, "getting contents definition seed")
 			}
-			addr := viper.GetString(keyServerHost) + ":" +
-				strconv.FormatUint(uint64(viper.GetInt64(keyServerPort)), 10)
-			gs, err := client.GetGroups(logger, addr, seed)
+			gs, err := client.GetGroups(logger, selectionServer.String(), seed)
 			if err != nil {
 				return errors.Wrap(err, "getting graph")
 			}
@@ -103,8 +113,7 @@ list is rendered using --renderer.`,
 		},
 	}
 
-	selection.Flags().String(keyServerHost, defaultAddr, "packing server host, e.g. http://localhost")
-	selection.Flags().Uint(keyServerPort, 3865, "packing server port")
+	selectionServer.registerFlags(selection)
 	selection.Flags().BoolVar(&includeEmptyParentGroups, "include-empty-parent-groups", false,
 		"Provide this flag to render groups that consist only of groups.")
 	selection.Flags().BoolVar(&includeGroupReferences, "include-group-references", false,
@@ -124,16 +133,8 @@ Each <reference> is the name (key) of a group hosted by the server — i.e.
 the filename of a group in the server's groups directory. Unlike "selection",
 this does not read a local file; it looks up the given names, expands them,
 and prints the result as JSON.`,
-		// See the note on the selection command: bind per-command in PreRunE so
-		// this command's --server-* flags are not clobbered by another command's.
-		PreRunE: func(c *cobra.Command, _ []string) error {
-			return viper.BindPFlags(c.Flags())
-		},
 		RunE: func(cmd *cobra.Command, keys []string) error {
-			addr := viper.GetString(keyServerHost) + ":" +
-				strconv.FormatUint(uint64(viper.GetInt64(keyServerPort)), 10)
-
-			gs, err := client.GetGroups(logger, addr, api.Contents{
+			gs, err := client.GetGroups(logger, refServer.String(), api.Contents{
 				Refs: keys,
 			})
 			if err != nil {
@@ -150,8 +151,7 @@ and prints the result as JSON.`,
 			return errors.Wrap(err, "writing result to output")
 		},
 	}
-	ref.Flags().String(keyServerHost, defaultAddr, "packing server host, e.g. http://localhost")
-	ref.Flags().Uint(keyServerPort, 3865, "packing server port")
+	refServer.registerFlags(ref)
 	rootCmd.AddCommand(ref)
 
 	simplifyCmd := &cobra.Command{
@@ -170,11 +170,6 @@ packing server for expansion, then:
 req: lines, comments, blank lines and ordering are preserved verbatim. By default
 the simplified selection is printed to stdout and a summary of what was removed is
 printed to stderr; use --in-place to rewrite <file> instead.`,
-		// See the note on the selection command: bind per-command in PreRunE so
-		// this command's --server-* flags are not clobbered by another command's.
-		PreRunE: func(c *cobra.Command, _ []string) error {
-			return viper.BindPFlags(c.Flags())
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]
 
@@ -187,9 +182,7 @@ printed to stderr; use --in-place to rewrite <file> instead.`,
 				return errors.Wrap(err, "parsing contents definition")
 			}
 
-			addr := viper.GetString(keyServerHost) + ":" +
-				strconv.FormatUint(uint64(viper.GetInt64(keyServerPort)), 10)
-			gs, err := client.GetGroups(logger, addr, seed)
+			gs, err := client.GetGroups(logger, simplifyServer.String(), seed)
 			if err != nil {
 				return errors.Wrap(err, "getting groups")
 			}
@@ -215,8 +208,7 @@ printed to stderr; use --in-place to rewrite <file> instead.`,
 			return errors.Wrap(err, "writing simplified selection to output")
 		},
 	}
-	simplifyCmd.Flags().String(keyServerHost, defaultAddr, "packing server host, e.g. http://localhost")
-	simplifyCmd.Flags().Uint(keyServerPort, 3865, "packing server port")
+	simplifyServer.registerFlags(simplifyCmd)
 	simplifyCmd.Flags().BoolVarP(&simplifyInPlace, "in-place", "w", false,
 		"rewrite the selection file in place instead of printing to stdout")
 	rootCmd.AddCommand(simplifyCmd)
