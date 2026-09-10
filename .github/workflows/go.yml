@@ -1,4 +1,4 @@
-# dubplate version: v0.14.0
+# dubplate version: v0.14.1
 
 name: go
 
@@ -13,11 +13,11 @@ jobs:
     steps:
       # the dubplate build system versions binaries from git describe, which
       # needs full history and tags rather than the default shallow clone
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           # the app repo's go.mod is the only place the Go version is declared
           go-version-file: go.mod
