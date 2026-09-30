@@ -77,7 +77,7 @@ function A9(fun, a, b, c, d, e, f, g, h, i) {
   return fun.a === 9 ? fun.f(a, b, c, d, e, f, g, h, i) : fun(a)(b)(c)(d)(e)(f)(g)(h)(i);
 }
 
-console.warn('Compiled in DEV mode. Follow the advice at https://elm-lang.org/0.19.1/optimize for better performance and smaller assets.');
+console.warn('Compiled in DEV mode. Follow the advice at https://elm-lang.org/0.19.2/optimize for better performance and smaller assets.');
 
 
 var _JsArray_empty = [];
@@ -4545,7 +4545,44 @@ function _Http_track(router, xhr, tracker)
 			size: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
 		}))));
 	});
-}var $elm$core$Maybe$Just = function (a) {
+}
+
+
+var _Bitwise_and = F2(function(a, b)
+{
+	return a & b;
+});
+
+var _Bitwise_or = F2(function(a, b)
+{
+	return a | b;
+});
+
+var _Bitwise_xor = F2(function(a, b)
+{
+	return a ^ b;
+});
+
+function _Bitwise_complement(a)
+{
+	return ~a;
+};
+
+var _Bitwise_shiftLeftBy = F2(function(offset, a)
+{
+	return a << offset;
+});
+
+var _Bitwise_shiftRightBy = F2(function(offset, a)
+{
+	return a >> offset;
+});
+
+var _Bitwise_shiftRightZfBy = F2(function(offset, a)
+{
+	return a >>> offset;
+});
+var $elm$core$Maybe$Just = function (a) {
 	return {$: 'Just', a: a};
 };
 var $elm$core$Maybe$Nothing = {$: 'Nothing'};
@@ -4672,8 +4709,8 @@ var $elm$core$String$split = F2(
 var $elm$json$Json$Decode$indent = function (str) {
 	return A2(
 		$elm$core$String$join,
-		'\n    ',
-		A2($elm$core$String$split, '\n', str));
+		'\u000A    ',
+		A2($elm$core$String$split, '\u000A', str));
 };
 var $elm$core$List$foldl = F3(
 	function (func, acc, list) {
@@ -4765,7 +4802,7 @@ var $elm$core$List$reverse = function (list) {
 var $elm$core$String$uncons = _String_uncons;
 var $elm$json$Json$Decode$errorOneOf = F2(
 	function (i, error) {
-		return '\n\n(' + ($elm$core$String$fromInt(i + 1) + (') ' + $elm$json$Json$Decode$indent(
+		return '\u000A\u000A(' + ($elm$core$String$fromInt(i + 1) + (') ' + $elm$json$Json$Decode$indent(
 			$elm$json$Json$Decode$errorToString(error))));
 	});
 var $elm$json$Json$Decode$errorToString = function (error) {
@@ -4790,7 +4827,7 @@ var $elm$json$Json$Decode$errorToStringHelp = F2(
 							return $elm$core$Char$isAlpha(_char) && A2($elm$core$String$all, $elm$core$Char$isAlphaNum, rest);
 						}
 					}();
-					var fieldName = isSimple ? ('.' + f) : ('[\'' + (f + '\']'));
+					var fieldName = isSimple ? ('.' + f) : ('[\u0027' + (f + '\u0027]'));
 					var $temp$error = err,
 						$temp$context = A2($elm$core$List$cons, fieldName, context);
 					error = $temp$error;
@@ -4841,7 +4878,7 @@ var $elm$json$Json$Decode$errorToStringHelp = F2(
 								$elm$core$List$length(errors)) + ' ways:'));
 							return A2(
 								$elm$core$String$join,
-								'\n\n',
+								'\u000A\u000A',
 								A2(
 									$elm$core$List$cons,
 									introduction,
@@ -4853,16 +4890,16 @@ var $elm$json$Json$Decode$errorToStringHelp = F2(
 					var json = error.b;
 					var introduction = function () {
 						if (!context.b) {
-							return 'Problem with the given value:\n\n';
+							return 'Problem with the given value:\u000A\u000A';
 						} else {
 							return 'Problem with the value at json' + (A2(
 								$elm$core$String$join,
 								'',
-								$elm$core$List$reverse(context)) + ':\n\n    ');
+								$elm$core$List$reverse(context)) + ':\u000A\u000A    ');
 						}
 					}();
 					return introduction + ($elm$json$Json$Decode$indent(
-						A2($elm$json$Json$Encode$encode, 4, json)) + ('\n\n' + msg));
+						A2($elm$json$Json$Encode$encode, 4, json)) + ('\u000A\u000A' + msg));
 			}
 		}
 	});
@@ -5336,49 +5373,26 @@ var $elm$core$Task$perform = F2(
 	});
 var $elm$browser$Browser$document = _Browser_document;
 var $elm$json$Json$Decode$field = _Json_decodeField;
-var $elm$core$Basics$composeR = F3(
-	function (f, g, x) {
-		return g(
-			f(x));
-	});
+var $author$project$Main$Changes = {$: 'Changes'};
+var $author$project$Main$Current = {$: 'Current'};
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
-var $author$project$Main$Mark = {$: 'Mark'};
-var $author$project$Main$Rendering = {$: 'Rendering'};
-var $author$project$Main$ToDo = {$: 'ToDo'};
-var $author$project$Main$defaultSelectionText = 'ref: battery_pack\nref: board_games\nref: camera\nref: clothing\nref: clothing_bottoms\nref: clothing_cold\nref: clothing_general\nref: clothing_gym\nref: clothing_hot\nref: clothing_shoes\nref: clothing_sunny\nref: clothing_tops\nref: clothing_underwear\nref: clothing_wet\nref: cycling_bike\nref: cycling_clothing\nref: cycling_clothing_cold\nref: cycling_clothing_essential\nref: cycling_clothing_mild\nref: cycling_fluids\nref: cycling_food\nref: cycling_garmin\nref: cycling_guest_bike\nref: cycling_lights\nref: cycling_lock\nref: cycling_tools_ride\nref: cycling_tools_workshop_portable\nref: earplugs\nref: flight\nref: hiking\nref: hiking_boots_socks\nref: hygene_essentials\nref: hygene_teeth_essentials\nref: hygene_teeth_medium_or_longtrip\nref: keyboard_mouse\nref: keys_phone_wallet\nref: laptop\nref: music_player\nref: outdoors\nref: phone\nref: phone_accessories\nref: phone_and_accessories\nref: remote_workstation\nref: smart_watch\nref: sun\nref: sunglasses\nref: sunscreen\nref: swimming_shorts\nref: towel\nref: travel_documents\nref: travel_utils\nref: water_bottle\nref: work_remotely_essentials\n\nShave before going\nChange cassette before going\n\n# Add this to some group\nPower meter medals\n\n# Add this to Bay Area location\nBart card\n';
-var $elm$core$Set$Set_elm_builtin = function (a) {
-	return {$: 'Set_elm_builtin', a: a};
-};
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
-var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Main$defaultModel = {done: $elm$core$Set$empty, doneDisplay: $author$project$Main$Mark, fetchResults: $elm$core$Maybe$Nothing, graphDrag: $elm$core$Maybe$Nothing, graphPanX: 20, graphPanY: 20, graphScale: 1, graphSelected: $elm$core$Maybe$Nothing, inlineSingletons: true, itemsOnly: 0, renderStatus: $author$project$Main$Rendering, requestId: 0, selectionText: $author$project$Main$defaultSelectionText, showContainerGroups: false, showGroupLinks: false, simplifyNote: $elm$core$Maybe$Nothing, viewMode: $author$project$Main$ToDo};
-var $author$project$Main$Hide = {$: 'Hide'};
-var $author$project$Main$doneDisplayKey = function (display) {
-	if (display.$ === 'Hide') {
-		return 'hidden';
-	} else {
-		return 'marked';
-	}
-};
-var $author$project$Main$doneDisplayFromKey = function (key) {
-	return _Utils_eq(
-		key,
-		$elm$core$Maybe$Just(
-			$author$project$Main$doneDisplayKey($author$project$Main$Hide))) ? $author$project$Main$Hide : $author$project$Main$Mark;
-};
-var $author$project$Main$FetchedResults = F2(
-	function (a, b) {
-		return {$: 'FetchedResults', a: a, b: b};
+var $author$project$StoredState$StoredState = F5(
+	function (committed, draftText, legacySelection, done, doneDisplay) {
+		return {committed: committed, done: done, doneDisplay: doneDisplay, draftText: draftText, legacySelection: legacySelection};
 	});
-var $author$project$Main$ContentsDefinition = F2(
+var $author$project$Packing$Snapshot = F2(
+	function (selection, groups) {
+		return {groups: groups, selection: selection};
+	});
+var $author$project$Packing$ContentsDefinition = F2(
 	function (refs, items) {
 		return {items: items, refs: refs};
 	});
-var $author$project$Main$Group = F2(
+var $author$project$Packing$Group = F2(
 	function (name, contents) {
 		return {contents: contents, name: name};
 	});
+var $elm$json$Json$Decode$list = _Json_decodeList;
 var $elm$json$Json$Decode$null = _Json_decodeNull;
 var $elm$json$Json$Decode$oneOf = _Json_oneOf;
 var $elm$json$Json$Decode$nullable = function (decoder) {
@@ -5398,99 +5412,44 @@ var $elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
-var $author$project$Main$decodedWithNullAsDefault = F2(
-	function (_default, decoder) {
-		return A2(
-			$elm$json$Json$Decode$map,
-			$elm$core$Maybe$withDefault(_default),
-			$elm$json$Json$Decode$nullable(decoder));
-	});
-var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$Packing$nullableList = function (decoder) {
+	return A2(
+		$elm$json$Json$Decode$map,
+		$elm$core$Maybe$withDefault(_List_Nil),
+		$elm$json$Json$Decode$nullable(
+			$elm$json$Json$Decode$list(decoder)));
+};
 var $elm$json$Json$Decode$string = _Json_decodeString;
-var $author$project$Main$decodeGroups = $elm$json$Json$Decode$list(
+var $author$project$Packing$decodeGroups = $elm$json$Json$Decode$list(
 	A3(
 		$elm$json$Json$Decode$map2,
-		$author$project$Main$Group,
+		$author$project$Packing$Group,
 		A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string),
 		A2(
 			$elm$json$Json$Decode$field,
 			'contents',
 			A3(
 				$elm$json$Json$Decode$map2,
-				$author$project$Main$ContentsDefinition,
+				$author$project$Packing$ContentsDefinition,
 				A2(
 					$elm$json$Json$Decode$field,
 					'refs',
-					A2(
-						$author$project$Main$decodedWithNullAsDefault,
-						_List_Nil,
-						$elm$json$Json$Decode$list($elm$json$Json$Decode$string))),
+					$author$project$Packing$nullableList($elm$json$Json$Decode$string)),
 				A2(
 					$elm$json$Json$Decode$field,
 					'items',
-					A2(
-						$author$project$Main$decodedWithNullAsDefault,
-						_List_Nil,
-						$elm$json$Json$Decode$list($elm$json$Json$Decode$string)))))));
-var $elm$http$Http$BadStatus_ = F2(
-	function (a, b) {
-		return {$: 'BadStatus_', a: a, b: b};
-	});
-var $elm$http$Http$BadUrl_ = function (a) {
-	return {$: 'BadUrl_', a: a};
-};
-var $elm$http$Http$GoodStatus_ = F2(
-	function (a, b) {
-		return {$: 'GoodStatus_', a: a, b: b};
-	});
-var $elm$http$Http$NetworkError_ = {$: 'NetworkError_'};
-var $elm$http$Http$Receiving = function (a) {
-	return {$: 'Receiving', a: a};
-};
-var $elm$http$Http$Sending = function (a) {
-	return {$: 'Sending', a: a};
-};
-var $elm$http$Http$Timeout_ = {$: 'Timeout_'};
-var $elm$core$Maybe$isJust = function (maybe) {
-	if (maybe.$ === 'Just') {
-		return true;
-	} else {
-		return false;
-	}
-};
-var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
-var $elm$core$Basics$compare = _Utils_compare;
-var $elm$core$Dict$get = F2(
-	function (targetKey, dict) {
-		get:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
-				switch (_v1.$) {
-					case 'LT':
-						var $temp$targetKey = targetKey,
-							$temp$dict = left;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-					case 'EQ':
-						return $elm$core$Maybe$Just(value);
-					default:
-						var $temp$targetKey = targetKey,
-							$temp$dict = right;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-				}
-			}
-		}
-	});
+					$author$project$Packing$nullableList($elm$json$Json$Decode$string))))));
+var $author$project$Packing$decodeSnapshot = A3(
+	$elm$json$Json$Decode$map2,
+	$author$project$Packing$Snapshot,
+	A2($elm$json$Json$Decode$field, 'selection', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'groups', $author$project$Packing$decodeGroups));
+var $elm$json$Json$Decode$fail = _Json_fail;
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $elm$json$Json$Decode$map3 = _Json_map3;
+var $elm$json$Json$Decode$map5 = _Json_map5;
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Dict$Black = {$: 'Black'};
 var $elm$core$Dict$RBNode_elm_builtin = F5(
 	function (a, b, c, d, e) {
@@ -5551,6 +5510,7 @@ var $elm$core$Dict$balance = F5(
 			}
 		}
 	});
+var $elm$core$Basics$compare = _Utils_compare;
 var $elm$core$Dict$insertHelp = F3(
 	function (key, value, dict) {
 		if (dict.$ === 'RBEmpty_elm_builtin') {
@@ -5599,6 +5559,589 @@ var $elm$core$Dict$insert = F3(
 			return x;
 		}
 	});
+var $elm$core$Dict$fromList = function (assocs) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (_v0, dict) {
+				var key = _v0.a;
+				var value = _v0.b;
+				return A3($elm$core$Dict$insert, key, value, dict);
+			}),
+		$elm$core$Dict$empty,
+		assocs);
+};
+var $elm$json$Json$Decode$keyValuePairs = _Json_decodeKeyValuePairs;
+var $elm$json$Json$Decode$dict = function (decoder) {
+	return A2(
+		$elm$json$Json$Decode$map,
+		$elm$core$Dict$fromList,
+		$elm$json$Json$Decode$keyValuePairs(decoder));
+};
+var $elm$core$Dict$get = F2(
+	function (targetKey, dict) {
+		get:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
+				switch (_v1.$) {
+					case 'LT':
+						var $temp$targetKey = targetKey,
+							$temp$dict = left;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+					case 'EQ':
+						return $elm$core$Maybe$Just(value);
+					default:
+						var $temp$targetKey = targetKey,
+							$temp$dict = right;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+				}
+			}
+		}
+	});
+var $elm$core$Dict$member = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$get, key, dict);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
+	});
+var $elm$json$Json$Decode$value = _Json_decodeValue;
+var $author$project$StoredState$optional = F3(
+	function (name, fallback, valueDecoder) {
+		return A2(
+			$elm$json$Json$Decode$andThen,
+			function (fields) {
+				return A2($elm$core$Dict$member, name, fields) ? A2($elm$json$Json$Decode$field, name, valueDecoder) : $elm$json$Json$Decode$succeed(fallback);
+			},
+			$elm$json$Json$Decode$dict($elm$json$Json$Decode$value));
+	});
+var $author$project$StoredState$decoder = function (defaultSelection) {
+	return A2(
+		$elm$json$Json$Decode$andThen,
+		function (version) {
+			switch (version) {
+				case 1:
+					return A4(
+						$elm$json$Json$Decode$map3,
+						F3(
+							function (selection, done, doneDisplay) {
+								return {
+									committed: $elm$core$Maybe$Nothing,
+									done: done,
+									doneDisplay: doneDisplay,
+									draftText: A2($elm$core$Maybe$withDefault, defaultSelection, selection),
+									legacySelection: selection
+								};
+							}),
+						A3(
+							$author$project$StoredState$optional,
+							'selection',
+							$elm$core$Maybe$Nothing,
+							$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)),
+						A3(
+							$author$project$StoredState$optional,
+							'done',
+							_List_Nil,
+							$author$project$Packing$nullableList($elm$json$Json$Decode$string)),
+						A3(
+							$author$project$StoredState$optional,
+							'doneDisplay',
+							$elm$core$Maybe$Nothing,
+							$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
+				case 2:
+					return A6(
+						$elm$json$Json$Decode$map5,
+						$author$project$StoredState$StoredState,
+						A2(
+							$elm$json$Json$Decode$field,
+							'committed',
+							$elm$json$Json$Decode$nullable($author$project$Packing$decodeSnapshot)),
+						A2($elm$json$Json$Decode$field, 'draftText', $elm$json$Json$Decode$string),
+						A3(
+							$author$project$StoredState$optional,
+							'legacySelection',
+							$elm$core$Maybe$Nothing,
+							$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)),
+						A3(
+							$author$project$StoredState$optional,
+							'done',
+							_List_Nil,
+							$author$project$Packing$nullableList($elm$json$Json$Decode$string)),
+						A3(
+							$author$project$StoredState$optional,
+							'doneDisplay',
+							$elm$core$Maybe$Nothing,
+							$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)));
+				default:
+					return $elm$json$Json$Decode$fail('This saved selection uses an unsupported storage version.');
+			}
+		},
+		A3($author$project$StoredState$optional, 'version', 1, $elm$json$Json$Decode$int));
+};
+var $author$project$Main$Mark = {$: 'Mark'};
+var $author$project$Main$ToDo = {$: 'ToDo'};
+var $author$project$Main$defaultSelectionText = 'ref: battery_pack\u000Aref: board_games\u000Aref: camera\u000Aref: clothing\u000Aref: clothing_bottoms\u000Aref: clothing_cold\u000Aref: clothing_general\u000Aref: clothing_gym\u000Aref: clothing_hot\u000Aref: clothing_shoes\u000Aref: clothing_sunny\u000Aref: clothing_tops\u000Aref: clothing_underwear\u000Aref: clothing_wet\u000Aref: cycling_bike\u000Aref: cycling_clothing\u000Aref: cycling_clothing_cold\u000Aref: cycling_clothing_essential\u000Aref: cycling_clothing_mild\u000Aref: cycling_fluids\u000Aref: cycling_food\u000Aref: cycling_garmin\u000Aref: cycling_guest_bike\u000Aref: cycling_lights\u000Aref: cycling_lock\u000Aref: cycling_tools_ride\u000Aref: cycling_tools_workshop_portable\u000Aref: earplugs\u000Aref: flight\u000Aref: hiking\u000Aref: hiking_boots_socks\u000Aref: hygene_essentials\u000Aref: hygene_teeth_essentials\u000Aref: hygene_teeth_medium_or_longtrip\u000Aref: keyboard_mouse\u000Aref: keys_phone_wallet\u000Aref: laptop\u000Aref: music_player\u000Aref: outdoors\u000Aref: phone\u000Aref: phone_accessories\u000Aref: phone_and_accessories\u000Aref: remote_workstation\u000Aref: smart_watch\u000Aref: sun\u000Aref: sunglasses\u000Aref: sunscreen\u000Aref: swimming_shorts\u000Aref: towel\u000Aref: travel_documents\u000Aref: travel_utils\u000Aref: water_bottle\u000Aref: work_remotely_essentials\u000A\u000AShave before going\u000AChange cassette before going\u000A\u000A# Add this to some group\u000APower meter medals\u000A\u000A# Add this to Bay Area location\u000ABart card\u000A';
+var $elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
+var $author$project$Selection$BootstrapFetch = F2(
+	function (a, b) {
+		return {$: 'BootstrapFetch', a: a, b: b};
+	});
+var $author$project$Selection$Resolve = {$: 'Resolve'};
+var $author$project$Selection$Waiting = {$: 'Waiting'};
+var $author$project$Selection$Debounce = function (a) {
+	return {$: 'Debounce', a: a};
+};
+var $author$project$Selection$Edit = function (a) {
+	return {$: 'Edit', a: a};
+};
+var $author$project$Selection$Failed = function (a) {
+	return {$: 'Failed', a: a};
+};
+var $author$project$Selection$Fetch = F2(
+	function (a, b) {
+		return {$: 'Fetch', a: a, b: b};
+	});
+var $author$project$Selection$Loading = function (a) {
+	return {$: 'Loading', a: a};
+};
+var $author$project$Selection$Persist = {$: 'Persist'};
+var $author$project$Selection$Ready = F2(
+	function (a, b) {
+		return {$: 'Ready', a: a, b: b};
+	});
+var $author$project$Selection$SimplifyFetch = F2(
+	function (a, b) {
+		return {$: 'SimplifyFetch', a: a, b: b};
+	});
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
+	});
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $elm$core$Set$fromList = function (list) {
+	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+};
+var $elm$core$List$sortBy = _List_sortBy;
+var $elm$core$List$sort = function (xs) {
+	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
+};
+var $author$project$Packing$canonical = function (groups) {
+	var sortedSet = A2($elm$core$Basics$composeR, $elm$core$Set$fromList, $elm$core$Set$toList);
+	return $elm$core$List$sort(
+		A2(
+			$elm$core$List$map,
+			function (g) {
+				return _Utils_Tuple3(
+					g.name,
+					sortedSet(g.contents.refs),
+					sortedSet(g.contents.items));
+			},
+			groups));
+};
+var $elm$core$Maybe$map = F2(
+	function (f, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return $elm$core$Maybe$Just(
+				f(value));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $elm$core$Basics$neq = _Utils_notEqual;
+var $author$project$Selection$ready = function (model) {
+	var _v0 = model.preview;
+	if (_v0.$ === 'Ready') {
+		var token = _v0.a;
+		var snapshot = _v0.b;
+		return (_Utils_eq(token.revision, model.revision) && _Utils_eq(snapshot.selection, model.draftText)) ? $elm$core$Maybe$Just(snapshot) : $elm$core$Maybe$Nothing;
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$Selection$hasChanges = function (model) {
+	var _v0 = model.committed;
+	if (_v0.$ === 'Nothing') {
+		return true;
+	} else {
+		var baseline = _v0.a;
+		return (!_Utils_eq(model.draftText, baseline.selection)) || A2(
+			$elm$core$Maybe$withDefault,
+			false,
+			A2(
+				$elm$core$Maybe$map,
+				function (snapshot) {
+					return !_Utils_eq(
+						$author$project$Packing$canonical(snapshot.groups),
+						$author$project$Packing$canonical(baseline.groups));
+				},
+				$author$project$Selection$ready(model)));
+	}
+};
+var $author$project$Selection$canApply = function (model) {
+	return (!_Utils_eq(
+		$author$project$Selection$ready(model),
+		$elm$core$Maybe$Nothing)) && ($author$project$Selection$hasChanges(model) && (_Utils_eq(model.pendingSimplify, $elm$core$Maybe$Nothing) && _Utils_eq(model.bootstrap, $elm$core$Maybe$Nothing)));
+};
+var $author$project$Selection$update = F2(
+	function (msg, model) {
+		update:
+		while (true) {
+			switch (msg.$) {
+				case 'Edit':
+					var selection = msg.a;
+					var revision = model.revision + 1;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{draftText: selection, pendingSimplify: $elm$core$Maybe$Nothing, preview: $author$project$Selection$Waiting, revision: revision, simplifyError: $elm$core$Maybe$Nothing, simplifyNote: $elm$core$Maybe$Nothing}),
+						_List_fromArray(
+							[
+								$author$project$Selection$Debounce(revision),
+								$author$project$Selection$Persist
+							]));
+				case 'DebounceElapsed':
+					var revision = msg.a;
+					if (_Utils_eq(revision, model.revision) && _Utils_eq(model.preview, $author$project$Selection$Waiting)) {
+						var $temp$msg = $author$project$Selection$Resolve,
+							$temp$model = model;
+						msg = $temp$msg;
+						model = $temp$model;
+						continue update;
+					} else {
+						return _Utils_Tuple2(model, _List_Nil);
+					}
+				case 'Resolve':
+					var token = {request: model.nextRequest + 1, revision: model.revision};
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								nextRequest: token.request,
+								preview: $author$project$Selection$Loading(token)
+							}),
+						_List_fromArray(
+							[
+								A2($author$project$Selection$Fetch, token, model.draftText)
+							]));
+				case 'Resolved':
+					var token = msg.a;
+					var result = msg.b;
+					return ((!_Utils_eq(
+						model.preview,
+						$author$project$Selection$Loading(token))) || (!_Utils_eq(token.revision, model.revision))) ? _Utils_Tuple2(model, _List_Nil) : _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								preview: function () {
+									if (result.$ === 'Ok') {
+										var groups = result.a;
+										return A2(
+											$author$project$Selection$Ready,
+											token,
+											{groups: groups, selection: model.draftText});
+									} else {
+										var error = result.a;
+										return $author$project$Selection$Failed(error);
+									}
+								}()
+							}),
+						_List_Nil);
+				case 'BootstrapResolved':
+					var token = msg.a;
+					var result = msg.b;
+					var _v2 = model.bootstrap;
+					if (_v2.$ === 'Just') {
+						var bootstrap = _v2.a;
+						if (!_Utils_eq(bootstrap.token, token)) {
+							return _Utils_Tuple2(model, _List_Nil);
+						} else {
+							var untouched = _Utils_eq(model.revision, token.revision) && (_Utils_eq(model.draftText, bootstrap.selection) && _Utils_eq(model.preview, $author$project$Selection$Waiting));
+							if (result.$ === 'Ok') {
+								var groups = result.a;
+								var snapshot = {groups: groups, selection: bootstrap.selection};
+								return _Utils_Tuple2(
+									_Utils_update(
+										model,
+										{
+											baselineError: $elm$core$Maybe$Nothing,
+											bootstrap: $elm$core$Maybe$Nothing,
+											committed: $elm$core$Maybe$Just(snapshot),
+											preview: untouched ? A2($author$project$Selection$Ready, token, snapshot) : model.preview
+										}),
+									_List_fromArray(
+										[$author$project$Selection$Persist]));
+							} else {
+								var error = result.a;
+								return _Utils_Tuple2(
+									_Utils_update(
+										model,
+										{
+											baselineError: $elm$core$Maybe$Just(error),
+											bootstrap: $elm$core$Maybe$Nothing,
+											preview: untouched ? $author$project$Selection$Failed(error) : model.preview
+										}),
+									_List_fromArray(
+										[$author$project$Selection$Persist]));
+							}
+						}
+					} else {
+						return _Utils_Tuple2(model, _List_Nil);
+					}
+				case 'Apply':
+					var _v4 = $author$project$Selection$ready(model);
+					if (_v4.$ === 'Just') {
+						var snapshot = _v4.a;
+						if ($author$project$Selection$canApply(model)) {
+							var revision = model.revision + 1;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										baselineError: $elm$core$Maybe$Nothing,
+										committed: $elm$core$Maybe$Just(snapshot),
+										pendingSimplify: $elm$core$Maybe$Nothing,
+										preview: A2(
+											$author$project$Selection$Ready,
+											{request: model.nextRequest, revision: revision},
+											snapshot),
+										revision: revision,
+										simplifyError: $elm$core$Maybe$Nothing,
+										simplifyNote: $elm$core$Maybe$Nothing
+									}),
+								_List_fromArray(
+									[$author$project$Selection$Persist]));
+						} else {
+							return _Utils_Tuple2(model, _List_Nil);
+						}
+					} else {
+						return _Utils_Tuple2(model, _List_Nil);
+					}
+				case 'Discard':
+					var _v5 = model.committed;
+					if (_v5.$ === 'Just') {
+						var snapshot = _v5.a;
+						var revision = model.revision + 1;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									baselineError: $elm$core$Maybe$Nothing,
+									bootstrap: $elm$core$Maybe$Nothing,
+									draftText: snapshot.selection,
+									pendingSimplify: $elm$core$Maybe$Nothing,
+									preview: A2(
+										$author$project$Selection$Ready,
+										{request: model.nextRequest, revision: revision},
+										snapshot),
+									revision: revision,
+									simplifyError: $elm$core$Maybe$Nothing,
+									simplifyNote: $elm$core$Maybe$Nothing
+								}),
+							_List_fromArray(
+								[$author$project$Selection$Persist]));
+					} else {
+						return _Utils_Tuple2(model, _List_Nil);
+					}
+				case 'Simplify':
+					if (!_Utils_eq(model.pendingSimplify, $elm$core$Maybe$Nothing)) {
+						return _Utils_Tuple2(model, _List_Nil);
+					} else {
+						var token = {request: model.nextRequest + 1, revision: model.revision};
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									nextRequest: token.request,
+									pendingSimplify: $elm$core$Maybe$Just(token),
+									simplifyError: $elm$core$Maybe$Nothing,
+									simplifyNote: $elm$core$Maybe$Nothing
+								}),
+							_List_fromArray(
+								[
+									A2($author$project$Selection$SimplifyFetch, token, model.draftText)
+								]));
+					}
+				default:
+					var token = msg.a;
+					var result = msg.b;
+					if ((!_Utils_eq(
+						model.pendingSimplify,
+						$elm$core$Maybe$Just(token))) || (!_Utils_eq(token.revision, model.revision))) {
+						return _Utils_Tuple2(model, _List_Nil);
+					} else {
+						if (result.$ === 'Err') {
+							var error = result.a;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										pendingSimplify: $elm$core$Maybe$Nothing,
+										simplifyError: $elm$core$Maybe$Just(error)
+									}),
+								_List_Nil);
+						} else {
+							var response = result.a;
+							var _v7 = _Utils_eq(response.selection, model.draftText) ? _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{pendingSimplify: $elm$core$Maybe$Nothing}),
+								_List_Nil) : A2(
+								$author$project$Selection$update,
+								$author$project$Selection$Edit(response.selection),
+								model);
+							var edited = _v7.a;
+							var effects = _v7.b;
+							return _Utils_Tuple2(
+								_Utils_update(
+									edited,
+									{
+										simplifyNote: $elm$core$Maybe$Just(
+											{items: response.removedItems, refs: response.removedRefs})
+									}),
+								effects);
+						}
+					}
+			}
+		}
+	});
+var $author$project$Selection$init = F3(
+	function (committed, draftText, legacySelection) {
+		var model = {baselineError: $elm$core$Maybe$Nothing, bootstrap: $elm$core$Maybe$Nothing, committed: committed, draftText: draftText, nextRequest: 0, pendingSimplify: $elm$core$Maybe$Nothing, preview: $author$project$Selection$Waiting, revision: 0, simplifyError: $elm$core$Maybe$Nothing, simplifyNote: $elm$core$Maybe$Nothing};
+		var _v0 = _Utils_Tuple2(committed, legacySelection);
+		if ((_v0.a.$ === 'Nothing') && (_v0.b.$ === 'Just')) {
+			var _v1 = _v0.a;
+			var selection = _v0.b.a;
+			var token = {request: 1, revision: 0};
+			var base = _Utils_update(
+				model,
+				{
+					bootstrap: $elm$core$Maybe$Just(
+						{selection: selection, token: token}),
+					nextRequest: 1
+				});
+			if (_Utils_eq(draftText, selection)) {
+				return _Utils_Tuple2(
+					base,
+					_List_fromArray(
+						[
+							A2($author$project$Selection$BootstrapFetch, token, selection)
+						]));
+			} else {
+				var _v2 = A2($author$project$Selection$update, $author$project$Selection$Resolve, base);
+				var resolving = _v2.a;
+				var effects = _v2.b;
+				return _Utils_Tuple2(
+					resolving,
+					A2(
+						$elm$core$List$cons,
+						A2($author$project$Selection$BootstrapFetch, token, selection),
+						effects));
+			}
+		} else {
+			return A2($author$project$Selection$update, $author$project$Selection$Resolve, model);
+		}
+	});
+var $author$project$Main$defaultModel = {
+	done: $elm$core$Set$empty,
+	doneDisplay: $author$project$Main$Mark,
+	graphDrag: $elm$core$Maybe$Nothing,
+	graphPanX: 20,
+	graphPanY: 20,
+	graphScale: 1,
+	graphSelected: $elm$core$Maybe$Nothing,
+	inlineSingletons: true,
+	itemsOnly: 0,
+	notice: $elm$core$Maybe$Nothing,
+	reviewTab: $author$project$Main$Changes,
+	selection: A3($author$project$Selection$init, $elm$core$Maybe$Nothing, $author$project$Main$defaultSelectionText, $elm$core$Maybe$Nothing).a,
+	showContainerGroups: false,
+	showGroupLinks: false,
+	storageError: $elm$core$Maybe$Nothing,
+	viewMode: $author$project$Main$ToDo
+};
+var $author$project$Main$Hide = {$: 'Hide'};
+var $author$project$Main$doneDisplayKey = function (display) {
+	if (display.$ === 'Hide') {
+		return 'hidden';
+	} else {
+		return 'marked';
+	}
+};
+var $author$project$Main$doneDisplayFromKey = function (key) {
+	return _Utils_eq(
+		key,
+		$elm$core$Maybe$Just(
+			$author$project$Main$doneDisplayKey($author$project$Main$Hide))) ? $author$project$Main$Hide : $author$project$Main$Mark;
+};
+var $author$project$StoredState$empty = function (selection) {
+	return {committed: $elm$core$Maybe$Nothing, done: _List_Nil, doneDisplay: $elm$core$Maybe$Nothing, draftText: selection, legacySelection: $elm$core$Maybe$Nothing};
+};
+var $elm$core$Basics$not = _Basics_not;
+var $author$project$Selection$BootstrapResolved = F2(
+	function (a, b) {
+		return {$: 'BootstrapResolved', a: a, b: b};
+	});
+var $author$project$Selection$DebounceElapsed = function (a) {
+	return {$: 'DebounceElapsed', a: a};
+};
+var $author$project$Selection$Resolved = F2(
+	function (a, b) {
+		return {$: 'Resolved', a: a, b: b};
+	});
+var $author$project$Main$SelectionMsg = function (a) {
+	return {$: 'SelectionMsg', a: a};
+};
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$http$Http$BadStatus_ = F2(
+	function (a, b) {
+		return {$: 'BadStatus_', a: a, b: b};
+	});
+var $elm$http$Http$BadUrl_ = function (a) {
+	return {$: 'BadUrl_', a: a};
+};
+var $elm$http$Http$GoodStatus_ = F2(
+	function (a, b) {
+		return {$: 'GoodStatus_', a: a, b: b};
+	});
+var $elm$http$Http$NetworkError_ = {$: 'NetworkError_'};
+var $elm$http$Http$Receiving = function (a) {
+	return {$: 'Receiving', a: a};
+};
+var $elm$http$Http$Sending = function (a) {
+	return {$: 'Sending', a: a};
+};
+var $elm$http$Http$Timeout_ = {$: 'Timeout_'};
+var $elm$core$Maybe$isJust = function (maybe) {
+	if (maybe.$ === 'Just') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
 var $elm$core$Dict$getMin = function (dict) {
 	getMin:
 	while (true) {
@@ -6018,7 +6561,7 @@ var $author$project$Main$expectGroups = function (toMsg) {
 						function (err) {
 							return 'Data received was not in the correct format: ' + $elm$json$Json$Decode$errorToString(err);
 						},
-						A2($elm$json$Json$Decode$decodeString, $author$project$Main$decodeGroups, body));
+						A2($elm$json$Json$Decode$decodeString, $author$project$Packing$decodeGroups, body));
 			}
 		});
 };
@@ -6192,12 +6735,12 @@ var $elm$http$Http$request = function (r) {
 };
 var $elm$http$Http$stringBody = _Http_pair;
 var $author$project$Main$fetch = F2(
-	function (id, selectionText) {
+	function (toMsg, selectionText) {
 		return $elm$http$Http$request(
 			{
 				body: A2($elm$http$Http$stringBody, 'text/plain', selectionText),
 				expect: $author$project$Main$expectGroups(
-					$author$project$Main$FetchedResults(id)),
+					A2($elm$core$Basics$composeR, toMsg, $author$project$Main$SelectionMsg)),
 				headers: _List_Nil,
 				method: 'POST',
 				timeout: $elm$core$Maybe$Just(5000),
@@ -6205,108 +6748,286 @@ var $author$project$Main$fetch = F2(
 				url: '/selection/'
 			});
 	});
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+var $elm$json$Json$Encode$list = F2(
+	function (func, entries) {
+		return _Json_wrap(
+			A3(
+				$elm$core$List$foldl,
+				_Json_addEntry(func),
+				_Json_emptyArray(_Utils_Tuple0),
+				entries));
 	});
-var $elm$core$Set$fromList = function (list) {
-	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+var $elm$json$Json$Encode$object = function (pairs) {
+	return _Json_wrap(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, obj) {
+					var k = _v0.a;
+					var v = _v0.b;
+					return A3(_Json_addField, k, v, obj);
+				}),
+			_Json_emptyObject(_Utils_Tuple0),
+			pairs));
 };
-var $elm$core$Maybe$map = F2(
-	function (f, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return $elm$core$Maybe$Just(
-				f(value));
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $elm$core$Result$map = F2(
-	function (func, ra) {
-		if (ra.$ === 'Ok') {
-			var a = ra.a;
-			return $elm$core$Result$Ok(
-				func(a));
-		} else {
-			var e = ra.a;
-			return $elm$core$Result$Err(e);
-		}
-	});
-var $author$project$Main$plzResult = function (res) {
-	if (res.$ === 'Ok') {
-		var ok = res.a;
-		return ok;
-	} else {
-		var err = res.a;
-		return err;
-	}
-};
-var $author$project$Main$StoredState = F3(
-	function (done, selection, doneDisplay) {
-		return {done: done, doneDisplay: doneDisplay, selection: selection};
-	});
-var $elm$json$Json$Decode$map3 = _Json_map3;
-var $elm$json$Json$Decode$maybe = function (decoder) {
-	return $elm$json$Json$Decode$oneOf(
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Packing$encodeSnapshot = function (snapshot) {
+	var strings = $elm$json$Json$Encode$list($elm$json$Json$Encode$string);
+	var group = function (g) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'name',
+					$elm$json$Json$Encode$string(g.name)),
+					_Utils_Tuple2(
+					'contents',
+					$elm$json$Json$Encode$object(
+						_List_fromArray(
+							[
+								_Utils_Tuple2(
+								'refs',
+								strings(g.contents.refs)),
+								_Utils_Tuple2(
+								'items',
+								strings(g.contents.items))
+							])))
+				]));
+	};
+	return $elm$json$Json$Encode$object(
 		_List_fromArray(
 			[
-				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder),
-				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
+				_Utils_Tuple2(
+				'selection',
+				$elm$json$Json$Encode$string(snapshot.selection)),
+				_Utils_Tuple2(
+				'groups',
+				A2($elm$json$Json$Encode$list, group, snapshot.groups))
 			]));
 };
-var $author$project$Main$storedStateDecoder = A4(
+var $elm$json$Json$Encode$int = _Json_wrap;
+var $elm$json$Json$Encode$null = _Json_encodeNull;
+var $author$project$StoredState$encode = F3(
+	function (selection, done, doneDisplay) {
+		return A2(
+			$elm$json$Json$Encode$encode,
+			0,
+			$elm$json$Json$Encode$object(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'version',
+						$elm$json$Json$Encode$int(2)),
+						_Utils_Tuple2(
+						'committed',
+						A2(
+							$elm$core$Maybe$withDefault,
+							$elm$json$Json$Encode$null,
+							A2($elm$core$Maybe$map, $author$project$Packing$encodeSnapshot, selection.committed))),
+						_Utils_Tuple2(
+						'draftText',
+						$elm$json$Json$Encode$string(selection.draftText)),
+						_Utils_Tuple2(
+						'legacySelection',
+						A2(
+							$elm$core$Maybe$withDefault,
+							$elm$json$Json$Encode$null,
+							A2(
+								$elm$core$Maybe$map,
+								A2(
+									$elm$core$Basics$composeR,
+									function ($) {
+										return $.selection;
+									},
+									$elm$json$Json$Encode$string),
+								selection.bootstrap))),
+						_Utils_Tuple2(
+						'done',
+						A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, done)),
+						_Utils_Tuple2(
+						'doneDisplay',
+						$elm$json$Json$Encode$string(doneDisplay))
+					])));
+	});
+var $author$project$Main$serialiseStateForStorage = function (model) {
+	return A3(
+		$author$project$StoredState$encode,
+		model.selection,
+		$elm$core$Set$toList(model.done),
+		$author$project$Main$doneDisplayKey(model.doneDisplay));
+};
+var $author$project$Selection$Simplified = F2(
+	function (a, b) {
+		return {$: 'Simplified', a: a, b: b};
+	});
+var $author$project$Selection$SimplifyResponse = F3(
+	function (selection, removedRefs, removedItems) {
+		return {removedItems: removedItems, removedRefs: removedRefs, selection: selection};
+	});
+var $author$project$Main$decodedWithNullAsDefault = F2(
+	function (_default, decoder) {
+		return A2(
+			$elm$json$Json$Decode$map,
+			$elm$core$Maybe$withDefault(_default),
+			$elm$json$Json$Decode$nullable(decoder));
+	});
+var $author$project$Main$decodeSimplify = A4(
 	$elm$json$Json$Decode$map3,
-	$author$project$Main$StoredState,
+	$author$project$Selection$SimplifyResponse,
+	A2($elm$json$Json$Decode$field, 'selection', $elm$json$Json$Decode$string),
 	A2(
 		$elm$json$Json$Decode$field,
-		'done',
+		'removedRefs',
 		A2(
 			$author$project$Main$decodedWithNullAsDefault,
 			_List_Nil,
 			$elm$json$Json$Decode$list($elm$json$Json$Decode$string))),
-	$elm$json$Json$Decode$maybe(
-		A2($elm$json$Json$Decode$field, 'selection', $elm$json$Json$Decode$string)),
-	$elm$json$Json$Decode$maybe(
-		A2($elm$json$Json$Decode$field, 'doneDisplay', $elm$json$Json$Decode$string)));
-var $author$project$Main$init = function (flags) {
-	var loaded = A2(
-		$elm$core$Maybe$withDefault,
-		$author$project$Main$defaultModel,
+	A2(
+		$elm$json$Json$Decode$field,
+		'removedItems',
 		A2(
-			$elm$core$Maybe$map,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$json$Json$Decode$decodeString($author$project$Main$storedStateDecoder),
-				A2(
-					$elm$core$Basics$composeR,
-					$elm$core$Result$mapError(
-						function (_v0) {
-							return $author$project$Main$defaultModel;
-						}),
+			$author$project$Main$decodedWithNullAsDefault,
+			_List_Nil,
+			$elm$json$Json$Decode$list($elm$json$Json$Decode$string))));
+var $author$project$Main$expectSimplify = function (toMsg) {
+	return A2(
+		$elm$http$Http$expectStringResponse,
+		toMsg,
+		function (response) {
+			switch (response.$) {
+				case 'BadUrl_':
+					var url = response.a;
+					return $elm$core$Result$Err('The URL ' + (url + ' was invalid'));
+				case 'Timeout_':
+					return $elm$core$Result$Err('Unable to reach the server, try again');
+				case 'NetworkError_':
+					return $elm$core$Result$Err('Unable to reach the server, check your network connection');
+				case 'BadStatus_':
+					var metadata = response.a;
+					var body = response.b;
+					return $elm$core$Result$Err(
+						$elm$core$String$isEmpty(
+							$elm$core$String$trim(body)) ? ('Server error, status: ' + $elm$core$String$fromInt(metadata.statusCode)) : $elm$core$String$trim(body));
+				default:
+					var body = response.b;
+					return A2(
+						$elm$core$Result$mapError,
+						function (err) {
+							return 'Data received was not in the correct format: ' + $elm$json$Json$Decode$errorToString(err);
+						},
+						A2($elm$json$Json$Decode$decodeString, $author$project$Main$decodeSimplify, body));
+			}
+		});
+};
+var $author$project$Main$simplifyRequest = F2(
+	function (token, selectionText) {
+		return $elm$http$Http$request(
+			{
+				body: A2($elm$http$Http$stringBody, 'text/plain', selectionText),
+				expect: $author$project$Main$expectSimplify(
 					A2(
 						$elm$core$Basics$composeR,
-						$elm$core$Result$map(
-							function (stored) {
-								return _Utils_update(
-									$author$project$Main$defaultModel,
-									{
-										done: $elm$core$Set$fromList(stored.done),
-										doneDisplay: $author$project$Main$doneDisplayFromKey(stored.doneDisplay),
-										selectionText: A2($elm$core$Maybe$withDefault, $author$project$Main$defaultSelectionText, stored.selection)
-									});
-							}),
-						$author$project$Main$plzResult))),
+						$author$project$Selection$Simplified(token),
+						$author$project$Main$SelectionMsg)),
+				headers: _List_Nil,
+				method: 'POST',
+				timeout: $elm$core$Maybe$Just(5000),
+				tracker: $elm$core$Maybe$Nothing,
+				url: '/simplify/'
+			});
+	});
+var $elm$core$Process$sleep = _Process_sleep;
+var $author$project$State$storeState = _Platform_outgoingPort('storeState', $elm$json$Json$Encode$string);
+var $author$project$Main$selectionEffects = F2(
+	function (model, effects) {
+		var run = function (effect) {
+			switch (effect.$) {
+				case 'Debounce':
+					var revision = effect.a;
+					return A2(
+						$elm$core$Task$perform,
+						function (_v1) {
+							return $author$project$Main$SelectionMsg(
+								$author$project$Selection$DebounceElapsed(revision));
+						},
+						$elm$core$Process$sleep(250));
+				case 'Fetch':
+					var token = effect.a;
+					var selection = effect.b;
+					return A2(
+						$author$project$Main$fetch,
+						$author$project$Selection$Resolved(token),
+						selection);
+				case 'BootstrapFetch':
+					var token = effect.a;
+					var selection = effect.b;
+					return A2(
+						$author$project$Main$fetch,
+						$author$project$Selection$BootstrapResolved(token),
+						selection);
+				case 'SimplifyFetch':
+					var token = effect.a;
+					var selection = effect.b;
+					return A2($author$project$Main$simplifyRequest, token, selection);
+				default:
+					return $author$project$State$storeState(
+						$author$project$Main$serialiseStateForStorage(model));
+			}
+		};
+		return $elm$core$Platform$Cmd$batch(
+			A2($elm$core$List$map, run, effects));
+	});
+var $elm$core$Result$withDefault = F2(
+	function (def, result) {
+		if (result.$ === 'Ok') {
+			var a = result.a;
+			return a;
+		} else {
+			return def;
+		}
+	});
+var $author$project$Main$init = function (flags) {
+	var decoded = A2(
+		$elm$core$Maybe$withDefault,
+		$elm$core$Result$Ok(
+			$author$project$StoredState$empty($author$project$Main$defaultSelectionText)),
+		A2(
+			$elm$core$Maybe$map,
+			$elm$json$Json$Decode$decodeString(
+				$author$project$StoredState$decoder($author$project$Main$defaultSelectionText)),
 			flags.state));
-	var firstId = loaded.requestId + 1;
+	var stored = A2(
+		$elm$core$Result$withDefault,
+		$author$project$StoredState$empty($author$project$Main$defaultSelectionText),
+		decoded);
+	var _v0 = A3($author$project$Selection$init, stored.committed, stored.draftText, stored.legacySelection);
+	var selection = _v0.a;
+	var effects = _v0.b;
+	var notice = function () {
+		if (decoded.$ === 'Err') {
+			return $elm$core$Maybe$Just('Saved state could not be read. It has not been overwritten. Editing or applying will replace it with this session.');
+		} else {
+			return ((!_Utils_eq(stored.committed, $elm$core$Maybe$Nothing)) && $author$project$Selection$hasChanges(selection)) ? $elm$core$Maybe$Just('Unapplied draft restored.') : $elm$core$Maybe$Nothing;
+		}
+	}();
+	var model = _Utils_update(
+		$author$project$Main$defaultModel,
+		{
+			done: $elm$core$Set$fromList(stored.done),
+			doneDisplay: $author$project$Main$doneDisplayFromKey(stored.doneDisplay),
+			notice: notice,
+			reviewTab: ((!_Utils_eq(stored.committed, $elm$core$Maybe$Nothing)) && (!$author$project$Selection$hasChanges(selection))) ? $author$project$Main$Current : $author$project$Main$Changes,
+			selection: selection,
+			storageError: flags.storageError
+		});
 	return _Utils_Tuple2(
-		_Utils_update(
-			loaded,
-			{requestId: firstId}),
-		A2($author$project$Main$fetch, firstId, loaded.selectionText));
+		model,
+		A2($author$project$Main$selectionEffects, model, effects));
 };
+var $author$project$Main$StorageResult = function (a) {
+	return {$: 'StorageResult', a: a};
+};
+var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $author$project$Main$GraphDragEnd = F2(
 	function (a, b) {
 		return {$: 'GraphDragEnd', a: a, b: b};
@@ -6315,7 +7036,6 @@ var $author$project$Main$GraphDragMove = F2(
 	function (a, b) {
 		return {$: 'GraphDragMove', a: a, b: b};
 	});
-var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$json$Json$Decode$float = _Json_decodeFloat;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $elm$browser$Browser$Events$Document = {$: 'Document'};
@@ -6344,18 +7064,6 @@ var $elm$browser$Browser$Events$addKey = function (sub) {
 			$elm$browser$Browser$Events$nodeToKey(node),
 			name),
 		sub);
-};
-var $elm$core$Dict$fromList = function (assocs) {
-	return A3(
-		$elm$core$List$foldl,
-		F2(
-			function (_v0, dict) {
-				var key = _v0.a;
-				var value = _v0.b;
-				return A3($elm$core$Dict$insert, key, value, dict);
-			}),
-		$elm$core$Dict$empty,
-		assocs);
 };
 var $elm$core$Dict$foldl = F3(
 	function (func, acc, dict) {
@@ -6547,8 +7255,8 @@ var $elm$browser$Browser$Events$onEffects = F3(
 	});
 var $elm$browser$Browser$Events$onSelfMsg = F3(
 	function (router, _v0, state) {
-		var key = _v0.key;
 		var event = _v0.event;
+		var key = _v0.key;
 		var toMessage = function (_v2) {
 			var subKey = _v2.a;
 			var _v3 = _v2.b;
@@ -6589,7 +7297,7 @@ var $elm$browser$Browser$Events$on = F3(
 	});
 var $elm$browser$Browser$Events$onMouseMove = A2($elm$browser$Browser$Events$on, $elm$browser$Browser$Events$Document, 'mousemove');
 var $elm$browser$Browser$Events$onMouseUp = A2($elm$browser$Browser$Events$on, $elm$browser$Browser$Events$Document, 'mouseup');
-var $author$project$Main$subscriptions = function (model) {
+var $author$project$Main$graphSubscriptions = function (model) {
 	var _v0 = model.graphDrag;
 	if (_v0.$ === 'Just') {
 		return $elm$core$Platform$Sub$batch(
@@ -6612,31 +7320,47 @@ var $author$project$Main$subscriptions = function (model) {
 		return $elm$core$Platform$Sub$none;
 	}
 };
+var $author$project$State$storageResult = _Platform_incomingPort(
+	'storageResult',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (state) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (error) {
+					return $elm$json$Json$Decode$succeed(
+						{error: error, state: state});
+				},
+				A2(
+					$elm$json$Json$Decode$field,
+					'error',
+					$elm$json$Json$Decode$oneOf(
+						_List_fromArray(
+							[
+								$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
+								A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, $elm$json$Json$Decode$string)
+							]))));
+		},
+		A2($elm$json$Json$Decode$field, 'state', $elm$json$Json$Decode$string)));
+var $author$project$Main$subscriptions = function (model) {
+	return $elm$core$Platform$Sub$batch(
+		_List_fromArray(
+			[
+				$author$project$State$storageResult($author$project$Main$StorageResult),
+				$author$project$Main$graphSubscriptions(model)
+			]));
+};
 var $author$project$Main$Done = {$: 'Done'};
 var $author$project$Main$Graph = {$: 'Graph'};
-var $author$project$Main$RenderFailed = function (a) {
-	return {$: 'RenderFailed', a: a};
-};
-var $author$project$Main$Rendered = {$: 'Rendered'};
 var $elm$core$Basics$negate = function (n) {
 	return -n;
 };
 var $elm$core$Basics$abs = function (n) {
 	return (n < 0) ? (-n) : n;
 };
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Basics$clamp = F3(
 	function (low, high, number) {
 		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
-	});
-var $elm$core$Dict$member = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$get, key, dict);
-		if (_v0.$ === 'Just') {
-			return true;
-		} else {
-			return false;
-		}
 	});
 var $elm$core$Set$member = F2(
 	function (key, _v0) {
@@ -6759,7 +7483,6 @@ var $elm$core$List$concatMap = F2(
 		return $elm$core$List$concat(
 			A2($elm$core$List$map, f, list));
 	});
-var $elm$core$Basics$not = _Basics_not;
 var $author$project$Main$collapseSingleItemGroups = function (groups) {
 	var referenced = $elm$core$Set$fromList(
 		A2(
@@ -6819,6 +7542,14 @@ var $author$project$Main$collapseSingleItemGroups = function (groups) {
 			},
 			groups));
 };
+var $author$project$Main$rawResults = function (model) {
+	return A2(
+		$elm$core$Maybe$map,
+		function ($) {
+			return $.groups;
+		},
+		_Utils_eq(model.reviewTab, $author$project$Main$Current) ? model.selection.committed : $author$project$Selection$ready(model.selection));
+};
 var $author$project$Main$effectiveResults = function (model) {
 	return A2(
 		$elm$core$Maybe$map,
@@ -6826,7 +7557,7 @@ var $author$project$Main$effectiveResults = function (model) {
 			return model.inlineSingletons ? $author$project$Main$collapseSingleItemGroups(
 				$author$project$Main$collapsePassthroughRefs(groups)) : groups;
 		},
-		model.fetchResults);
+		$author$project$Main$rawResults(model));
 };
 var $author$project$Main$GroupNode = {$: 'GroupNode'};
 var $author$project$Main$ItemNode = {$: 'ItemNode'};
@@ -6969,10 +7700,6 @@ var $elm$core$List$minimum = function (list) {
 	}
 };
 var $author$project$Main$nodeHeight = 22;
-var $elm$core$List$sortBy = _List_sortBy;
-var $elm$core$List$sort = function (xs) {
-	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
-};
 var $elm$core$Dict$values = function (dict) {
 	return A3(
 		$elm$core$Dict$foldr,
@@ -7314,128 +8041,20 @@ var $author$project$Main$lineageGroups = F2(
 				},
 				groups));
 	});
-var $elm$core$Basics$neq = _Utils_notEqual;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Main$refitGraph = function (model) {
+	var fit = $author$project$Main$fitToView(
+		$author$project$Main$effectiveResults(model));
+	return _Utils_update(
+		model,
+		{graphDrag: $elm$core$Maybe$Nothing, graphPanX: fit.panX, graphPanY: fit.panY, graphScale: fit.scale, graphSelected: $elm$core$Maybe$Nothing});
+};
 var $elm$core$Set$remove = F2(
 	function (key, _v0) {
 		var dict = _v0.a;
 		return $elm$core$Set$Set_elm_builtin(
 			A2($elm$core$Dict$remove, key, dict));
 	});
-var $elm$json$Json$Encode$list = F2(
-	function (func, entries) {
-		return _Json_wrap(
-			A3(
-				$elm$core$List$foldl,
-				_Json_addEntry(func),
-				_Json_emptyArray(_Utils_Tuple0),
-				entries));
-	});
-var $elm$json$Json$Encode$object = function (pairs) {
-	return _Json_wrap(
-		A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v0, obj) {
-					var k = _v0.a;
-					var v = _v0.b;
-					return A3(_Json_addField, k, v, obj);
-				}),
-			_Json_emptyObject(_Utils_Tuple0),
-			pairs));
-};
-var $elm$json$Json$Encode$string = _Json_wrap;
-var $author$project$Main$serialiseStateForStorage = function (model) {
-	return A2(
-		$elm$json$Json$Encode$encode,
-		2,
-		$elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'done',
-					A3(
-						$elm$core$Basics$composeR,
-						$elm$core$Set$toList,
-						$elm$json$Json$Encode$list($elm$json$Json$Encode$string),
-						model.done)),
-					_Utils_Tuple2(
-					'selection',
-					$elm$json$Json$Encode$string(model.selectionText)),
-					_Utils_Tuple2(
-					'doneDisplay',
-					$elm$json$Json$Encode$string(
-						$author$project$Main$doneDisplayKey(model.doneDisplay)))
-				])));
-};
-var $author$project$Main$Simplified = function (a) {
-	return {$: 'Simplified', a: a};
-};
-var $author$project$Main$SimplifyResponse = F3(
-	function (selection, removedRefs, removedItems) {
-		return {removedItems: removedItems, removedRefs: removedRefs, selection: selection};
-	});
-var $author$project$Main$decodeSimplify = A4(
-	$elm$json$Json$Decode$map3,
-	$author$project$Main$SimplifyResponse,
-	A2($elm$json$Json$Decode$field, 'selection', $elm$json$Json$Decode$string),
-	A2(
-		$elm$json$Json$Decode$field,
-		'removedRefs',
-		A2(
-			$author$project$Main$decodedWithNullAsDefault,
-			_List_Nil,
-			$elm$json$Json$Decode$list($elm$json$Json$Decode$string))),
-	A2(
-		$elm$json$Json$Decode$field,
-		'removedItems',
-		A2(
-			$author$project$Main$decodedWithNullAsDefault,
-			_List_Nil,
-			$elm$json$Json$Decode$list($elm$json$Json$Decode$string))));
-var $author$project$Main$expectSimplify = function (toMsg) {
-	return A2(
-		$elm$http$Http$expectStringResponse,
-		toMsg,
-		function (response) {
-			switch (response.$) {
-				case 'BadUrl_':
-					var url = response.a;
-					return $elm$core$Result$Err('The URL ' + (url + ' was invalid'));
-				case 'Timeout_':
-					return $elm$core$Result$Err('Unable to reach the server, try again');
-				case 'NetworkError_':
-					return $elm$core$Result$Err('Unable to reach the server, check your network connection');
-				case 'BadStatus_':
-					var metadata = response.a;
-					var body = response.b;
-					return $elm$core$Result$Err(
-						$elm$core$String$isEmpty(
-							$elm$core$String$trim(body)) ? ('Server error, status: ' + $elm$core$String$fromInt(metadata.statusCode)) : $elm$core$String$trim(body));
-				default:
-					var body = response.b;
-					return A2(
-						$elm$core$Result$mapError,
-						function (err) {
-							return 'Data received was not in the correct format: ' + $elm$json$Json$Decode$errorToString(err);
-						},
-						A2($elm$json$Json$Decode$decodeString, $author$project$Main$decodeSimplify, body));
-			}
-		});
-};
-var $author$project$Main$simplifyRequest = function (selectionText) {
-	return $elm$http$Http$request(
-		{
-			body: A2($elm$http$Http$stringBody, 'text/plain', selectionText),
-			expect: $author$project$Main$expectSimplify($author$project$Main$Simplified),
-			headers: _List_Nil,
-			method: 'POST',
-			timeout: $elm$core$Maybe$Just(5000),
-			tracker: $elm$core$Maybe$Nothing,
-			url: '/simplify/'
-		});
-};
-var $author$project$State$storeState = _Platform_outgoingPort('storeState', $elm$json$Json$Encode$string);
 var $author$project$State$updateModel = F2(
 	function (serialise, model) {
 		var localStoredState = serialise(model);
@@ -7446,84 +8065,67 @@ var $author$project$State$updateModel = F2(
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
-			case 'SelectionChanged':
-				var selectionText = msg.a;
-				var newId = model.requestId + 1;
+			case 'SelectionMsg':
+				var selectionMsg = msg.a;
+				var _v1 = A2($author$project$Selection$update, selectionMsg, model.selection);
+				var selection = _v1.a;
+				var effects = _v1.b;
+				var tab = function () {
+					switch (selectionMsg.$) {
+						case 'Apply':
+							return $author$project$Selection$canApply(model.selection) ? $author$project$Main$Current : model.reviewTab;
+						case 'Discard':
+							return (!_Utils_eq(model.selection.committed, $elm$core$Maybe$Nothing)) ? $author$project$Main$Current : model.reviewTab;
+						case 'BootstrapResolved':
+							return ((!_Utils_eq(selection.committed, $elm$core$Maybe$Nothing)) && (!$author$project$Selection$hasChanges(selection))) ? $author$project$Main$Current : model.reviewTab;
+						default:
+							return ((!$author$project$Selection$hasChanges(model.selection)) && $author$project$Selection$hasChanges(selection)) ? $author$project$Main$Changes : model.reviewTab;
+					}
+				}();
 				var newModel = _Utils_update(
 					model,
-					{renderStatus: $author$project$Main$Rendering, requestId: newId, selectionText: selectionText, simplifyNote: $elm$core$Maybe$Nothing});
+					{
+						notice: function () {
+							switch (selectionMsg.$) {
+								case 'Edit':
+									return $elm$core$Maybe$Nothing;
+								case 'Apply':
+									return $author$project$Selection$canApply(model.selection) ? $elm$core$Maybe$Nothing : model.notice;
+								case 'Discard':
+									return $elm$core$Maybe$Nothing;
+								default:
+									return model.notice;
+							}
+						}(),
+						reviewTab: tab,
+						selection: selection
+					});
+				var fitted = ((!_Utils_eq(
+					$author$project$Main$rawResults(model),
+					$author$project$Main$rawResults(newModel))) || (!_Utils_eq(tab, model.reviewTab))) ? $author$project$Main$refitGraph(newModel) : newModel;
 				return _Utils_Tuple2(
-					newModel,
-					$elm$core$Platform$Cmd$batch(
-						_List_fromArray(
-							[
-								$author$project$State$storeState(
-								$author$project$Main$serialiseStateForStorage(newModel)),
-								A2($author$project$Main$fetch, newId, selectionText)
-							])));
-			case 'SimplifyClicked':
+					fitted,
+					A2($author$project$Main$selectionEffects, fitted, effects));
+			case 'SelectReviewTab':
+				var tab = msg.a;
 				return _Utils_Tuple2(
-					model,
-					$author$project$Main$simplifyRequest(model.selectionText));
-			case 'Simplified':
-				var result = msg.a;
-				if (result.$ === 'Ok') {
-					var resp = result.a;
-					var newId = model.requestId + 1;
-					var newModel = _Utils_update(
-						model,
-						{
-							renderStatus: $author$project$Main$Rendering,
-							requestId: newId,
-							selectionText: resp.selection,
-							simplifyNote: $elm$core$Maybe$Just(
-								{items: resp.removedItems, refs: resp.removedRefs})
-						});
-					return _Utils_Tuple2(
-						newModel,
-						$elm$core$Platform$Cmd$batch(
-							_List_fromArray(
-								[
-									$author$project$State$storeState(
-									$author$project$Main$serialiseStateForStorage(newModel)),
-									A2($author$project$Main$fetch, newId, resp.selection)
-								])));
-				} else {
-					var err = result.a;
-					return _Utils_Tuple2(
+					$author$project$Main$refitGraph(
 						_Utils_update(
 							model,
-							{
-								renderStatus: $author$project$Main$RenderFailed(err)
-							}),
-						$elm$core$Platform$Cmd$none);
-				}
-			case 'FetchedResults':
-				var id = msg.a;
-				var res = msg.b;
-				return (!_Utils_eq(id, model.requestId)) ? _Utils_Tuple2(model, $elm$core$Platform$Cmd$none) : _Utils_Tuple2(
-					function () {
-						if (res.$ === 'Ok') {
-							var groups = res.a;
-							return _Utils_update(
-								model,
-								{
-									fetchResults: $elm$core$Maybe$Just(groups),
-									renderStatus: $author$project$Main$Rendered
-								});
-						} else {
-							var err = res.a;
-							return _Utils_update(
-								model,
-								{
-									renderStatus: $author$project$Main$RenderFailed(err)
-								});
-						}
-					}(),
+							{reviewTab: tab})),
 					$elm$core$Platform$Cmd$none);
+			case 'StorageResult':
+				var result = msg.a;
+				return _Utils_eq(
+					result.state,
+					$author$project$Main$serialiseStateForStorage(model)) ? _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{storageError: result.error}),
+					$elm$core$Platform$Cmd$none) : _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			case 'ViewMode':
 				if (msg.a.$ === 'Graph') {
-					var _v3 = msg.a;
+					var _v4 = msg.a;
 					var fit = $author$project$Main$fitToView(
 						$author$project$Main$effectiveResults(model));
 					return _Utils_Tuple2(
@@ -7542,14 +8144,14 @@ var $author$project$Main$update = F2(
 			case 'ItemDone':
 				var item = msg.a;
 				var done = msg.b;
-				return A2(
+				return _Utils_eq(model.reviewTab, $author$project$Main$Current) ? A2(
 					$author$project$State$updateModel,
 					$author$project$Main$serialiseStateForStorage,
 					_Utils_update(
 						model,
 						{
 							done: done ? A2($elm$core$Set$insert, item, model.done) : A2($elm$core$Set$remove, item, model.done)
-						}));
+						})) : _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			case 'ShowGroupLinks':
 				var show = msg.a;
 				return _Utils_Tuple2(
@@ -7569,8 +8171,8 @@ var $author$project$Main$update = F2(
 				var base = _Utils_update(
 					model,
 					{inlineSingletons: enabled});
-				var _v4 = model.viewMode;
-				if (_v4.$ === 'Graph') {
+				var _v5 = model.viewMode;
+				if (_v5.$ === 'Graph') {
 					var fit = $author$project$Main$fitToView(
 						$author$project$Main$effectiveResults(base));
 					return _Utils_Tuple2(
@@ -7600,12 +8202,12 @@ var $author$project$Main$update = F2(
 						{itemsOnly: itemsOnly}),
 					$elm$core$Platform$Cmd$none);
 			case 'ClearDone':
-				return A2(
+				return _Utils_eq(model.reviewTab, $author$project$Main$Current) ? A2(
 					$author$project$State$updateModel,
 					$author$project$Main$serialiseStateForStorage,
 					_Utils_update(
 						model,
-						{done: $elm$core$Set$empty}));
+						{done: $elm$core$Set$empty})) : _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			case 'GraphWheel':
 				var deltaY = msg.a;
 				var offsetX = msg.b;
@@ -7633,9 +8235,9 @@ var $author$project$Main$update = F2(
 			case 'GraphDragMove':
 				var x = msg.a;
 				var y = msg.b;
-				var _v5 = model.graphDrag;
-				if (_v5.$ === 'Just') {
-					var d = _v5.a;
+				var _v6 = model.graphDrag;
+				if (_v6.$ === 'Just') {
+					var d = _v6.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -7655,9 +8257,9 @@ var $author$project$Main$update = F2(
 				var x = msg.a;
 				var y = msg.b;
 				var wasClick = function () {
-					var _v6 = model.graphDrag;
-					if (_v6.$ === 'Just') {
-						var d = _v6.a;
+					var _v7 = model.graphDrag;
+					if (_v7.$ === 'Just') {
+						var d = _v7.a;
 						return ($elm$core$Basics$abs(x - d.startX) + $elm$core$Basics$abs(y - d.startY)) < 4;
 					} else {
 						return false;
@@ -7730,11 +8332,27 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 		}
 	});
-var $author$project$Main$SelectionChanged = function (a) {
-	return {$: 'SelectionChanged', a: a};
-};
-var $author$project$Main$SimplifyClicked = {$: 'SimplifyClicked'};
+var $author$project$Selection$Apply = {$: 'Apply'};
+var $author$project$Selection$Discard = {$: 'Discard'};
+var $author$project$Main$Proposed = {$: 'Proposed'};
+var $author$project$Selection$Simplify = {$: 'Simplify'};
+var $elm$virtual_dom$VirtualDom$attribute = F2(
+	function (key, value) {
+		return A2(
+			_VirtualDom_attribute,
+			_VirtualDom_noOnOrFormAction(key),
+			_VirtualDom_noJavaScriptOrHtmlUri(value));
+	});
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $elm$html$Html$button = _VirtualDom_node('button');
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
 var $author$project$Main$ClearDone = {$: 'ClearDone'};
 var $author$project$Main$GraphFit = {$: 'GraphFit'};
 var $author$project$Main$GraphZoom = function (a) {
@@ -7910,7 +8528,7 @@ var $author$project$Main$controlsView = function (model) {
 			$elm$html$Html$div,
 			_List_Nil,
 			_Utils_ap(
-				_List_fromArray(
+				_Utils_eq(model.reviewTab, $author$project$Main$Current) ? _List_fromArray(
 					[
 						A2(
 						$elm$html$Html$button,
@@ -7925,7 +8543,7 @@ var $author$project$Main$controlsView = function (model) {
 								$elm$html$Html$text(
 								$author$project$Main$doneDisplayLabel(model.doneDisplay))
 							]))
-					]),
+					]) : _List_Nil,
 				_Utils_ap(
 					function () {
 						var _v1 = model.doneDisplay;
@@ -7965,78 +8583,123 @@ var $author$project$Main$controlsView = function (model) {
 							return _List_Nil;
 						}
 					}(),
-					_List_fromArray(
-						[
-							A2(
-							$elm$html$Html$button,
-							_List_fromArray(
-								[
-									$elm$html$Html$Events$onClick(
-									$author$project$Main$ViewMode($author$project$Main$Graph))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('graph view')
-								])),
-							A2(
-							$elm$html$Html$button,
-							_List_fromArray(
-								[
-									$elm$html$Html$Events$onClick(
-									$author$project$Main$ShowGroupLinks(!model.showGroupLinks))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('show group links')
-								])),
-							A2(
-							$elm$html$Html$button,
-							_List_fromArray(
-								[
-									$elm$html$Html$Events$onClick(
-									$author$project$Main$ShowContainerGroups(!model.showContainerGroups))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('show container groups')
-								])),
-							A2(
-							$elm$html$Html$button,
-							_List_fromArray(
-								[
-									$elm$html$Html$Events$onClick(
-									$author$project$Main$ToggleInlineSingletons(!model.inlineSingletons))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text(
-									$author$project$Main$inlineToggleLabel(model.inlineSingletons))
-								])),
-							A2(
-							$elm$html$Html$button,
-							_List_fromArray(
-								[
-									$elm$html$Html$Events$onClick(
-									$author$project$Main$ItemsOnly((model.itemsOnly + 1) % 3))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('toggle items only')
-								])),
-							A2(
-							$elm$html$Html$button,
-							_List_fromArray(
-								[
-									$elm$html$Html$Events$onClick($author$project$Main$ClearDone)
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('reset')
-								]))
-						]))));
+					_Utils_ap(
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$ViewMode($author$project$Main$Graph))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('graph view')
+									])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$ShowGroupLinks(!model.showGroupLinks))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('show group links')
+									])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$ShowContainerGroups(!model.showContainerGroups))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('show container groups')
+									])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$ToggleInlineSingletons(!model.inlineSingletons))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text(
+										$author$project$Main$inlineToggleLabel(model.inlineSingletons))
+									])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick(
+										$author$project$Main$ItemsOnly((model.itemsOnly + 1) % 3))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('toggle items only')
+									]))
+							]),
+						_Utils_eq(model.reviewTab, $author$project$Main$Current) ? _List_fromArray(
+							[
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick($author$project$Main$ClearDone)
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Clear packing progress')
+									]))
+							]) : _List_Nil))));
 	}
 };
+var $elm$json$Json$Encode$bool = _Json_wrap;
+var $elm$html$Html$Attributes$boolProperty = F2(
+	function (key, bool) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$bool(bool));
+	});
+var $elm$html$Html$Attributes$disabled = $elm$html$Html$Attributes$boolProperty('disabled');
+var $author$project$Main$displayModel = function (model) {
+	return _Utils_eq(model.reviewTab, $author$project$Main$Proposed) ? _Utils_update(
+		model,
+		{doneDisplay: $author$project$Main$Mark}) : model;
+};
 var $elm$html$Html$h3 = _VirtualDom_node('h3');
+var $elm$html$Html$p = _VirtualDom_node('p');
+var $author$project$Main$maybeMessage = F2(
+	function (color, message) {
+		return A2(
+			$elm$core$Maybe$withDefault,
+			$elm$html$Html$text(''),
+			A2(
+				$elm$core$Maybe$map,
+				function (value) {
+					return A2(
+						$elm$html$Html$p,
+						_List_fromArray(
+							[
+								A2($elm$html$Html$Attributes$style, 'color', color)
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text(value)
+							]));
+				},
+				message));
+	});
+var $elm$virtual_dom$VirtualDom$node = function (tag) {
+	return _VirtualDom_node(
+		_VirtualDom_noScript(tag));
+};
+var $elm$html$Html$node = $elm$virtual_dom$VirtualDom$node;
 var $elm$html$Html$Events$alwaysStop = function (x) {
 	return _Utils_Tuple2(x, true);
 };
@@ -8068,71 +8731,109 @@ var $elm$html$Html$Events$onInput = function (tagger) {
 			$elm$html$Html$Events$alwaysStop,
 			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
 };
-var $elm$html$Html$p = _VirtualDom_node('p');
-var $elm$html$Html$Attributes$stringProperty = F2(
-	function (key, string) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$string(string));
-	});
-var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
-var $author$project$Main$renderStatusBadge = function (status) {
-	switch (status.$) {
-		case 'Rendering':
-			return A2(
-				$elm$html$Html$span,
+var $author$project$Main$previewStatus = function (selection) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				A2($elm$html$Html$Attributes$attribute, 'aria-live', 'polite')
+			]),
+		_List_fromArray(
+			[
+				(!_Utils_eq(selection.bootstrap, $elm$core$Maybe$Nothing)) ? A2(
+				$elm$html$Html$p,
+				_List_Nil,
 				_List_fromArray(
 					[
-						$elm$html$Html$Attributes$title('Rendering…')
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('⏳')
-					]));
-		case 'Rendered':
-			return A2(
-				$elm$html$Html$span,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$title('Rendered successfully')
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('✅')
-					]));
-		default:
-			return A2(
-				$elm$html$Html$span,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$title('Render failed'),
-						A2($elm$html$Html$Attributes$style, 'color', 'red')
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('❌')
-					]));
-	}
-};
-var $author$project$Main$renderStatusMessage = function (status) {
-	if (status.$ === 'RenderFailed') {
-		var err = status.a;
-		return A2(
-			$elm$html$Html$p,
-			_List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$style, 'color', 'red')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text(err)
-				]));
-	} else {
-		return $elm$html$Html$text('');
-	}
+						$elm$html$Html$text('Restoring the previously saved selection…')
+					])) : A2(
+				$author$project$Main$maybeMessage,
+				'#a32121',
+				A2(
+					$elm$core$Maybe$map,
+					function (error) {
+						return 'The previously saved selection could not be resolved. Correct the draft and apply an initial selection. ' + error;
+					},
+					selection.baselineError)),
+				function () {
+				var _v0 = selection.preview;
+				switch (_v0.$) {
+					case 'Waiting':
+						return A2(
+							$elm$html$Html$p,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Updating preview…')
+								]));
+					case 'Loading':
+						return A2(
+							$elm$html$Html$p,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Updating preview…')
+								]));
+					case 'Ready':
+						return A2(
+							$elm$html$Html$div,
+							_List_Nil,
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$p,
+									_List_Nil,
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Preview ready.')
+										])),
+									A2(
+									$elm$html$Html$button,
+									_List_fromArray(
+										[
+											$elm$html$Html$Events$onClick(
+											$author$project$Main$SelectionMsg($author$project$Selection$Resolve))
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Refresh preview')
+										]))
+								]));
+					default:
+						var error = _v0.a;
+						return A2(
+							$elm$html$Html$div,
+							_List_Nil,
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$p,
+									_List_fromArray(
+										[
+											A2($elm$html$Html$Attributes$style, 'color', '#a32121')
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Preview failed: ' + error)
+										])),
+									A2(
+									$elm$html$Html$button,
+									_List_fromArray(
+										[
+											$elm$html$Html$Events$onClick(
+											$author$project$Main$SelectionMsg($author$project$Selection$Resolve))
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Retry preview')
+										]))
+								]));
+				}
+			}()
+			]));
 };
 var $author$project$Main$ClearGraphFocus = {$: 'ClearGraphFocus'};
+var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
 var $author$project$Main$graphFocusBanner = function (selected) {
 	if (selected.$ === 'Nothing') {
 		return $elm$html$Html$text('');
@@ -8155,7 +8856,7 @@ var $author$project$Main$graphFocusBanner = function (selected) {
 			_List_fromArray(
 				[
 					$elm$html$Html$text(
-					'Showing lineage of \u2018' + (A2($elm$core$String$dropLeft, 2, nodeId) + '\u2019')),
+					'Showing lineage of ‘' + (A2($elm$core$String$dropLeft, 2, nodeId) + '’')),
 					A2(
 					$elm$html$Html$button,
 					_List_fromArray(
@@ -8705,7 +9406,7 @@ var $author$project$Main$groupsView = F2(
 									return A2(
 										$elm$html$Html$p,
 										_Utils_ap(
-											_List_fromArray(
+											_Utils_eq(model.reviewTab, $author$project$Main$Current) ? _List_fromArray(
 												[
 													A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
 													$elm$html$Html$Events$onClick(
@@ -8713,7 +9414,7 @@ var $author$project$Main$groupsView = F2(
 														$author$project$Main$ItemDone,
 														itemKey,
 														!A2($elm$core$Set$member, itemKey, model.done)))
-												]),
+												]) : _List_Nil,
 											faded ? _List_fromArray(
 												[
 													A2($elm$html$Html$Attributes$style, 'opacity', '0.45'),
@@ -8914,25 +9615,81 @@ var $author$project$Main$resultsView = function (model) {
 			if (_v0.$ === 'Nothing') {
 				return _List_fromArray(
 					[
-						$elm$html$Html$text('Editing selection…')
+						$elm$html$Html$text(
+						_Utils_eq(model.reviewTab, $author$project$Main$Current) ? 'No selection has been applied yet.' : 'A valid preview is not available for the current draft.')
 					]);
 			} else {
 				var groups = _v0.a;
-				var _v1 = model.viewMode;
-				if (_v1.$ === 'Graph') {
+				if ($elm$core$List$isEmpty(groups)) {
 					return _List_fromArray(
 						[
-							$author$project$Main$graphFocusBanner(model.graphSelected),
 							A2(
-							$author$project$Main$graphView,
-							model,
-							A2($author$project$Main$graphGroups, model, groups))
+							$elm$html$Html$p,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text('This selection contains no items or groups.')
+								]))
 						]);
 				} else {
-					return A2($author$project$Main$groupsView, model, groups);
+					var _v1 = model.viewMode;
+					if (_v1.$ === 'Graph') {
+						return _List_fromArray(
+							[
+								$author$project$Main$graphFocusBanner(model.graphSelected),
+								A2(
+								$author$project$Main$graphView,
+								model,
+								A2($author$project$Main$graphGroups, model, groups))
+							]);
+					} else {
+						return A2($author$project$Main$groupsView, model, groups);
+					}
 				}
 			}
 		}());
+};
+var $author$project$Main$SelectReviewTab = function (a) {
+	return {$: 'SelectReviewTab', a: a};
+};
+var $author$project$Main$reviewTabs = function (model) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				A2($elm$html$Html$Attributes$attribute, 'aria-label', 'Selection review')
+			]),
+		A2(
+			$elm$core$List$map,
+			function (_v0) {
+				var tab = _v0.a;
+				var label = _v0.b;
+				return A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$SelectReviewTab(tab)),
+							A2(
+							$elm$html$Html$Attributes$attribute,
+							'aria-pressed',
+							_Utils_eq(model.reviewTab, tab) ? 'true' : 'false'),
+							A2(
+							$elm$html$Html$Attributes$style,
+							'font-weight',
+							_Utils_eq(model.reviewTab, tab) ? 'bold' : 'normal')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(label)
+						]));
+			},
+			_List_fromArray(
+				[
+					_Utils_Tuple2($author$project$Main$Changes, 'Changes'),
+					_Utils_Tuple2($author$project$Main$Proposed, 'Proposed list'),
+					_Utils_Tuple2($author$project$Main$Current, 'Current list')
+				])));
 };
 var $elm$html$Html$Attributes$rows = function (n) {
 	return A2(
@@ -8962,8 +9719,8 @@ var $author$project$Main$simplifyNoteView = function (note) {
 	if (note.$ === 'Nothing') {
 		return $elm$html$Html$text('');
 	} else {
-		var refs = note.a.refs;
 		var items = note.a.items;
+		var refs = note.a.refs;
 		return ($elm$core$List$isEmpty(refs) && $elm$core$List$isEmpty(items)) ? A2(
 			$elm$html$Html$p,
 			_List_fromArray(
@@ -9001,19 +9758,629 @@ var $author$project$Main$simplifyNoteView = function (note) {
 };
 var $elm$html$Html$textarea = _VirtualDom_node('textarea');
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
+var $author$project$SelectionDiff$Item = F2(
+	function (name, sources) {
+		return {name: name, sources: sources};
+	});
+var $author$project$SelectionDiff$SourceChange = F3(
+	function (name, before, after) {
+		return {after: after, before: before, name: name};
+	});
+var $elm$core$Dict$diff = F2(
+	function (t1, t2) {
+		return A3(
+			$elm$core$Dict$foldl,
+			F3(
+				function (k, v, t) {
+					return A2($elm$core$Dict$remove, k, t);
+				}),
+			t1,
+			t2);
+	});
+var $elm$core$Set$diff = F2(
+	function (_v0, _v1) {
+		var dict1 = _v0.a;
+		var dict2 = _v1.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$diff, dict1, dict2));
+	});
+var $elm$core$Dict$filter = F2(
+	function (isGood, dict) {
+		return A3(
+			$elm$core$Dict$foldl,
+			F3(
+				function (k, v, d) {
+					return A2(isGood, k, v) ? A3($elm$core$Dict$insert, k, v, d) : d;
+				}),
+			$elm$core$Dict$empty,
+			dict);
+	});
+var $elm$core$Dict$intersect = F2(
+	function (t1, t2) {
+		return A2(
+			$elm$core$Dict$filter,
+			F2(
+				function (k, _v0) {
+					return A2($elm$core$Dict$member, k, t2);
+				}),
+			t1);
+	});
+var $elm$core$Set$intersect = F2(
+	function (_v0, _v1) {
+		var dict1 = _v0.a;
+		var dict2 = _v1.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$intersect, dict1, dict2));
+	});
+var $elm$core$Dict$sizeHelp = F2(
+	function (n, dict) {
+		sizeHelp:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return n;
+			} else {
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$n = A2($elm$core$Dict$sizeHelp, n + 1, right),
+					$temp$dict = left;
+				n = $temp$n;
+				dict = $temp$dict;
+				continue sizeHelp;
+			}
+		}
+	});
+var $elm$core$Dict$size = function (dict) {
+	return A2($elm$core$Dict$sizeHelp, 0, dict);
+};
+var $elm$core$Set$size = function (_v0) {
+	var dict = _v0.a;
+	return $elm$core$Dict$size(dict);
+};
+var $author$project$SelectionDiff$sources = function (groups) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (g, index) {
+				return A3(
+					$elm$core$List$foldl,
+					function (item) {
+						return A2(
+							$elm$core$Dict$update,
+							item,
+							A2(
+								$elm$core$Basics$composeR,
+								$elm$core$Maybe$withDefault($elm$core$Set$empty),
+								A2(
+									$elm$core$Basics$composeR,
+									$elm$core$Set$insert(g.name),
+									$elm$core$Maybe$Just)));
+					},
+					index,
+					g.contents.items);
+			}),
+		$elm$core$Dict$empty,
+		groups);
+};
+var $author$project$SelectionDiff$compare = F2(
+	function (before, after) {
+		var origins = F2(
+			function (index, name) {
+				return $elm$core$Set$toList(
+					A2(
+						$elm$core$Maybe$withDefault,
+						$elm$core$Set$empty,
+						A2($elm$core$Dict$get, name, index)));
+			});
+		var old = $author$project$SelectionDiff$sources(before);
+		var _new = $author$project$SelectionDiff$sources(after);
+		var names = function (index) {
+			return $elm$core$Set$fromList(
+				$elm$core$Dict$keys(index));
+		};
+		var retained = A2(
+			$elm$core$Set$intersect,
+			names(old),
+			names(_new));
+		var items = F2(
+			function (index, keys) {
+				return A2(
+					$elm$core$List$map,
+					function (name) {
+						return A2(
+							$author$project$SelectionDiff$Item,
+							name,
+							A2(origins, index, name));
+					},
+					$elm$core$Set$toList(keys));
+			});
+		return {
+			added: A2(
+				items,
+				_new,
+				A2(
+					$elm$core$Set$diff,
+					names(_new),
+					names(old))),
+			removed: A2(
+				items,
+				old,
+				A2(
+					$elm$core$Set$diff,
+					names(old),
+					names(_new))),
+			retained: $elm$core$Set$size(retained),
+			sourceChanges: A2(
+				$elm$core$List$map,
+				function (name) {
+					return A3(
+						$author$project$SelectionDiff$SourceChange,
+						name,
+						A2(origins, old, name),
+						A2(origins, _new, name));
+				},
+				A2(
+					$elm$core$List$filter,
+					function (name) {
+						return !_Utils_eq(
+							A2($elm$core$Dict$get, name, old),
+							A2($elm$core$Dict$get, name, _new));
+					},
+					$elm$core$Set$toList(retained)))
+		};
+	});
+var $elm$html$Html$details = _VirtualDom_node('details');
+var $elm$html$Html$li = _VirtualDom_node('li');
+var $author$project$Review$lineView = function (line) {
+	var _v0 = function () {
+		switch (line.$) {
+			case 'Added':
+				var value = line.a;
+				return _Utils_Tuple3('+ ', value, '#e6f5eb');
+			case 'Removed':
+				var value = line.a;
+				return _Utils_Tuple3('− ', value, '#fce8e8');
+			default:
+				var value = line.a;
+				return _Utils_Tuple3('  ', value, 'transparent');
+		}
+	}();
+	var prefix = _v0.a;
+	var content = _v0.b;
+	var background = _v0.c;
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				A2($elm$html$Html$Attributes$style, 'background', background)
+			]),
+		_List_fromArray(
+			[
+				$elm$html$Html$text(
+				_Utils_ap(prefix, content))
+			]));
+};
+var $author$project$SelectionDiff$Added = function (a) {
+	return {$: 'Added', a: a};
+};
+var $author$project$SelectionDiff$Removed = function (a) {
+	return {$: 'Removed', a: a};
+};
+var $author$project$SelectionDiff$Unchanged = function (a) {
+	return {$: 'Unchanged', a: a};
+};
+var $elm$core$Array$fromListHelp = F3(
+	function (list, nodeList, nodeListSize) {
+		fromListHelp:
+		while (true) {
+			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, list);
+			var jsArray = _v0.a;
+			var remainingItems = _v0.b;
+			if (_Utils_cmp(
+				$elm$core$Elm$JsArray$length(jsArray),
+				$elm$core$Array$branchFactor) < 0) {
+				return A2(
+					$elm$core$Array$builderToArray,
+					true,
+					{nodeList: nodeList, nodeListSize: nodeListSize, tail: jsArray});
+			} else {
+				var $temp$list = remainingItems,
+					$temp$nodeList = A2(
+					$elm$core$List$cons,
+					$elm$core$Array$Leaf(jsArray),
+					nodeList),
+					$temp$nodeListSize = nodeListSize + 1;
+				list = $temp$list;
+				nodeList = $temp$nodeList;
+				nodeListSize = $temp$nodeListSize;
+				continue fromListHelp;
+			}
+		}
+	});
+var $elm$core$Array$fromList = function (list) {
+	if (!list.b) {
+		return $elm$core$Array$empty;
+	} else {
+		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
+	}
+};
+var $elm$core$Basics$ge = _Utils_ge;
+var $elm$core$Bitwise$and = _Bitwise_and;
+var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
+var $elm$core$Array$bitMask = 4294967295 >>> (32 - $elm$core$Array$shiftStep);
+var $elm$core$Elm$JsArray$unsafeGet = _JsArray_unsafeGet;
+var $elm$core$Array$getHelp = F3(
+	function (shift, index, tree) {
+		getHelp:
+		while (true) {
+			var pos = $elm$core$Array$bitMask & (index >>> shift);
+			var _v0 = A2($elm$core$Elm$JsArray$unsafeGet, pos, tree);
+			if (_v0.$ === 'SubTree') {
+				var subTree = _v0.a;
+				var $temp$shift = shift - $elm$core$Array$shiftStep,
+					$temp$index = index,
+					$temp$tree = subTree;
+				shift = $temp$shift;
+				index = $temp$index;
+				tree = $temp$tree;
+				continue getHelp;
+			} else {
+				var values = _v0.a;
+				return A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, values);
+			}
+		}
+	});
+var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
+var $elm$core$Array$tailIndex = function (len) {
+	return (len >>> 5) << 5;
+};
+var $elm$core$Array$get = F2(
+	function (index, _v0) {
+		var len = _v0.a;
+		var startShift = _v0.b;
+		var tree = _v0.c;
+		var tail = _v0.d;
+		return ((index < 0) || (_Utils_cmp(index, len) > -1)) ? $elm$core$Maybe$Nothing : ((_Utils_cmp(
+			index,
+			$elm$core$Array$tailIndex(len)) > -1) ? $elm$core$Maybe$Just(
+			A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, tail)) : $elm$core$Maybe$Just(
+			A3($elm$core$Array$getHelp, startShift, index, tree)));
+	});
+var $elm$core$Array$length = function (_v0) {
+	var len = _v0.a;
+	return len;
+};
+var $author$project$SelectionDiff$lines = F2(
+	function (before, after) {
+		var split = function (text) {
+			return (text === '') ? $elm$core$Array$empty : $elm$core$Array$fromList(
+				A2($elm$core$String$split, '\u000A', text));
+		};
+		var old = split(before);
+		var oldLength = $elm$core$Array$length(old);
+		var _new = split(after);
+		var newLength = $elm$core$Array$length(_new);
+		var lengthAt = F3(
+			function (i, j, table) {
+				return A2(
+					$elm$core$Maybe$withDefault,
+					0,
+					A2(
+						$elm$core$Dict$get,
+						_Utils_Tuple2(i, j),
+						table));
+			});
+		var get = F2(
+			function (array, i) {
+				return A2(
+					$elm$core$Maybe$withDefault,
+					'',
+					A2($elm$core$Array$get, i, array));
+			});
+		var fill = F3(
+			function (i, j, table) {
+				return A3(
+					$elm$core$Dict$insert,
+					_Utils_Tuple2(i, j),
+					_Utils_eq(
+						A2(get, old, i),
+						A2(get, _new, j)) ? (1 + A3(lengthAt, i + 1, j + 1, table)) : A2(
+						$elm$core$Basics$max,
+						A3(lengthAt, i + 1, j, table),
+						A3(lengthAt, i, j + 1, table)),
+					table);
+			});
+		var lengths = A3(
+			$elm$core$List$foldl,
+			F2(
+				function (i, table) {
+					return A3(
+						$elm$core$List$foldl,
+						fill(i),
+						table,
+						$elm$core$List$reverse(
+							A2($elm$core$List$range, 0, newLength - 1)));
+				}),
+			$elm$core$Dict$empty,
+			$elm$core$List$reverse(
+				A2($elm$core$List$range, 0, oldLength - 1)));
+		var walk = F3(
+			function (i, j, acc) {
+				walk:
+				while (true) {
+					if ((_Utils_cmp(i, oldLength) > -1) && (_Utils_cmp(j, newLength) > -1)) {
+						return $elm$core$List$reverse(acc);
+					} else {
+						if ((_Utils_cmp(i, oldLength) < 0) && ((_Utils_cmp(j, newLength) < 0) && _Utils_eq(
+							A2(get, old, i),
+							A2(get, _new, j)))) {
+							var $temp$i = i + 1,
+								$temp$j = j + 1,
+								$temp$acc = A2(
+								$elm$core$List$cons,
+								$author$project$SelectionDiff$Unchanged(
+									A2(get, old, i)),
+								acc);
+							i = $temp$i;
+							j = $temp$j;
+							acc = $temp$acc;
+							continue walk;
+						} else {
+							if ((_Utils_cmp(i, oldLength) < 0) && ((_Utils_cmp(j, newLength) > -1) || (_Utils_cmp(
+								A3(lengthAt, i + 1, j, lengths),
+								A3(lengthAt, i, j + 1, lengths)) > -1))) {
+								var $temp$i = i + 1,
+									$temp$j = j,
+									$temp$acc = A2(
+									$elm$core$List$cons,
+									$author$project$SelectionDiff$Removed(
+										A2(get, old, i)),
+									acc);
+								i = $temp$i;
+								j = $temp$j;
+								acc = $temp$acc;
+								continue walk;
+							} else {
+								var $temp$i = i,
+									$temp$j = j + 1,
+									$temp$acc = A2(
+									$elm$core$List$cons,
+									$author$project$SelectionDiff$Added(
+										A2(get, _new, j)),
+									acc);
+								i = $temp$i;
+								j = $temp$j;
+								acc = $temp$acc;
+								continue walk;
+							}
+						}
+					}
+				}
+			});
+		return A3(walk, 0, 0, _List_Nil);
+	});
+var $elm$html$Html$pre = _VirtualDom_node('pre');
+var $elm$html$Html$summary = _VirtualDom_node('summary');
+var $elm$html$Html$ul = _VirtualDom_node('ul');
+var $author$project$Review$view = function (model) {
+	var baseline = A2(
+		$elm$core$Maybe$withDefault,
+		{groups: _List_Nil, selection: ''},
+		model.committed);
+	var itemChanges = function () {
+		var _v0 = $author$project$Selection$ready(model);
+		if (_v0.$ === 'Nothing') {
+			return _List_fromArray(
+				[
+					A2(
+					$elm$html$Html$p,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Resolve the current draft to see its item changes. Your current list is unchanged.')
+						]))
+				]);
+		} else {
+			var proposed = _v0.a;
+			var diff = A2($author$project$SelectionDiff$compare, baseline.groups, proposed.groups);
+			var count = function (xs) {
+				return $elm$core$String$fromInt(
+					$elm$core$List$length(xs));
+			};
+			var itemList = F4(
+				function (label, marker, color, items) {
+					return $elm$core$List$isEmpty(items) ? $elm$html$Html$text('') : A2(
+						$elm$html$Html$div,
+						_List_Nil,
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$h4,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text(
+										label + (' (' + (count(items) + ')')))
+									])),
+								A2(
+								$elm$html$Html$ul,
+								_List_Nil,
+								A2(
+									$elm$core$List$map,
+									function (item) {
+										return A2(
+											$elm$html$Html$li,
+											_List_fromArray(
+												[
+													A2($elm$html$Html$Attributes$style, 'color', color)
+												]),
+											_List_fromArray(
+												[
+													$elm$html$Html$text(marker + (' ' + item.name)),
+													A2(
+													$elm$html$Html$div,
+													_List_fromArray(
+														[
+															A2($elm$html$Html$Attributes$style, 'font-size', '0.85em'),
+															A2($elm$html$Html$Attributes$style, 'color', '#555')
+														]),
+													_List_fromArray(
+														[
+															$elm$html$Html$text(
+															'From: ' + A2($elm$core$String$join, ', ', item.sources))
+														]))
+												]));
+									},
+									items))
+							]));
+				});
+			return _List_fromArray(
+				[
+					A2(
+					$elm$html$Html$p,
+					_List_fromArray(
+						[
+							A2($elm$html$Html$Attributes$attribute, 'role', 'status')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							count(diff.added) + ((($elm$core$List$length(diff.added) === 1) ? ' item added · ' : ' items added · ') + (count(diff.removed) + (' removed · ' + ($elm$core$String$fromInt(diff.retained) + ' retained')))))
+						])),
+					($elm$core$List$isEmpty(diff.added) && $elm$core$List$isEmpty(diff.removed)) ? A2(
+					$elm$html$Html$p,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$author$project$Selection$hasChanges(model) ? 'Selection changed; no change to overall items.' : 'No unapplied changes.')
+						])) : $elm$html$Html$text(''),
+					(_Utils_eq(proposed.selection, baseline.selection) && (!_Utils_eq(
+					$author$project$Packing$canonical(proposed.groups),
+					$author$project$Packing$canonical(baseline.groups)))) ? A2(
+					$elm$html$Html$p,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Referenced groups have changed since this selection was applied. Review these changes before accepting the updated list.')
+						])) : $elm$html$Html$text(''),
+					A4(itemList, 'Added', '+', '#17603a', diff.added),
+					A4(itemList, 'Removed', '−', '#a32121', diff.removed),
+					$elm$core$List$isEmpty(diff.sourceChanges) ? $elm$html$Html$text('') : A2(
+					$elm$html$Html$details,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$summary,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text(
+									'Source changes (' + (count(diff.sourceChanges) + ') — items still included'))
+								])),
+							A2(
+							$elm$html$Html$ul,
+							_List_Nil,
+							A2(
+								$elm$core$List$map,
+								function (item) {
+									return A2(
+										$elm$html$Html$li,
+										_List_Nil,
+										_List_fromArray(
+											[
+												$elm$html$Html$text(item.name),
+												A2(
+												$elm$html$Html$div,
+												_List_Nil,
+												_List_fromArray(
+													[
+														$elm$html$Html$text(
+														'Before: ' + A2($elm$core$String$join, ', ', item.before))
+													])),
+												A2(
+												$elm$html$Html$div,
+												_List_Nil,
+												_List_fromArray(
+													[
+														$elm$html$Html$text(
+														'After: ' + A2($elm$core$String$join, ', ', item.after))
+													]))
+											]));
+								},
+								diff.sourceChanges))
+						]))
+				]);
+		}
+	}();
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_Utils_ap(
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$h3,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Changes to resolved items')
+						]))
+				]),
+			_Utils_ap(
+				itemChanges,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$details,
+						_List_Nil,
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$summary,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Selection edits')
+									])),
+								_Utils_eq(baseline.selection, model.draftText) ? A2(
+								$elm$html$Html$p,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Selection text is unchanged.')
+									])) : A2(
+								$elm$html$Html$pre,
+								_List_fromArray(
+									[
+										A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap'),
+										A2($elm$html$Html$Attributes$style, 'overflow-wrap', 'anywhere')
+									]),
+								A2(
+									$elm$core$List$map,
+									$author$project$Review$lineView,
+									A2($author$project$SelectionDiff$lines, baseline.selection, model.draftText)))
+							]))
+					]))));
+};
 var $author$project$Main$view = function (model) {
 	return {
 		body: _List_fromArray(
 			[
+				A3(
+				$elm$html$Html$node,
+				'style',
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('\u000Abody { margin: 0; }\u000A.packing-layout {\u000A    display: grid;\u000A    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);\u000A    height: 100vh;\u000A    height: 100dvh;\u000A    box-sizing: border-box;\u000A}\u000A.packing-panel { overflow: auto; min-width: 0; min-height: 0; }\u000A.selection-panel { display: flex; flex-direction: column; }\u000A.selection-panel > :not(textarea) { flex-shrink: 0; }\u000A.selection-editor { flex: 1 1 0; min-height: 8rem; resize: none; }\u000Abutton { margin: 0 .4rem .4rem 0; padding: .4rem .65rem; cursor: pointer; }\u000Abutton:disabled { cursor: default; }\u000A@media (max-width: 760px) {\u000A    .packing-layout { display: block; height: auto; }\u000A    .packing-panel { overflow: visible; margin-bottom: 1.5rem; }\u000A    .selection-panel { display: block; }\u000A    .selection-editor { height: 50vh; min-height: 14rem; resize: vertical; }\u000A}\u000A')
+					])),
 				A2(
 				$elm$html$Html$div,
 				_List_fromArray(
 					[
-						A2($elm$html$Html$Attributes$style, 'display', 'flex'),
+						$elm$html$Html$Attributes$class('packing-layout'),
 						A2($elm$html$Html$Attributes$style, 'gap', '1rem'),
-						A2($elm$html$Html$Attributes$style, 'position', 'fixed'),
-						A2($elm$html$Html$Attributes$style, 'inset', '0'),
-						A2($elm$html$Html$Attributes$style, 'overflow', 'hidden'),
 						A2($elm$html$Html$Attributes$style, 'padding', '1rem')
 					]),
 				_List_fromArray(
@@ -9022,9 +10389,7 @@ var $author$project$Main$view = function (model) {
 						$elm$html$Html$div,
 						_List_fromArray(
 							[
-								A2($elm$html$Html$Attributes$style, 'flex', '1 1 0'),
-								A2($elm$html$Html$Attributes$style, 'min-width', '0'),
-								A2($elm$html$Html$Attributes$style, 'overflow', 'auto')
+								$elm$html$Html$Attributes$class('packing-panel selection-panel')
 							]),
 						_List_fromArray(
 							[
@@ -9033,17 +10398,58 @@ var $author$project$Main$view = function (model) {
 								_List_Nil,
 								_List_fromArray(
 									[
-										$elm$html$Html$text('Selection '),
-										$author$project$Main$renderStatusBadge(model.renderStatus)
+										$elm$html$Html$text(
+										$author$project$Selection$hasChanges(model.selection) ? 'Selection · Unapplied changes' : 'Selection · Current')
 									])),
-								$author$project$Main$renderStatusMessage(model.renderStatus),
 								A2(
 								$elm$html$Html$p,
 								_List_Nil,
 								_List_fromArray(
 									[
-										$elm$html$Html$text('Edit your selection below. Copy the text out to save it.')
+										$elm$html$Html$text('Edit a draft, review its resolved items, then apply or discard your changes. Saved on this device.')
 									])),
+								A2($author$project$Main$maybeMessage, '#555', model.notice),
+								A2(
+								$author$project$Main$maybeMessage,
+								'#a32121',
+								A2(
+									$elm$core$Maybe$map,
+									function (error) {
+										return 'Could not save on this device: ' + (error + ' Your changes remain in this tab.');
+									},
+									model.storageError)),
+								A2(
+								$elm$html$Html$div,
+								_List_Nil,
+								_List_fromArray(
+									[
+										A2(
+										$elm$html$Html$button,
+										_List_fromArray(
+											[
+												$elm$html$Html$Events$onClick(
+												$author$project$Main$SelectionMsg($author$project$Selection$Apply)),
+												$elm$html$Html$Attributes$disabled(
+												!$author$project$Selection$canApply(model.selection))
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text(
+												_Utils_eq(model.selection.committed, $elm$core$Maybe$Nothing) ? 'Apply initial selection' : 'Apply changes')
+											])),
+										(!_Utils_eq(model.selection.committed, $elm$core$Maybe$Nothing)) ? A2(
+										$elm$html$Html$button,
+										_List_fromArray(
+											[
+												$elm$html$Html$Events$onClick(
+												$author$project$Main$SelectionMsg($author$project$Selection$Discard))
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text('Discard changes')
+											])) : $elm$html$Html$text('')
+									])),
+								$author$project$Main$previewStatus(model.selection),
 								A2(
 								$elm$html$Html$div,
 								_List_fromArray(
@@ -9056,11 +10462,15 @@ var $author$project$Main$view = function (model) {
 										$elm$html$Html$button,
 										_List_fromArray(
 											[
-												$elm$html$Html$Events$onClick($author$project$Main$SimplifyClicked)
+												$elm$html$Html$Events$onClick(
+												$author$project$Main$SelectionMsg($author$project$Selection$Simplify)),
+												$elm$html$Html$Attributes$disabled(
+												!_Utils_eq(model.selection.pendingSimplify, $elm$core$Maybe$Nothing))
 											]),
 										_List_fromArray(
 											[
-												$elm$html$Html$text('Simplify')
+												$elm$html$Html$text(
+												(!_Utils_eq(model.selection.pendingSimplify, $elm$core$Maybe$Nothing)) ? 'Simplifying…' : 'Simplify')
 											])),
 										A2(
 										$elm$html$Html$span,
@@ -9075,13 +10485,17 @@ var $author$project$Main$view = function (model) {
 												$elm$html$Html$text('remove refs already pulled in by others, and items already in a group')
 											]))
 									])),
-								$author$project$Main$simplifyNoteView(model.simplifyNote),
+								A2($author$project$Main$maybeMessage, '#a32121', model.selection.simplifyError),
+								$author$project$Main$simplifyNoteView(model.selection.simplifyNote),
 								A2(
 								$elm$html$Html$textarea,
 								_List_fromArray(
 									[
-										$elm$html$Html$Attributes$value(model.selectionText),
-										$elm$html$Html$Events$onInput($author$project$Main$SelectionChanged),
+										$elm$html$Html$Attributes$value(model.selection.draftText),
+										$elm$html$Html$Attributes$class('selection-editor'),
+										$elm$html$Html$Events$onInput(
+										A2($elm$core$Basics$composeR, $author$project$Selection$Edit, $author$project$Main$SelectionMsg)),
+										A2($elm$html$Html$Attributes$attribute, 'aria-label', 'Draft selection'),
 										$elm$html$Html$Attributes$rows(30),
 										A2($elm$html$Html$Attributes$style, 'width', '100%'),
 										A2($elm$html$Html$Attributes$style, 'box-sizing', 'border-box'),
@@ -9093,14 +10507,34 @@ var $author$project$Main$view = function (model) {
 						$elm$html$Html$div,
 						_List_fromArray(
 							[
-								A2($elm$html$Html$Attributes$style, 'flex', '1 1 0'),
-								A2($elm$html$Html$Attributes$style, 'min-width', '0'),
-								A2($elm$html$Html$Attributes$style, 'overflow', 'auto')
+								$elm$html$Html$Attributes$class('packing-panel')
 							]),
 						_List_fromArray(
 							[
-								$author$project$Main$controlsView(model),
-								$author$project$Main$resultsView(model)
+								$author$project$Main$reviewTabs(model),
+								_Utils_eq(model.reviewTab, $author$project$Main$Changes) ? $author$project$Review$view(model.selection) : A2(
+								$elm$html$Html$div,
+								_List_Nil,
+								_List_fromArray(
+									[
+										_Utils_eq(model.reviewTab, $author$project$Main$Proposed) ? A2(
+										$elm$html$Html$p,
+										_List_Nil,
+										_List_fromArray(
+											[
+												$elm$html$Html$text('Proposed list · Read-only preview of all items')
+											])) : A2(
+										$elm$html$Html$p,
+										_List_Nil,
+										_List_fromArray(
+											[
+												$elm$html$Html$text('Current list · Last applied selection')
+											])),
+										$author$project$Main$controlsView(
+										$author$project$Main$displayModel(model)),
+										$author$project$Main$resultsView(
+										$author$project$Main$displayModel(model))
+									]))
 							]))
 					]))
 			]),
@@ -9112,13 +10546,26 @@ var $author$project$Main$main = $elm$browser$Browser$document(
 _Platform_export({'Main':{'init':$author$project$Main$main(
 	A2(
 		$elm$json$Json$Decode$andThen,
-		function (state) {
-			return $elm$json$Json$Decode$succeed(
-				{state: state});
+		function (storageError) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (state) {
+					return $elm$json$Json$Decode$succeed(
+						{state: state, storageError: storageError});
+				},
+				A2(
+					$elm$json$Json$Decode$field,
+					'state',
+					$elm$json$Json$Decode$oneOf(
+						_List_fromArray(
+							[
+								$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
+								A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, $elm$json$Json$Decode$string)
+							]))));
 		},
 		A2(
 			$elm$json$Json$Decode$field,
-			'state',
+			'storageError',
 			$elm$json$Json$Decode$oneOf(
 				_List_fromArray(
 					[

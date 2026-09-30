@@ -1,0 +1,14 @@
+{
+  "name": "packing-frontend",
+  "private": true,
+  "scripts": {
+    "test": "elm-test",
+    "test:browser": "node --test tests/browser/*.mjs"
+  },
+  "devDependencies": {
+    "elm": "0.19.2-0",
+    "elm-format": "0.8.8",
+    "elm-test": "0.19.2-1",
+    "playwright": "1.63.0"
+  }
+}

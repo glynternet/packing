@@ -15,6 +15,9 @@ port module State exposing (..)
 port storeState : String -> Cmd msg
 
 
+port storageResult : ({ state : String, error : Maybe String } -> msg) -> Sub msg
+
+
 updateModel : (model -> String) -> model -> ( model, Cmd msg )
 updateModel serialise model =
     let

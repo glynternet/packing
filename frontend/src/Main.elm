@@ -4,15 +4,20 @@ import Browser
 import Browser.Events
 import Dict exposing (Dict)
 import Html exposing (Html, a, button, div, h3, h4, p, span, text, textarea)
-import Html.Attributes exposing (href, id, rows, style, value)
+import Html.Attributes exposing (disabled, href, id, rows, style, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Json.Decode
-import Json.Encode
+import Packing exposing (Group, decodeGroups)
+import Process
+import Review
+import Selection
 import Set
 import State
+import StoredState
 import Svg
 import Svg.Attributes as SA
+import Task
 
 
 
@@ -33,18 +38,16 @@ main =
 
 
 type alias Flags =
-    { state : Maybe String }
-
-
-type alias StoredState =
-    { done : List String
-    , selection : Maybe String
-    , doneDisplay : Maybe String
+    { state : Maybe String
+    , storageError : Maybe String
     }
 
 
 type alias Model =
-    { fetchResults : Maybe (List Group)
+    { selection : Selection.Model
+    , reviewTab : ReviewTab
+    , notice : Maybe String
+    , storageError : Maybe String
     , viewMode : ViewMode
     , done : Set.Set String
 
@@ -68,20 +71,6 @@ type alias Model =
     -- sorted last — and the ToDo/Done distinction is ignored.
     , doneDisplay : DoneDisplay
     , itemsOnly : Int
-    , selectionText : String
-
-    -- simplifyNote holds the outcome of the most recent Simplify action (the
-    -- refs/items that were removed), shown next to the editor until the user
-    -- edits the selection again. Nothing when no Simplify has run since.
-    , simplifyNote : Maybe { refs : List String, items : List String }
-
-    -- requestId tags each in-flight fetch so out-of-order responses (e.g. while
-    -- typing quickly) can be discarded; only the latest request's result is used.
-    , requestId : Int
-
-    -- renderStatus reflects the outcome of the most recent /selection/ request,
-    -- surfaced as a marker next to the Selection header.
-    , renderStatus : RenderStatus
 
     -- Graph-view viewport: pan/zoom of the SVG group graph, the in-flight pan
     -- drag (if any), and the node the user has clicked to focus on.
@@ -97,6 +86,12 @@ type ViewMode
     = ToDo
     | Done
     | Graph
+
+
+type ReviewTab
+    = Changes
+    | Proposed
+    | Current
 
 
 {-| How the list view treats items and groups that are done.
@@ -129,22 +124,6 @@ doneDisplayFromKey key =
 
     else
         Mark
-
-
-type RenderStatus
-    = Rendering
-    | Rendered
-    | RenderFailed String
-
-
-plzResult : Result x x -> x
-plzResult res =
-    case res of
-        Ok ok ->
-            ok
-
-        Err err ->
-            err
 
 
 {-| The selection a user starts with, in the same text format as a selection
@@ -219,7 +198,10 @@ Bart card
 
 defaultModel : Model
 defaultModel =
-    { fetchResults = Nothing
+    { selection = Selection.init Nothing defaultSelectionText Nothing |> Tuple.first
+    , reviewTab = Changes
+    , notice = Nothing
+    , storageError = Nothing
     , viewMode = ToDo
     , done = Set.empty
     , showGroupLinks = False
@@ -227,10 +209,6 @@ defaultModel =
     , inlineSingletons = True
     , doneDisplay = Mark
     , itemsOnly = 0
-    , selectionText = defaultSelectionText
-    , simplifyNote = Nothing
-    , requestId = 0
-    , renderStatus = Rendering
     , graphScale = 1
     , graphPanX = 20
     , graphPanY = 20
@@ -242,30 +220,45 @@ defaultModel =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
-        loaded =
+        decoded =
             flags.state
-                |> Maybe.map
-                    (Json.Decode.decodeString storedStateDecoder
-                        -- On corrupt stored state, fall back to defaults.
-                        >> Result.mapError (\_ -> defaultModel)
-                        >> Result.map
-                            (\stored ->
-                                { defaultModel
-                                    | done = Set.fromList stored.done
-                                    , selectionText = stored.selection |> Maybe.withDefault defaultSelectionText
-                                    , doneDisplay = doneDisplayFromKey stored.doneDisplay
-                                }
-                            )
-                        >> plzResult
-                    )
-                |> Maybe.withDefault defaultModel
+                |> Maybe.map (Json.Decode.decodeString (StoredState.decoder defaultSelectionText))
+                |> Maybe.withDefault (Ok (StoredState.empty defaultSelectionText))
 
-        firstId =
-            loaded.requestId + 1
+        stored =
+            Result.withDefault (StoredState.empty defaultSelectionText) decoded
+
+        ( selection, effects ) =
+            Selection.init stored.committed stored.draftText stored.legacySelection
+
+        notice =
+            case decoded of
+                Err _ ->
+                    Just "Saved state could not be read. It has not been overwritten. Editing or applying will replace it with this session."
+
+                Ok _ ->
+                    if stored.committed /= Nothing && Selection.hasChanges selection then
+                        Just "Unapplied draft restored."
+
+                    else
+                        Nothing
+
+        model =
+            { defaultModel
+                | selection = selection
+                , done = Set.fromList stored.done
+                , doneDisplay = doneDisplayFromKey stored.doneDisplay
+                , reviewTab =
+                    if stored.committed /= Nothing && not (Selection.hasChanges selection) then
+                        Current
+
+                    else
+                        Changes
+                , notice = notice
+                , storageError = flags.storageError
+            }
     in
-    ( { loaded | requestId = firstId }
-    , fetch firstId loaded.selectionText
-    )
+    ( model, selectionEffects model effects )
 
 
 
@@ -273,7 +266,9 @@ init flags =
 
 
 type Msg
-    = FetchedResults Int (Result String (List Group))
+    = SelectionMsg Selection.Msg
+    | SelectReviewTab ReviewTab
+    | StorageResult { state : String, error : Maybe String }
     | ViewMode ViewMode
     | ItemDone String Bool
     | ShowGroupLinks Bool
@@ -282,9 +277,6 @@ type Msg
     | SetDoneDisplay DoneDisplay
     | ItemsOnly Int
     | ClearDone
-    | SelectionChanged String
-    | SimplifyClicked
-    | Simplified (Result String SimplifyResponse)
     | GraphWheel Float Float Float
     | GraphDragStart Float Float
     | GraphDragMove Float Float
@@ -298,67 +290,83 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        SelectionChanged selectionText ->
+        SelectionMsg selectionMsg ->
             let
-                newId =
-                    model.requestId + 1
+                ( selection, effects ) =
+                    Selection.update selectionMsg model.selection
+
+                tab =
+                    case selectionMsg of
+                        Selection.Apply ->
+                            if Selection.canApply model.selection then
+                                Current
+
+                            else
+                                model.reviewTab
+
+                        Selection.Discard ->
+                            if model.selection.committed /= Nothing then
+                                Current
+
+                            else
+                                model.reviewTab
+
+                        Selection.BootstrapResolved _ _ ->
+                            if selection.committed /= Nothing && not (Selection.hasChanges selection) then
+                                Current
+
+                            else
+                                model.reviewTab
+
+                        _ ->
+                            if not (Selection.hasChanges model.selection) && Selection.hasChanges selection then
+                                Changes
+
+                            else
+                                model.reviewTab
 
                 newModel =
-                    { model | selectionText = selectionText, simplifyNote = Nothing, requestId = newId, renderStatus = Rendering }
+                    { model
+                        | selection = selection
+                        , reviewTab = tab
+                        , notice =
+                            case selectionMsg of
+                                Selection.Edit _ ->
+                                    Nothing
+
+                                Selection.Apply ->
+                                    if Selection.canApply model.selection then
+                                        Nothing
+
+                                    else
+                                        model.notice
+
+                                Selection.Discard ->
+                                    Nothing
+
+                                _ ->
+                                    model.notice
+                    }
+
+                fitted =
+                    if rawResults model /= rawResults newModel || tab /= model.reviewTab then
+                        refitGraph newModel
+
+                    else
+                        newModel
             in
-            ( newModel
-            , Cmd.batch
-                [ State.storeState (serialiseStateForStorage newModel)
-                , fetch newId selectionText
-                ]
-            )
+            ( fitted, selectionEffects fitted effects )
 
-        SimplifyClicked ->
-            -- Fire-and-forget: the response (Simplified) applies the minified
-            -- selection and re-renders. Leave the model as-is meanwhile.
-            ( model, simplifyRequest model.selectionText )
+        SelectReviewTab tab ->
+            ( refitGraph { model | reviewTab = tab }, Cmd.none )
 
-        Simplified result ->
-            case result of
-                Ok resp ->
-                    let
-                        newId =
-                            model.requestId + 1
-
-                        newModel =
-                            { model
-                                | selectionText = resp.selection
-                                , simplifyNote = Just { refs = resp.removedRefs, items = resp.removedItems }
-                                , requestId = newId
-                                , renderStatus = Rendering
-                            }
-                    in
-                    ( newModel
-                    , Cmd.batch
-                        [ State.storeState (serialiseStateForStorage newModel)
-                        , fetch newId resp.selection
-                        ]
-                    )
-
-                Err err ->
-                    -- Keep the current selection; surface the error via the badge.
-                    ( { model | renderStatus = RenderFailed err }, Cmd.none )
-
-        FetchedResults id res ->
-            if id /= model.requestId then
-                -- Stale response for a selection that has since changed; ignore it.
-                ( model, Cmd.none )
+        StorageResult result ->
+            if result.state == serialiseStateForStorage model then
+                ( { model | storageError = result.error }, Cmd.none )
 
             else
-                ( case res of
-                    Ok groups ->
-                        { model | fetchResults = Just groups, renderStatus = Rendered }
-
-                    Err err ->
-                        -- Keep the last good render visible; the marker shows the error.
-                        { model | renderStatus = RenderFailed err }
-                , Cmd.none
-                )
+                -- Ignore acknowledgements for older writes.
+                ( model, Cmd.none )
 
         ViewMode Graph ->
             -- Entering the graph view: frame the whole graph to fit the viewport.
@@ -381,15 +389,19 @@ update msg model =
             ( { model | viewMode = mode }, Cmd.none )
 
         ItemDone item done ->
-            State.updateModel serialiseStateForStorage
-                { model
-                    | done =
-                        if done then
-                            Set.insert item model.done
+            if model.reviewTab == Current then
+                State.updateModel serialiseStateForStorage
+                    { model
+                        | done =
+                            if done then
+                                Set.insert item model.done
 
-                        else
-                            Set.remove item model.done
-                }
+                            else
+                                Set.remove item model.done
+                    }
+
+            else
+                ( model, Cmd.none )
 
         ShowGroupLinks show ->
             ( { model | showGroupLinks = show }, Cmd.none )
@@ -440,7 +452,11 @@ update msg model =
             ( { model | itemsOnly = itemsOnly }, Cmd.none )
 
         ClearDone ->
-            State.updateModel serialiseStateForStorage { model | done = Set.empty }
+            if model.reviewTab == Current then
+                State.updateModel serialiseStateForStorage { model | done = Set.empty }
+
+            else
+                ( model, Cmd.none )
 
         GraphWheel deltaY offsetX offsetY ->
             -- Zoom towards the cursor: keep the graph point under the pointer fixed.
@@ -594,43 +610,53 @@ update msg model =
 
 serialiseStateForStorage : Model -> String
 serialiseStateForStorage model =
-    Json.Encode.object
-        [ ( "done", model.done |> (Set.toList >> Json.Encode.list Json.Encode.string) )
-        , ( "selection", Json.Encode.string model.selectionText )
-        , ( "doneDisplay", Json.Encode.string (doneDisplayKey model.doneDisplay) )
-        ]
-        |> Json.Encode.encode 2
+    StoredState.encode model.selection (Set.toList model.done) (doneDisplayKey model.doneDisplay)
 
 
-storedStateDecoder : Json.Decode.Decoder StoredState
-storedStateDecoder =
-    Json.Decode.map3 StoredState
-        (Json.Decode.field "done" (decodedWithNullAsDefault [] (Json.Decode.list Json.Decode.string)))
-        (Json.Decode.maybe (Json.Decode.field "selection" Json.Decode.string))
-        (Json.Decode.maybe (Json.Decode.field "doneDisplay" Json.Decode.string))
+selectionEffects : Model -> List Selection.Effect -> Cmd Msg
+selectionEffects model effects =
+    let
+        run effect =
+            case effect of
+                Selection.Debounce revision ->
+                    Process.sleep 250 |> Task.perform (\_ -> SelectionMsg (Selection.DebounceElapsed revision))
+
+                Selection.Fetch token selection ->
+                    fetch (Selection.Resolved token) selection
+
+                Selection.BootstrapFetch token selection ->
+                    fetch (Selection.BootstrapResolved token) selection
+
+                Selection.SimplifyFetch token selection ->
+                    simplifyRequest token selection
+
+                Selection.Persist ->
+                    State.storeState (serialiseStateForStorage model)
+    in
+    Cmd.batch (List.map run effects)
 
 
-fetch : Int -> String -> Cmd Msg
-fetch id selectionText =
+fetch : (Result String (List Group) -> Selection.Msg) -> String -> Cmd Msg
+fetch toMsg selectionText =
     Http.request
         { method = "POST"
         , headers = []
         , url = "/selection/"
         , body = Http.stringBody "text/plain" selectionText
-        , expect = expectGroups (FetchedResults id)
+        , expect = expectGroups (toMsg >> SelectionMsg)
         , timeout = Just 5000
         , tracker = Nothing
         }
 
 
-simplifyRequest : String -> Cmd Msg
-simplifyRequest selectionText =
+simplifyRequest : Selection.Token -> String -> Cmd Msg
+simplifyRequest token selectionText =
     Http.request
         { method = "POST"
         , headers = []
         , url = "/simplify/"
         , body = Http.stringBody "text/plain" selectionText
-        , expect = expectSimplify Simplified
+        , expect = expectSimplify (Selection.Simplified token >> SelectionMsg)
         , timeout = Just 5000
         , tracker = Nothing
         }
@@ -645,6 +671,11 @@ continues even if the pointer leaves the SVG, and ends on mouse-up.
 -}
 subscriptions : Model -> Sub Msg
 subscriptions model =
+    Sub.batch [ State.storageResult StorageResult, graphSubscriptions model ]
+
+
+graphSubscriptions : Model -> Sub Msg
+graphSubscriptions model =
     case model.graphDrag of
         Just _ ->
             Sub.batch
@@ -672,31 +703,86 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "Packing"
     , body =
-        [ div
-            [ style "display" "flex"
+        [ Html.node "style"
+            []
+            [ text """
+body { margin: 0; }
+.packing-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+    height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
+}
+.packing-panel { overflow: auto; min-width: 0; min-height: 0; }
+.selection-panel { display: flex; flex-direction: column; }
+.selection-panel > :not(textarea) { flex-shrink: 0; }
+.selection-editor { flex: 1 1 0; min-height: 8rem; resize: none; }
+button { margin: 0 .4rem .4rem 0; padding: .4rem .65rem; cursor: pointer; }
+button:disabled { cursor: default; }
+@media (max-width: 760px) {
+    .packing-layout { display: block; height: auto; }
+    .packing-panel { overflow: visible; margin-bottom: 1.5rem; }
+    .selection-panel { display: block; }
+    .selection-editor { height: 50vh; min-height: 14rem; resize: vertical; }
+}
+""" ]
+        , div
+            [ Html.Attributes.class "packing-layout"
             , style "gap" "1rem"
-            , style "position" "fixed"
-            , style "inset" "0"
-            , style "overflow" "hidden"
             , style "padding" "1rem"
             ]
             [ div
-                [ style "flex" "1 1 0"
-                , style "min-width" "0"
-                , style "overflow" "auto"
-                ]
-                [ h3 [] [ text "Selection ", renderStatusBadge model.renderStatus ]
-                , renderStatusMessage model.renderStatus
-                , p [] [ text "Edit your selection below. Copy the text out to save it." ]
+                [ Html.Attributes.class "packing-panel selection-panel" ]
+                [ h3 []
+                    [ text
+                        (if Selection.hasChanges model.selection then
+                            "Selection · Unapplied changes"
+
+                         else
+                            "Selection · Current"
+                        )
+                    ]
+                , p [] [ text "Edit a draft, review its resolved items, then apply or discard your changes. Saved on this device." ]
+                , maybeMessage "#555" model.notice
+                , maybeMessage "#a32121" (Maybe.map (\error -> "Could not save on this device: " ++ error ++ " Your changes remain in this tab.") model.storageError)
+                , div []
+                    [ button [ onClick (SelectionMsg Selection.Apply), disabled (not (Selection.canApply model.selection)) ]
+                        [ text
+                            (if model.selection.committed == Nothing then
+                                "Apply initial selection"
+
+                             else
+                                "Apply changes"
+                            )
+                        ]
+                    , if model.selection.committed /= Nothing then
+                        button [ onClick (SelectionMsg Selection.Discard) ] [ text "Discard changes" ]
+
+                      else
+                        text ""
+                    ]
+                , previewStatus model.selection
                 , div [ style "margin-bottom" "0.5rem" ]
-                    [ button [ onClick SimplifyClicked ] [ text "Simplify" ]
+                    [ button [ onClick (SelectionMsg Selection.Simplify), disabled (model.selection.pendingSimplify /= Nothing) ]
+                        [ text
+                            (if model.selection.pendingSimplify /= Nothing then
+                                "Simplifying…"
+
+                             else
+                                "Simplify"
+                            )
+                        ]
                     , span [ style "margin-left" "0.5rem", style "color" "#555", style "font-size" "0.85rem" ]
                         [ text "remove refs already pulled in by others, and items already in a group" ]
                     ]
-                , simplifyNoteView model.simplifyNote
+                , maybeMessage "#a32121" model.selection.simplifyError
+                , simplifyNoteView model.selection.simplifyNote
                 , textarea
-                    [ value model.selectionText
-                    , onInput SelectionChanged
+                    [ value model.selection.draftText
+                    , Html.Attributes.class "selection-editor"
+                    , onInput (Selection.Edit >> SelectionMsg)
+                    , Html.Attributes.attribute "aria-label" "Draft selection"
                     , rows 30
                     , style "width" "100%"
                     , style "box-sizing" "border-box"
@@ -705,44 +791,105 @@ view model =
                     []
                 ]
             , div
-                [ style "flex" "1 1 0"
-                , style "min-width" "0"
-                , style "overflow" "auto"
-                ]
-                [ controlsView model
-                , resultsView model
+                [ Html.Attributes.class "packing-panel" ]
+                [ reviewTabs model
+                , if model.reviewTab == Changes then
+                    Review.view model.selection
+
+                  else
+                    div []
+                        [ if model.reviewTab == Proposed then
+                            p [] [ text "Proposed list · Read-only preview of all items" ]
+
+                          else
+                            p [] [ text "Current list · Last applied selection" ]
+                        , controlsView (displayModel model)
+                        , resultsView (displayModel model)
+                        ]
                 ]
             ]
         ]
     }
 
 
-{-| A small marker shown next to the "Selection" header reflecting the outcome
-of the most recent /selection/ request.
--}
-renderStatusBadge : RenderStatus -> Html msg
-renderStatusBadge status =
-    case status of
-        Rendering ->
-            span [ Html.Attributes.title "Rendering…" ] [ text "⏳" ]
-
-        Rendered ->
-            span [ Html.Attributes.title "Rendered successfully" ] [ text "✅" ]
-
-        RenderFailed _ ->
-            span [ Html.Attributes.title "Render failed", style "color" "red" ] [ text "❌" ]
+maybeMessage : String -> Maybe String -> Html msg
+maybeMessage color message =
+    message |> Maybe.map (\value -> p [ style "color" color ] [ text value ]) |> Maybe.withDefault (text "")
 
 
-{-| On failure, the render error message shown under the header; nothing otherwise.
--}
-renderStatusMessage : RenderStatus -> Html msg
-renderStatusMessage status =
-    case status of
-        RenderFailed err ->
-            p [ style "color" "red" ] [ text err ]
+previewStatus : Selection.Model -> Html Msg
+previewStatus selection =
+    div [ Html.Attributes.attribute "aria-live" "polite" ]
+        [ if selection.bootstrap /= Nothing then
+            p [] [ text "Restoring the previously saved selection…" ]
 
-        _ ->
-            text ""
+          else
+            maybeMessage "#a32121" (Maybe.map (\error -> "The previously saved selection could not be resolved. Correct the draft and apply an initial selection. " ++ error) selection.baselineError)
+        , case selection.preview of
+            Selection.Waiting ->
+                p [] [ text "Updating preview…" ]
+
+            Selection.Loading _ ->
+                p [] [ text "Updating preview…" ]
+
+            Selection.Ready _ _ ->
+                div []
+                    [ p [] [ text "Preview ready." ]
+                    , button [ onClick (SelectionMsg Selection.Resolve) ] [ text "Refresh preview" ]
+                    ]
+
+            Selection.Failed error ->
+                div []
+                    [ p [ style "color" "#a32121" ] [ text ("Preview failed: " ++ error) ]
+                    , button [ onClick (SelectionMsg Selection.Resolve) ] [ text "Retry preview" ]
+                    ]
+        ]
+
+
+reviewTabs : Model -> Html Msg
+reviewTabs model =
+    div [ Html.Attributes.attribute "aria-label" "Selection review" ]
+        (List.map
+            (\( tab, label ) ->
+                button
+                    [ onClick (SelectReviewTab tab)
+                    , Html.Attributes.attribute "aria-pressed"
+                        (if model.reviewTab == tab then
+                            "true"
+
+                         else
+                            "false"
+                        )
+                    , style "font-weight"
+                        (if model.reviewTab == tab then
+                            "bold"
+
+                         else
+                            "normal"
+                        )
+                    ]
+                    [ text label ]
+            )
+            [ ( Changes, "Changes" ), ( Proposed, "Proposed list" ), ( Current, "Current list" ) ]
+        )
+
+
+displayModel : Model -> Model
+displayModel model =
+    if model.reviewTab == Proposed then
+        { model | doneDisplay = Mark }
+
+    else
+        model
+
+
+refitGraph : Model -> Model
+refitGraph model =
+    let
+        fit =
+            fitToView (effectiveResults model)
+    in
+    { model | graphScale = fit.scale, graphPanX = fit.panX, graphPanY = fit.panY, graphSelected = Nothing, graphDrag = Nothing }
 
 
 {-| The result of the most recent Simplify: which refs/items were removed, or a
@@ -841,9 +988,14 @@ controlsView model =
 
         _ ->
             div []
-                ([ button [ onClick <| SetDoneDisplay (otherDoneDisplay model.doneDisplay) ]
-                    [ text (doneDisplayLabel model.doneDisplay) ]
-                 ]
+                ((if model.reviewTab == Current then
+                    [ button [ onClick <| SetDoneDisplay (otherDoneDisplay model.doneDisplay) ]
+                        [ text (doneDisplayLabel model.doneDisplay) ]
+                    ]
+
+                  else
+                    []
+                 )
                     -- The todo/done pages only exist while done work is hidden;
                     -- Mark puts both on one page.
                     ++ (case model.doneDisplay of
@@ -865,28 +1017,53 @@ controlsView model =
                        , button [ onClick <| ToggleInlineSingletons (not model.inlineSingletons) ]
                             [ text (inlineToggleLabel model.inlineSingletons) ]
                        , button [ onClick <| ItemsOnly (remainderBy 3 (model.itemsOnly + 1)) ] [ text "toggle items only" ]
-                       , button [ onClick <| ClearDone ] [ text "reset" ]
                        ]
+                    ++ (if model.reviewTab == Current then
+                            [ button [ onClick ClearDone ] [ text "Clear packing progress" ] ]
+
+                        else
+                            []
+                       )
                 )
 
 
 resultsView : Model -> Html Msg
 resultsView model =
-    -- Errors are surfaced by the render-status marker next to the Selection
-    -- header, so this panel only shows the last successfully rendered groups.
     div []
         (case effectiveResults model of
             Nothing ->
-                [ text "Editing selection…" ]
+                [ text
+                    (if model.reviewTab == Current then
+                        "No selection has been applied yet."
+
+                     else
+                        "A valid preview is not available for the current draft."
+                    )
+                ]
 
             Just groups ->
-                case model.viewMode of
-                    Graph ->
-                        [ graphFocusBanner model.graphSelected, graphView model (graphGroups model groups) ]
+                if List.isEmpty groups then
+                    [ p [] [ text "This selection contains no items or groups." ] ]
 
-                    _ ->
-                        groupsView model groups
+                else
+                    case model.viewMode of
+                        Graph ->
+                            [ graphFocusBanner model.graphSelected, graphView model (graphGroups model groups) ]
+
+                        _ ->
+                            groupsView model groups
         )
+
+
+rawResults : Model -> Maybe (List Group)
+rawResults model =
+    (if model.reviewTab == Current then
+        model.selection.committed
+
+     else
+        Selection.ready model.selection
+    )
+        |> Maybe.map .groups
 
 
 {-| The rendered groups after applying view transforms that both the list and
@@ -897,7 +1074,7 @@ chain ending in a single item composes into that item).
 -}
 effectiveResults : Model -> Maybe (List Group)
 effectiveResults model =
-    model.fetchResults
+    rawResults model
         |> Maybe.map
             (\groups ->
                 if model.inlineSingletons then
@@ -916,6 +1093,7 @@ name, its done-state is shared across every group it lands in.
 
 Single-pass: the collapsible set is taken from the input, so a group that only
 becomes single-item as a result of another collapsing is not itself collapsed.
+
 -}
 collapseSingleItemGroups : List Group -> List Group
 collapseSingleItemGroups groups =
@@ -962,6 +1140,7 @@ is left intact (never rewritten, never dropped) so resolution always terminates.
 Runs before collapseSingleItemGroups so the two compose: a chain terminating in
 a single-item group gets its refs rewritten to that group, which the single-item
 step then inlines. Mirrors Go `pkg/inline.PassthroughRefs`.
+
 -}
 collapsePassthroughRefs : List Group -> List Group
 collapsePassthroughRefs groups =
@@ -1018,7 +1197,8 @@ collapsePassthroughRefs groups =
             )
 
 
-{-| Deduplicate a list of strings, keeping the first occurrence's order. -}
+{-| Deduplicate a list of strings, keeping the first occurrence's order.
+-}
 dedupRefs : List String -> List String
 dedupRefs refs =
     List.foldl
@@ -1075,7 +1255,8 @@ doneGroupNames done groups =
         |> Set.fromList
 
 
-{-| The slice of the list currently on screen, for the heading. -}
+{-| The slice of the list currently on screen, for the heading.
+-}
 viewingLabel : Model -> String
 viewingLabel model =
     case ( model.doneDisplay, model.viewMode ) of
@@ -1162,9 +1343,14 @@ groupsView model groups =
 
                                 toClickableItem ( itemKey, faded ) itemText =
                                     p
-                                        ([ style "cursor" "pointer"
-                                         , Html.Events.onClick (ItemDone itemKey (not (Set.member itemKey model.done)))
-                                         ]
+                                        ((if model.reviewTab == Current then
+                                            [ style "cursor" "pointer"
+                                            , Html.Events.onClick (ItemDone itemKey (not (Set.member itemKey model.done)))
+                                            ]
+
+                                          else
+                                            []
+                                         )
                                             ++ (if faded then
                                                     [ style "opacity" "0.45", style "color" "#555" ]
 
@@ -1247,28 +1433,6 @@ groupsView model groups =
 --- HTTP
 
 
-type alias Group =
-    { name : String, contents : ContentsDefinition }
-
-
-type alias ContentsDefinition =
-    { refs : List String, items : List String }
-
-
-decodeGroups : Json.Decode.Decoder (List Group)
-decodeGroups =
-    Json.Decode.list
-        (Json.Decode.map2 Group
-            (Json.Decode.field "name" Json.Decode.string)
-            (Json.Decode.field "contents"
-                (Json.Decode.map2 ContentsDefinition
-                    (Json.Decode.field "refs" <| decodedWithNullAsDefault [] <| Json.Decode.list Json.Decode.string)
-                    (Json.Decode.field "items" <| decodedWithNullAsDefault [] <| Json.Decode.list Json.Decode.string)
-                )
-            )
-        )
-
-
 decodedWithNullAsDefault : a -> Json.Decode.Decoder a -> Json.Decode.Decoder a
 decodedWithNullAsDefault default decoder =
     Json.Decode.map (Maybe.withDefault default) (Json.Decode.nullable decoder)
@@ -1307,16 +1471,9 @@ expectGroups toMsg =
                             (\err -> "Data received was not in the correct format: " ++ Json.Decode.errorToString err)
 
 
-type alias SimplifyResponse =
-    { selection : String
-    , removedRefs : List String
-    , removedItems : List String
-    }
-
-
-decodeSimplify : Json.Decode.Decoder SimplifyResponse
+decodeSimplify : Json.Decode.Decoder Selection.SimplifyResponse
 decodeSimplify =
-    Json.Decode.map3 SimplifyResponse
+    Json.Decode.map3 Selection.SimplifyResponse
         (Json.Decode.field "selection" Json.Decode.string)
         (Json.Decode.field "removedRefs" <| decodedWithNullAsDefault [] <| Json.Decode.list Json.Decode.string)
         (Json.Decode.field "removedItems" <| decodedWithNullAsDefault [] <| Json.Decode.list Json.Decode.string)
@@ -1325,7 +1482,7 @@ decodeSimplify =
 {-| expectSimplify mirrors expectGroups: decode the JSON simplify response, and
 on a non-2xx status surface the server's plain-text error body to the user.
 -}
-expectSimplify : (Result String SimplifyResponse -> msg) -> Http.Expect msg
+expectSimplify : (Result String Selection.SimplifyResponse -> msg) -> Http.Expect msg
 expectSimplify toMsg =
     Http.expectStringResponse toMsg <|
         \response ->
@@ -1371,7 +1528,8 @@ nodeHeight =
     22
 
 
-{-| String.fromFloat, abbreviated because SVG coordinate strings use it a lot. -}
+{-| String.fromFloat, abbreviated because SVG coordinate strings use it a lot.
+-}
 gStr : Float -> String
 gStr =
     String.fromFloat
@@ -1459,13 +1617,15 @@ rowPitch =
     30
 
 
-{-| Width of a node box sized to its label (roughly monospace character width). -}
+{-| Width of a node box sized to its label (roughly monospace character width).
+-}
 nodeW : String -> Float
 nodeW label =
     max 44 (toFloat (String.length label) * 6.6 + 20)
 
 
-{-| Lay a column of node ids out vertically, centred on y = 0. -}
+{-| Lay a column of node ids out vertically, centred on y = 0.
+-}
 columnNodes : Float -> NodeKind -> (String -> String) -> List String -> List GNode
 columnNodes x kind label ids =
     let
@@ -1587,14 +1747,16 @@ ifThen cond maybe =
         Nothing
 
 
-{-| Prepend `val` to the list stored at `key` (creating it if absent). -}
+{-| Prepend `val` to the list stored at `key` (creating it if absent).
+-}
 pushAdj : String -> String -> Dict String (List String) -> Dict String (List String)
 pushAdj key val dict =
     Dict.update key (\mb -> Just (val :: Maybe.withDefault [] mb)) dict
 
 
 {-| Every node reachable from `start` along `adj` (inclusive of `start`),
-breadth/depth-first with a visited set so cycles terminate. -}
+breadth/depth-first with a visited set so cycles terminate.
+-}
 reachable : Dict String (List String) -> String -> Set.Set String
 reachable adj start =
     reachableHelp adj [ start ] Set.empty
@@ -1624,7 +1786,8 @@ meanOrZero xs =
             List.sum xs / toFloat (List.length xs)
 
 
-{-| A small coloured square used in the graph legend. -}
+{-| A small coloured square used in the graph legend.
+-}
 legendSwatch : String -> String -> Html Msg
 legendSwatch fill stroke =
     span
@@ -1711,7 +1874,8 @@ lineageGroups selectedId groups =
 
 
 {-| The group list to feed the graph: the whole thing, or — when a node is
-focused — just that node's lineage. -}
+focused — just that node's lineage.
+-}
 graphGroups : Model -> List Group -> List Group
 graphGroups model groups =
     case model.graphSelected of
@@ -1724,7 +1888,8 @@ graphGroups model groups =
 
 {-| When a graph node is focused, a pill above the graph names the focused node
 and offers a reset; nothing is shown otherwise. The node id carries a "g:"/"i:"
-kind prefix, dropped here to show the plain name. -}
+kind prefix, dropped here to show the plain name.
+-}
 graphFocusBanner : Maybe String -> Html Msg
 graphFocusBanner selected =
     case selected of
@@ -1743,7 +1908,7 @@ graphFocusBanner selected =
                 , style "border-radius" "999px"
                 , style "font-size" "0.85em"
                 ]
-                [ text ("Showing lineage of \u{2018}" ++ String.dropLeft 2 nodeId ++ "\u{2019}")
+                [ text ("Showing lineage of ‘" ++ String.dropLeft 2 nodeId ++ "’")
                 , button
                     [ onClick ClearGraphFocus
                     , style "cursor" "pointer"
@@ -1894,7 +2059,8 @@ viewEdge active parent child =
 
 
 {-| Fill/stroke/text colours per node kind and state. Groups are blue-grey,
-items green, so the two are distinguishable at a glance. -}
+items green, so the two are distinguishable at a glance.
+-}
 nodeColors : NodeKind -> NodeState -> { fill : String, stroke : String, text : String }
 nodeColors kind state =
     case ( kind, state ) of

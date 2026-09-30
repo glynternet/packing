@@ -34,14 +34,25 @@ const index = `<html>
 <body>
 <div id="app"></div>
 <script>
-const storedState = localStorage.getItem("appState");
+let storedState = null;
+let storageError = null;
+try {
+    storedState = localStorage.getItem("appState");
+} catch (error) {
+    storageError = String(error);
+}
 const app = Elm.Main.init({
-    flags: {state: storedState},
+    flags: {state: storedState, storageError},
 	node: document.getElementById("app"),
 });
 app.ports.storeState.subscribe(state => {
-    localStorage.setItem("appState", state);
-    console.log("Stored state");
+    let error = null;
+    try {
+        localStorage.setItem("appState", state);
+    } catch (cause) {
+        error = String(cause);
+    }
+    app.ports.storageResult.send({state, error});
 });
 </script>
 </body>

@@ -19,15 +19,23 @@ JSON types in `pkg/api/api.go` (`Contents{Refs, Items, Requires}` and `Group{Nam
 
 ## Commands
 
-Build and test are driven by Make (dubplate-generated Makefiles) and plain `go`.
+Build and test are driven by Make (including dubplate-generated Makefiles), Go,
+and project-local frontend tools. Development prerequisites: Go 1.25+, Node.js
+24 (the tested version), npm, and Make. Elm, elm-format, elm-test, and Playwright
+are pinned in `frontend/package.json` and `frontend/package-lock.json`.
 
 ```sh
 make binaries            # build both binaries into ./build/<version>/<os>-<arch>/
 make binary APP_NAME=packing-server   # build a single binary
 make installs            # go install both binaries (version-stamped) to $GOPATH/bin
+make setup-frontend      # npm ci + download Playwright Chromium (first setup)
 make frontend            # elm make src/Main.elm -> cmd/packing-server/elm.js
 
-go test ./...                                 # run all tests
+make test                # Go tests + Elm unit/fuzz tests
+make test-browser        # build UI/server + isolated Chromium acceptance tests
+make check               # Elm formatting + all of the above tests
+
+go test ./...                                 # Go tests only
 go test ./pkg/list/...                        # test a single package
 go test ./pkg/list/ -run TestParseContentsDefinition   # run a single test
 go build ./...                                # quick compile check
@@ -40,8 +48,54 @@ go run ./cmd/packing-cli selection <selection-file> --renderer markdown
 Notes:
 - Build artifacts go to `./build/` (gitignored). When building only to verify, prefer
   building into `/tmp` so nothing lands in the tree.
-- There is no lint config or CI in the repo; `go test ./...` is the test surface. Tests
-  use `stretchr/testify` and live in external `_test` packages.
+- Go tests use `stretchr/testify` and live in external `_test` packages. There is
+  no CI configuration; `make check` is the repeatable local validation workflow.
+
+### Frontend testing workflow
+
+`make setup-frontend` installs the locked dependencies and Chromium. Normal builds
+use `frontend/node_modules/.bin/elm` (compiler 0.19.2), so the global Elm version
+does not affect this project. If only building or running Elm tests, browser
+installation is optional: `npm --prefix frontend ci` is sufficient. Run setup
+again when updating the Playwright version. Linux environments missing browser
+shared libraries can use `cd frontend && npm exec -- playwright install --with-deps chromium`;
+that command may require administrator permissions to install OS packages.
+
+Use the narrowest relevant checks while iterating, then `make check` before
+finishing a frontend change:
+
+```sh
+make -C frontend test          # pure state, diff, persistence, and Elm integration tests
+make -C frontend check-format # validate Elm source/test formatting
+make -C frontend format       # apply the pinned formatter
+make test-browser             # real UI with the real Go parser/resolver
+
+# Forward elm-test arguments, e.g. to reproduce the seed printed by a failure:
+npm --prefix frontend test -- --seed 12345 --fuzz 100
+
+# Optional screenshots of the desktop and mobile review flow:
+PACKING_TEST_ARTIFACTS=/tmp/packing-screenshots make test-browser
+```
+
+The browser suite in `frontend/tests/browser/workflow.mjs` rebuilds the tracked
+embedded `cmd/packing-server/elm.js`, compiles a server binary into a unique OS
+temporary directory, creates small group fixtures, and starts it on a free local
+port. Each test uses a fresh Chromium context and fixture localStorage. It does
+not need a running development server or real packing data. The server, browser,
+and temporary fixtures are cleaned up after the run; requested screenshots remain
+in `PACKING_TEST_ARTIFACTS`. On an abruptly killed process, temporary directories
+can remain with the prefix `packing-browser-`.
+
+Unit/fuzz tests cover shared items and source changes, exact Apply/Discard
+snapshots, delayed resolution and Simplify responses, zero-item-diff edits,
+migration, invalid saved drafts, and packing-progress isolation. Browser tests
+exercise group swaps, preview/list/graph switching, Apply without refetching,
+invalid-draft reload recovery, delayed responses, Simplify, empty selections,
+changed group files, storage failures, responsive layout, and the editor filling
+the available pane height before scrolling its contents. Delayed-response
+tests use explicit request gates rather than fixed sleeps. Browser runtime errors
+fail tests. Add pure behavior tests to `frontend/tests/*.elm` and user workflow
+tests to `frontend/tests/browser/*.mjs`.
 
 ## Architecture
 
@@ -78,11 +132,29 @@ renderer writes output. Renderers are built in `rendererFactory`: `json`, `markd
 canonical intermediate representation; the HTML renderer is markdown → HTML.
 
 ### Frontend (`frontend/`)
-Elm 0.19.1 app (`src/Main.elm`, `src/State.elm`). `make frontend` compiles it to
+Elm 0.19.2 app. `make frontend` compiles it to
 `cmd/packing-server/elm.js`, which the server embeds with `//go:embed` and serves at
-`/elm.js` alongside an inline `index.html`. App state (done items) is persisted to
-`localStorage` through Elm ports. **After changing Elm, rerun `make frontend` and rebuild
-the server** or the embedded JS is stale.
+`/elm.js` alongside an inline `index.html`. **After changing Elm, rerun
+`make frontend` and rebuild the server** or the embedded JS is stale. Browser tests
+perform both steps automatically.
+
+- `src/Main.elm`: UI, list/graph presentation, and interpretation of selection effects.
+- `src/Selection.elm`: pure draft/accepted state machine. Revision/request tokens
+  reject stale resolve and Simplify responses. Apply accepts the matching preview;
+  Discard restores the accepted snapshot without fetching. Packing progress is
+  kept outside this state machine.
+- `src/Packing.elm`: shared group/snapshot types and JSON codecs. Canonical group
+  comparisons ignore ordering and repeated memberships.
+- `src/SelectionDiff.elm` and `src/Review.elm`: unique resolved item additions/removals,
+  directly containing source groups, and raw selection line diffs. Diff data is
+  computed before singleton collapsing or completed-item filtering.
+- `src/StoredState.elm`: version 2 `appState` encoding/decoding. Stores the accepted
+  selection and raw resolved snapshot separately from draft text, along with done
+  items and display preference. Legacy saved selections become a baseline only
+  after successful resolution; migration preserves any newer draft edits.
+- `src/State.elm`: localStorage ports. The JS bridge reports write failures back
+  to Elm. Reload resolves the draft while retaining the accepted snapshot, making
+  changes to group files reviewable rather than silently applying them.
 
 ## Conventions and gotchas
 
