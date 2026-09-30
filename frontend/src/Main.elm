@@ -675,10 +675,16 @@ view model =
         [ div
             [ style "display" "flex"
             , style "gap" "1rem"
-            , style "align-items" "flex-start"
+            , style "position" "fixed"
+            , style "inset" "0"
+            , style "overflow" "hidden"
             , style "padding" "1rem"
             ]
-            [ div [ style "flex" "1 1 0" ]
+            [ div
+                [ style "flex" "1 1 0"
+                , style "min-width" "0"
+                , style "overflow" "auto"
+                ]
                 [ h3 [] [ text "Selection ", renderStatusBadge model.renderStatus ]
                 , renderStatusMessage model.renderStatus
                 , p [] [ text "Edit your selection below. Copy the text out to save it." ]
@@ -698,7 +704,11 @@ view model =
                     ]
                     []
                 ]
-            , div [ style "flex" "1 1 0" ]
+            , div
+                [ style "flex" "1 1 0"
+                , style "min-width" "0"
+                , style "overflow" "auto"
+                ]
                 [ controlsView model
                 , resultsView model
                 ]

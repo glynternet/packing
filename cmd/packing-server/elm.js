@@ -9011,7 +9011,9 @@ var $author$project$Main$view = function (model) {
 					[
 						A2($elm$html$Html$Attributes$style, 'display', 'flex'),
 						A2($elm$html$Html$Attributes$style, 'gap', '1rem'),
-						A2($elm$html$Html$Attributes$style, 'align-items', 'flex-start'),
+						A2($elm$html$Html$Attributes$style, 'position', 'fixed'),
+						A2($elm$html$Html$Attributes$style, 'inset', '0'),
+						A2($elm$html$Html$Attributes$style, 'overflow', 'hidden'),
 						A2($elm$html$Html$Attributes$style, 'padding', '1rem')
 					]),
 				_List_fromArray(
@@ -9020,7 +9022,9 @@ var $author$project$Main$view = function (model) {
 						$elm$html$Html$div,
 						_List_fromArray(
 							[
-								A2($elm$html$Html$Attributes$style, 'flex', '1 1 0')
+								A2($elm$html$Html$Attributes$style, 'flex', '1 1 0'),
+								A2($elm$html$Html$Attributes$style, 'min-width', '0'),
+								A2($elm$html$Html$Attributes$style, 'overflow', 'auto')
 							]),
 						_List_fromArray(
 							[
@@ -9089,7 +9093,9 @@ var $author$project$Main$view = function (model) {
 						$elm$html$Html$div,
 						_List_fromArray(
 							[
-								A2($elm$html$Html$Attributes$style, 'flex', '1 1 0')
+								A2($elm$html$Html$Attributes$style, 'flex', '1 1 0'),
+								A2($elm$html$Html$Attributes$style, 'min-width', '0'),
+								A2($elm$html$Html$Attributes$style, 'overflow', 'auto')
 							]),
 						_List_fromArray(
 							[
