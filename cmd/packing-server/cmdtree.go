@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -34,21 +36,23 @@ const index = `<html>
 <body>
 <div id="app"></div>
 <script>
+const selectionStorageKey = __SELECTION_STORAGE_KEY__;
+const storageKey = selectionStorageKey || "appState";
 let storedState = null;
 let storageError = null;
 try {
-    storedState = localStorage.getItem("appState");
+    storedState = localStorage.getItem(storageKey);
 } catch (error) {
     storageError = String(error);
 }
 const app = Elm.Main.init({
-    flags: {state: storedState, storageError},
+    flags: {state: storedState, storageError, serverSelection: selectionStorageKey !== null},
 	node: document.getElementById("app"),
 });
 app.ports.storeState.subscribe(state => {
     let error = null;
     try {
-        localStorage.setItem("appState", state);
+        localStorage.setItem(storageKey, state);
     } catch (cause) {
         error = String(cause);
     }
@@ -73,6 +77,7 @@ func buildCmdTree(logger log.Logger, _ io.Writer, rootCmd *cobra.Command) {
 	var (
 		groupsDirFlag string
 		port          uint
+		selectionFile string
 	)
 
 	serve := &cobra.Command{
@@ -88,7 +93,14 @@ each file's name is the key used to reference it (ref:<name>). It exposes:
   POST /selection/  expand a selection (raw text, as a selection file) into groups
   POST /simplify/   minify a selection (raw text), returning the simplified text
                     and the refs/items removed as JSON
+  GET/PUT /saved-selection/  read/save the text file configured by --selection-file
   GET  /            the Elm web UI (also /index.html and /elm.js)
+
+With --selection-file, the web UI loads that file (creating it empty if missing)
+and atomically replaces it on Apply. Its parent directory must exist and be
+writable. Saves require the ETag from the last load in If-Match; stale saves
+return 412 so the UI can review the newer selection without losing its draft.
+Without the flag, selections are saved only in the browser.
 
 Point packing-cli at this server with --server-host / --server-port.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -116,16 +128,24 @@ Point packing-cli at this server with --server-host / --server-port.`,
 				}}
 
 			addr := ":" + strconv.FormatUint(uint64(port), 10)
-			return errors.Wrap(serve(logger, s.GetGroups, addr), "serving groups service")
+			if selectionFile != "" {
+				var err error
+				selectionFile, err = filepath.Abs(selectionFile)
+				if err != nil {
+					return errors.Wrap(err, "resolving selection file path")
+				}
+			}
+			return errors.Wrap(serve(logger, s.GetGroups, addr, selectionFile), "serving groups service")
 		},
 	}
 
 	serve.Flags().StringVar(&groupsDirFlag, keyPackingGroups, "", "directory of group files to serve; each filename is its reference key (defaults to the current directory)")
 	serve.Flags().UintVar(&port, keyPort, 3865, "port to listen on")
+	serve.Flags().StringVar(&selectionFile, "selection-file", "", "selection text file to load and atomically save from the web UI (created empty if missing)")
 	rootCmd.AddCommand(serve)
 }
 
-func serve(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error), addr string) error {
+func serve(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error), addr, selectionFile string) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return errors.Wrapf(err, "failed to listen at %q", addr)
@@ -133,10 +153,20 @@ func serve(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error),
 	if err := logger.Log(
 		log.KV{K: "message", V: "Starting server"},
 		log.KV{K: "address", V: addr}); err != nil {
+		// Preserve the logging error if closing the unused listener also fails.
+		_ = lis.Close()
 		return errors.Wrap(err, "logging")
 	}
 
+	return errors.Wrap((&http.Server{
+		Addr:    addr,
+		Handler: newHandler(logger, getGroups, selectionFile),
+	}).Serve(lis), "serving everything")
+}
+
+func newHandler(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error), selectionFile string) http.Handler {
 	var serveMux http.ServeMux
+	serveMux.Handle("/saved-selection/", savedSelectionHandler(selectionFile))
 	serveMux.HandleFunc("/groups/", func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodPost {
 			_ = log.Error(logger, log.Message("Unsupported method"), log.KV{K: "url", V: request.URL}, log.KV{K: "method", V: request.Method})
@@ -231,30 +261,24 @@ func serve(logger log.Logger, getGroups func(api.Contents) ([]api.Group, error),
 			RemovedItems: nonNil(res.RemovedItems),
 		})
 	})
+	storageKey := "null"
+	if selectionFile != "" {
+		storageKey = fmt.Sprintf("\"appState:selection:%x\"", sha256.Sum256([]byte(selectionFile)))
+	}
+	page := []byte(strings.Replace(index, "__SELECTION_STORAGE_KEY__", storageKey, 1))
 	serveMux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		writeStaticContent(logger, w, []byte(index))
+		w.Header().Set("Cache-Control", "no-store")
+		writeStaticContent(logger, w, page)
 	})
 	serveMux.HandleFunc("/index.html", func(w http.ResponseWriter, _ *http.Request) {
-		writeStaticContent(logger, w, []byte(index))
+		w.Header().Set("Cache-Control", "no-store")
+		writeStaticContent(logger, w, page)
 	})
 	serveMux.HandleFunc("/elm.js", func(w http.ResponseWriter, _ *http.Request) {
 		writeStaticContent(logger, w, elmJS)
 	})
 
-	sErr := errors.Wrap((&http.Server{
-		Addr:    addr,
-		Handler: &serveMux,
-	}).Serve(lis), "serving everything")
-	cErr := lis.Close()
-	if sErr == nil {
-		return errors.Wrap(cErr, "closing listener")
-	}
-	if cErr != nil {
-		_ = logger.Log(
-			log.Message("Error closing listener"),
-			log.ErrorMessage(err))
-	}
-	return sErr
+	return &serveMux
 }
 
 // simplifyResponse is the JSON body returned by /simplify/: the minified

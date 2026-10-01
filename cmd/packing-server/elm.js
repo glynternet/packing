@@ -5058,6 +5058,7 @@ var $elm$core$Result$isOk = function (result) {
 	}
 };
 var $elm$json$Json$Decode$andThen = _Json_andThen;
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$json$Json$Decode$map = _Json_map1;
 var $elm$json$Json$Decode$map2 = _Json_map2;
 var $elm$json$Json$Decode$succeed = _Json_succeed;
@@ -5375,6 +5376,8 @@ var $elm$browser$Browser$document = _Browser_document;
 var $elm$json$Json$Decode$field = _Json_decodeField;
 var $author$project$Main$Changes = {$: 'Changes'};
 var $author$project$Main$Current = {$: 'Current'};
+var $author$project$Main$LoadingSelection = {$: 'LoadingSelection'};
+var $author$project$Main$LocalOnly = {$: 'LocalOnly'};
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $author$project$StoredState$StoredState = F5(
 	function (committed, draftText, legacySelection, done, doneDisplay) {
@@ -5910,10 +5913,51 @@ var $author$project$Selection$update = F2(
 					} else {
 						return _Utils_Tuple2(model, _List_Nil);
 					}
+				case 'Rebase':
+					var baseline = msg.a;
+					var revision = model.revision + 1;
+					var rebased = _Utils_update(
+						model,
+						{
+							baselineError: $elm$core$Maybe$Nothing,
+							bootstrap: $elm$core$Maybe$Nothing,
+							committed: $elm$core$Maybe$Just(baseline),
+							pendingSimplify: $elm$core$Maybe$Nothing,
+							preview: function () {
+								var _v5 = $author$project$Selection$ready(model);
+								if (_v5.$ === 'Just') {
+									var snapshot = _v5.a;
+									return A2(
+										$author$project$Selection$Ready,
+										{request: model.nextRequest, revision: revision},
+										snapshot);
+								} else {
+									return $author$project$Selection$Waiting;
+								}
+							}(),
+							revision: revision,
+							simplifyError: $elm$core$Maybe$Nothing,
+							simplifyNote: $elm$core$Maybe$Nothing
+						});
+					if (!_Utils_eq(
+						$author$project$Selection$ready(rebased),
+						$elm$core$Maybe$Nothing)) {
+						return _Utils_Tuple2(
+							rebased,
+							_List_fromArray(
+								[$author$project$Selection$Persist]));
+					} else {
+						var _v4 = A2($author$project$Selection$update, $author$project$Selection$Resolve, rebased);
+						var resolving = _v4.a;
+						var effects = _v4.b;
+						return _Utils_Tuple2(
+							resolving,
+							A2($elm$core$List$cons, $author$project$Selection$Persist, effects));
+					}
 				case 'Apply':
-					var _v4 = $author$project$Selection$ready(model);
-					if (_v4.$ === 'Just') {
-						var snapshot = _v4.a;
+					var _v6 = $author$project$Selection$ready(model);
+					if (_v6.$ === 'Just') {
+						var snapshot = _v6.a;
 						if ($author$project$Selection$canApply(model)) {
 							var revision = model.revision + 1;
 							return _Utils_Tuple2(
@@ -5940,9 +5984,9 @@ var $author$project$Selection$update = F2(
 						return _Utils_Tuple2(model, _List_Nil);
 					}
 				case 'Discard':
-					var _v5 = model.committed;
-					if (_v5.$ === 'Just') {
-						var snapshot = _v5.a;
+					var _v7 = model.committed;
+					if (_v7.$ === 'Just') {
+						var snapshot = _v7.a;
 						var revision = model.revision + 1;
 						return _Utils_Tuple2(
 							_Utils_update(
@@ -6004,7 +6048,7 @@ var $author$project$Selection$update = F2(
 								_List_Nil);
 						} else {
 							var response = result.a;
-							var _v7 = _Utils_eq(response.selection, model.draftText) ? _Utils_Tuple2(
+							var _v9 = _Utils_eq(response.selection, model.draftText) ? _Utils_Tuple2(
 								_Utils_update(
 									model,
 									{pendingSimplify: $elm$core$Maybe$Nothing}),
@@ -6012,8 +6056,8 @@ var $author$project$Selection$update = F2(
 								$author$project$Selection$update,
 								$author$project$Selection$Edit(response.selection),
 								model);
-							var edited = _v7.a;
-							var effects = _v7.b;
+							var edited = _v9.a;
+							var effects = _v9.b;
 							return _Utils_Tuple2(
 								_Utils_update(
 									edited,
@@ -6076,8 +6120,12 @@ var $author$project$Main$defaultModel = {
 	itemsOnly: 0,
 	notice: $elm$core$Maybe$Nothing,
 	reviewTab: $author$project$Main$Changes,
+	reviewingConflict: false,
 	selectedGroup: $elm$core$Maybe$Nothing,
 	selection: A3($author$project$Selection$init, $elm$core$Maybe$Nothing, $author$project$Main$defaultSelectionText, $elm$core$Maybe$Nothing).a,
+	serverETag: '',
+	serverError: $elm$core$Maybe$Nothing,
+	serverState: $author$project$Main$LocalOnly,
 	showContainerGroups: false,
 	showGroupLinks: false,
 	storageError: $elm$core$Maybe$Nothing,
@@ -6100,22 +6148,9 @@ var $author$project$Main$doneDisplayFromKey = function (key) {
 var $author$project$StoredState$empty = function (selection) {
 	return {committed: $elm$core$Maybe$Nothing, done: _List_Nil, doneDisplay: $elm$core$Maybe$Nothing, draftText: selection, legacySelection: $elm$core$Maybe$Nothing};
 };
-var $elm$core$Basics$not = _Basics_not;
-var $author$project$Selection$BootstrapResolved = F2(
-	function (a, b) {
-		return {$: 'BootstrapResolved', a: a, b: b};
-	});
-var $author$project$Selection$DebounceElapsed = function (a) {
-	return {$: 'DebounceElapsed', a: a};
+var $author$project$Main$LoadedSelection = function (a) {
+	return {$: 'LoadedSelection', a: a};
 };
-var $author$project$Selection$Resolved = F2(
-	function (a, b) {
-		return {$: 'Resolved', a: a, b: b};
-	});
-var $author$project$Main$SelectionMsg = function (a) {
-	return {$: 'SelectionMsg', a: a};
-};
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
 		return {$: 'BadStatus_', a: a, b: b};
@@ -6516,6 +6551,11 @@ var $elm$core$Dict$update = F3(
 			return A2($elm$core$Dict$remove, targetKey, dictionary);
 		}
 	});
+var $elm$http$Http$emptyBody = _Http_emptyBody;
+var $author$project$Main$Conflict = {$: 'Conflict'};
+var $author$project$Main$ServerFailure = function (a) {
+	return {$: 'ServerFailure', a: a};
+};
 var $elm$http$Http$expectStringResponse = F2(
 	function (toMsg, toResult) {
 		return A3(
@@ -6524,47 +6564,25 @@ var $elm$http$Http$expectStringResponse = F2(
 			$elm$core$Basics$identity,
 			A2($elm$core$Basics$composeR, toResult, toMsg));
 	});
-var $elm$core$Result$mapError = F2(
-	function (f, result) {
-		if (result.$ === 'Ok') {
-			var v = result.a;
-			return $elm$core$Result$Ok(v);
-		} else {
-			var e = result.a;
-			return $elm$core$Result$Err(
-				f(e));
-		}
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
 	});
-var $elm$core$String$trim = _String_trim;
-var $author$project$Main$expectGroups = function (toMsg) {
-	return A2(
-		$elm$http$Http$expectStringResponse,
-		toMsg,
-		function (response) {
-			switch (response.$) {
-				case 'BadUrl_':
-					var url = response.a;
-					return $elm$core$Result$Err('The URL ' + (url + ' was invalid'));
-				case 'Timeout_':
-					return $elm$core$Result$Err('Unable to reach the server, try again');
-				case 'NetworkError_':
-					return $elm$core$Result$Err('Unable to reach the server, check your network connection');
-				case 'BadStatus_':
-					var metadata = response.a;
-					var body = response.b;
-					return $elm$core$Result$Err(
-						$elm$core$String$isEmpty(
-							$elm$core$String$trim(body)) ? ('Server error, status: ' + $elm$core$String$fromInt(metadata.statusCode)) : $elm$core$String$trim(body));
-				default:
-					var body = response.b;
-					return A2(
-						$elm$core$Result$mapError,
-						function (err) {
-							return 'Data received was not in the correct format: ' + $elm$json$Json$Decode$errorToString(err);
-						},
-						A2($elm$json$Json$Decode$decodeString, $author$project$Packing$decodeGroups, body));
-			}
-		});
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
 };
 var $elm$http$Http$Request = function (a) {
 	return {$: 'Request', a: a};
@@ -6734,14 +6752,121 @@ var $elm$http$Http$request = function (r) {
 		$elm$http$Http$Request(
 			{allowCookiesFromOtherDomains: false, body: r.body, expect: r.expect, headers: r.headers, method: r.method, timeout: r.timeout, tracker: r.tracker, url: r.url}));
 };
+var $elm$core$String$toLower = _String_toLower;
+var $elm$core$String$trim = _String_trim;
+var $author$project$Main$savedSelectionRequest = F4(
+	function (method, headers, body, toMsg) {
+		return $elm$http$Http$request(
+			{
+				body: body,
+				expect: A2(
+					$elm$http$Http$expectStringResponse,
+					toMsg,
+					function (response) {
+						switch (response.$) {
+							case 'GoodStatus_':
+								var metadata = response.a;
+								var text = response.b;
+								var _v1 = $elm$core$List$head(
+									A2(
+										$elm$core$List$filter,
+										function (_v2) {
+											var name = _v2.a;
+											return $elm$core$String$toLower(name) === 'etag';
+										},
+										$elm$core$Dict$toList(metadata.headers)));
+								if (_v1.$ === 'Just') {
+									var _v3 = _v1.a;
+									var etag = _v3.b;
+									return $elm$core$Result$Ok(
+										{etag: etag, selection: text});
+								} else {
+									return $elm$core$Result$Err(
+										$author$project$Main$ServerFailure('The server did not return a selection version. Reload and try again.'));
+								}
+							case 'BadStatus_':
+								var metadata = response.a;
+								var text = response.b;
+								return (metadata.statusCode === 412) ? $elm$core$Result$Err($author$project$Main$Conflict) : $elm$core$Result$Err(
+									$author$project$Main$ServerFailure(
+										'Server error ' + ($elm$core$String$fromInt(metadata.statusCode) + (': ' + $elm$core$String$trim(text)))));
+							default:
+								return $elm$core$Result$Err(
+									$author$project$Main$ServerFailure('Unable to reach the server. Check your connection and try again.'));
+						}
+					}),
+				headers: headers,
+				method: method,
+				timeout: $elm$core$Maybe$Just(10000),
+				tracker: $elm$core$Maybe$Nothing,
+				url: '/saved-selection/'
+			});
+	});
+var $author$project$Main$loadSavedSelection = A4($author$project$Main$savedSelectionRequest, 'GET', _List_Nil, $elm$http$Http$emptyBody, $author$project$Main$LoadedSelection);
+var $elm$core$Basics$not = _Basics_not;
+var $author$project$Selection$BootstrapResolved = F2(
+	function (a, b) {
+		return {$: 'BootstrapResolved', a: a, b: b};
+	});
+var $author$project$Selection$DebounceElapsed = function (a) {
+	return {$: 'DebounceElapsed', a: a};
+};
+var $author$project$Selection$Resolved = F2(
+	function (a, b) {
+		return {$: 'Resolved', a: a, b: b};
+	});
+var $author$project$Main$SelectionMsg = function (a) {
+	return {$: 'SelectionMsg', a: a};
+};
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Result$mapError = F2(
+	function (f, result) {
+		if (result.$ === 'Ok') {
+			var v = result.a;
+			return $elm$core$Result$Ok(v);
+		} else {
+			var e = result.a;
+			return $elm$core$Result$Err(
+				f(e));
+		}
+	});
+var $author$project$Main$expectGroups = function (toMsg) {
+	return A2(
+		$elm$http$Http$expectStringResponse,
+		toMsg,
+		function (response) {
+			switch (response.$) {
+				case 'BadUrl_':
+					var url = response.a;
+					return $elm$core$Result$Err('The URL ' + (url + ' was invalid'));
+				case 'Timeout_':
+					return $elm$core$Result$Err('Unable to reach the server, try again');
+				case 'NetworkError_':
+					return $elm$core$Result$Err('Unable to reach the server, check your network connection');
+				case 'BadStatus_':
+					var metadata = response.a;
+					var body = response.b;
+					return $elm$core$Result$Err(
+						$elm$core$String$isEmpty(
+							$elm$core$String$trim(body)) ? ('Server error, status: ' + $elm$core$String$fromInt(metadata.statusCode)) : $elm$core$String$trim(body));
+				default:
+					var body = response.b;
+					return A2(
+						$elm$core$Result$mapError,
+						function (err) {
+							return 'Data received was not in the correct format: ' + $elm$json$Json$Decode$errorToString(err);
+						},
+						A2($elm$json$Json$Decode$decodeString, $author$project$Packing$decodeGroups, body));
+			}
+		});
+};
 var $elm$http$Http$stringBody = _Http_pair;
-var $author$project$Main$fetch = F2(
+var $author$project$Main$resolveSelection = F2(
 	function (toMsg, selectionText) {
 		return $elm$http$Http$request(
 			{
 				body: A2($elm$http$Http$stringBody, 'text/plain', selectionText),
-				expect: $author$project$Main$expectGroups(
-					A2($elm$core$Basics$composeR, toMsg, $author$project$Main$SelectionMsg)),
+				expect: $author$project$Main$expectGroups(toMsg),
 				headers: _List_Nil,
 				method: 'POST',
 				timeout: $elm$core$Maybe$Just(5000),
@@ -6749,6 +6874,10 @@ var $author$project$Main$fetch = F2(
 				url: '/selection/'
 			});
 	});
+var $author$project$Main$fetch = function (toMsg) {
+	return $author$project$Main$resolveSelection(
+		A2($elm$core$Basics$composeR, toMsg, $author$project$Main$SelectionMsg));
+};
 var $elm$json$Json$Encode$list = F2(
 	function (func, entries) {
 		return _Json_wrap(
@@ -6988,18 +7117,19 @@ var $elm$core$Result$withDefault = F2(
 		}
 	});
 var $author$project$Main$init = function (flags) {
+	var fallbackSelection = flags.serverSelection ? '' : $author$project$Main$defaultSelectionText;
 	var decoded = A2(
 		$elm$core$Maybe$withDefault,
 		$elm$core$Result$Ok(
-			$author$project$StoredState$empty($author$project$Main$defaultSelectionText)),
+			$author$project$StoredState$empty(fallbackSelection)),
 		A2(
 			$elm$core$Maybe$map,
 			$elm$json$Json$Decode$decodeString(
-				$author$project$StoredState$decoder($author$project$Main$defaultSelectionText)),
+				$author$project$StoredState$decoder(fallbackSelection)),
 			flags.state));
 	var stored = A2(
 		$elm$core$Result$withDefault,
-		$author$project$StoredState$empty($author$project$Main$defaultSelectionText),
+		$author$project$StoredState$empty(fallbackSelection),
 		decoded);
 	var _v0 = A3($author$project$Selection$init, stored.committed, stored.draftText, stored.legacySelection);
 	var selection = _v0.a;
@@ -7019,11 +7149,12 @@ var $author$project$Main$init = function (flags) {
 			notice: notice,
 			reviewTab: ((!_Utils_eq(stored.committed, $elm$core$Maybe$Nothing)) && (!$author$project$Selection$hasChanges(selection))) ? $author$project$Main$Current : $author$project$Main$Changes,
 			selection: selection,
+			serverState: flags.serverSelection ? $author$project$Main$LoadingSelection : $author$project$Main$LocalOnly,
 			storageError: flags.storageError
 		});
 	return _Utils_Tuple2(
 		model,
-		A2($author$project$Main$selectionEffects, model, effects));
+		flags.serverSelection ? $author$project$Main$loadSavedSelection : A2($author$project$Main$selectionEffects, model, effects));
 };
 var $author$project$Main$StorageResult = function (a) {
 	return {$: 'StorageResult', a: a};
@@ -7351,8 +7482,29 @@ var $author$project$Main$subscriptions = function (model) {
 				$author$project$Main$graphSubscriptions(model)
 			]));
 };
+var $author$project$Selection$Apply = {$: 'Apply'};
+var $author$project$Main$ConflictFailed = function (a) {
+	return {$: 'ConflictFailed', a: a};
+};
+var $author$project$Main$ConflictResolved = F2(
+	function (a, b) {
+		return {$: 'ConflictResolved', a: a, b: b};
+	});
 var $author$project$Main$Done = {$: 'Done'};
 var $author$project$Main$Graph = {$: 'Graph'};
+var $author$project$Main$LoadFailed = function (a) {
+	return {$: 'LoadFailed', a: a};
+};
+var $author$project$Main$LoadingConflict = {$: 'LoadingConflict'};
+var $author$project$Selection$Rebase = function (a) {
+	return {$: 'Rebase', a: a};
+};
+var $author$project$Main$ResolvingConflict = {$: 'ResolvingConflict'};
+var $author$project$Main$SavedSelection = function (a) {
+	return {$: 'SavedSelection', a: a};
+};
+var $author$project$Main$SavingSelection = {$: 'SavingSelection'};
+var $author$project$Main$ServerReady = {$: 'ServerReady'};
 var $elm$core$Basics$negate = function (n) {
 	return -n;
 };
@@ -7387,17 +7539,6 @@ var $author$project$Main$dedupRefs = function (refs) {
 			_Utils_Tuple2($elm$core$Set$empty, _List_Nil),
 			refs).b);
 };
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
 var $author$project$Main$collapsePassthroughRefs = function (groups) {
 	var passthrough = $elm$core$Dict$fromList(
 		A2(
@@ -7913,6 +8054,11 @@ var $author$project$Main$fitToView = function (maybeGroups) {
 		return {panX: (baseW - (gW * scale)) / 2, panY: (baseH - (gH * scale)) / 2, scale: scale};
 	}
 };
+var $elm$http$Http$Header = F2(
+	function (a, b) {
+		return {$: 'Header', a: a, b: b};
+	});
+var $elm$http$Http$header = $elm$http$Http$Header;
 var $author$project$Main$pushAdj = F3(
 	function (key, val, dict) {
 		return A3(
@@ -8056,6 +8202,25 @@ var $elm$core$Set$remove = F2(
 		return $elm$core$Set$Set_elm_builtin(
 			A2($elm$core$Dict$remove, key, dict));
 	});
+var $author$project$Main$saveErrorText = function (error) {
+	if (error.$ === 'Conflict') {
+		return 'The saved selection has changed.';
+	} else {
+		var message = error.a;
+		return message;
+	}
+};
+var $author$project$Main$selectionLocked = function (model) {
+	var _v0 = model.serverState;
+	switch (_v0.$) {
+		case 'LocalOnly':
+			return false;
+		case 'ServerReady':
+			return false;
+		default:
+			return true;
+	}
+};
 var $author$project$State$updateModel = F2(
 	function (serialise, model) {
 		var localStoredState = serialise(model);
@@ -8063,64 +8228,230 @@ var $author$project$State$updateModel = F2(
 			model,
 			$author$project$State$storeState(localStoredState));
 	});
+var $author$project$Selection$Discard = {$: 'Discard'};
+var $author$project$Main$updateSelection = F2(
+	function (selectionMsg, model) {
+		var _v0 = A2($author$project$Selection$update, selectionMsg, model.selection);
+		var selection = _v0.a;
+		var effects = _v0.b;
+		var tab = function () {
+			switch (selectionMsg.$) {
+				case 'Apply':
+					return $author$project$Selection$canApply(model.selection) ? $author$project$Main$Current : model.reviewTab;
+				case 'Discard':
+					return (!_Utils_eq(model.selection.committed, $elm$core$Maybe$Nothing)) ? $author$project$Main$Current : model.reviewTab;
+				case 'Rebase':
+					return $author$project$Main$Changes;
+				case 'BootstrapResolved':
+					return ((!_Utils_eq(selection.committed, $elm$core$Maybe$Nothing)) && (!$author$project$Selection$hasChanges(selection))) ? $author$project$Main$Current : model.reviewTab;
+				default:
+					return ((!$author$project$Selection$hasChanges(model.selection)) && $author$project$Selection$hasChanges(selection)) ? $author$project$Main$Changes : model.reviewTab;
+			}
+		}();
+		var newModel = _Utils_update(
+			model,
+			{
+				notice: function () {
+					switch (selectionMsg.$) {
+						case 'Edit':
+							return $elm$core$Maybe$Nothing;
+						case 'Apply':
+							return $author$project$Selection$canApply(model.selection) ? $elm$core$Maybe$Nothing : model.notice;
+						case 'Discard':
+							return $elm$core$Maybe$Nothing;
+						default:
+							return model.notice;
+					}
+				}(),
+				reviewTab: tab,
+				reviewingConflict: _Utils_eq(selectionMsg, $author$project$Selection$Discard) ? false : model.reviewingConflict,
+				selectedGroup: function () {
+					if (!_Utils_eq(tab, model.reviewTab)) {
+						return $elm$core$Maybe$Nothing;
+					} else {
+						switch (selectionMsg.$) {
+							case 'Apply':
+								return $author$project$Selection$canApply(model.selection) ? $elm$core$Maybe$Nothing : model.selectedGroup;
+							case 'Discard':
+								return $elm$core$Maybe$Nothing;
+							default:
+								return model.selectedGroup;
+						}
+					}
+				}(),
+				selection: selection,
+				serverError: _Utils_eq(selectionMsg, $author$project$Selection$Discard) ? $elm$core$Maybe$Nothing : model.serverError
+			});
+		var fitted = ((!_Utils_eq(
+			$author$project$Main$rawResults(model),
+			$author$project$Main$rawResults(newModel))) || (!_Utils_eq(tab, model.reviewTab))) ? $author$project$Main$refitGraph(newModel) : newModel;
+		return _Utils_Tuple2(
+			fitted,
+			A2($author$project$Main$selectionEffects, fitted, effects));
+	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
 			case 'SelectionMsg':
 				var selectionMsg = msg.a;
-				var _v1 = A2($author$project$Selection$update, selectionMsg, model.selection);
-				var selection = _v1.a;
-				var effects = _v1.b;
-				var tab = function () {
-					switch (selectionMsg.$) {
-						case 'Apply':
-							return $author$project$Selection$canApply(model.selection) ? $author$project$Main$Current : model.reviewTab;
-						case 'Discard':
-							return (!_Utils_eq(model.selection.committed, $elm$core$Maybe$Nothing)) ? $author$project$Main$Current : model.reviewTab;
-						case 'BootstrapResolved':
-							return ((!_Utils_eq(selection.committed, $elm$core$Maybe$Nothing)) && (!$author$project$Selection$hasChanges(selection))) ? $author$project$Main$Current : model.reviewTab;
-						default:
-							return ((!$author$project$Selection$hasChanges(model.selection)) && $author$project$Selection$hasChanges(selection)) ? $author$project$Main$Changes : model.reviewTab;
+				return $author$project$Main$selectionLocked(model) ? _Utils_Tuple2(model, $elm$core$Platform$Cmd$none) : ((_Utils_eq(selectionMsg, $author$project$Selection$Apply) && (_Utils_eq(model.serverState, $author$project$Main$ServerReady) && $author$project$Selection$canApply(model.selection))) ? _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{serverError: $elm$core$Maybe$Nothing, serverState: $author$project$Main$SavingSelection}),
+					A4(
+						$author$project$Main$savedSelectionRequest,
+						'PUT',
+						_List_fromArray(
+							[
+								A2($elm$http$Http$header, 'If-Match', model.serverETag)
+							]),
+						A2($elm$http$Http$stringBody, 'text/plain', model.selection.draftText),
+						$author$project$Main$SavedSelection)) : A2($author$project$Main$updateSelection, selectionMsg, model));
+			case 'LoadedSelection':
+				var result = msg.a;
+				if ((!_Utils_eq(model.serverState, $author$project$Main$LoadingSelection)) && (!_Utils_eq(model.serverState, $author$project$Main$LoadingConflict))) {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				} else {
+					if (result.$ === 'Err') {
+						var error = result.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									serverState: _Utils_eq(model.serverState, $author$project$Main$LoadingConflict) ? $author$project$Main$ConflictFailed(
+										$author$project$Main$saveErrorText(error)) : $author$project$Main$LoadFailed(
+										$author$project$Main$saveErrorText(error))
+								}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						var saved = result.a;
+						var matches = _Utils_eq(
+							A2(
+								$elm$core$Maybe$map,
+								function ($) {
+									return $.selection;
+								},
+								model.selection.committed),
+							$elm$core$Maybe$Just(saved.selection));
+						var hasLocalDraft = A2(
+							$elm$core$Maybe$withDefault,
+							false,
+							A2(
+								$elm$core$Maybe$map,
+								function (baseline) {
+									return !_Utils_eq(baseline.selection, model.selection.draftText);
+								},
+								model.selection.committed));
+						if (_Utils_eq(model.serverState, $author$project$Main$LoadingConflict) || ((!matches) && hasLocalDraft)) {
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{notice: $elm$core$Maybe$Nothing, reviewingConflict: true, serverState: $author$project$Main$ResolvingConflict}),
+								A2(
+									$author$project$Main$resolveSelection,
+									$author$project$Main$ConflictResolved(saved),
+									saved.selection));
+						} else {
+							var _v2 = matches ? A3($author$project$Selection$init, model.selection.committed, model.selection.draftText, $elm$core$Maybe$Nothing) : A3(
+								$author$project$Selection$init,
+								$elm$core$Maybe$Nothing,
+								saved.selection,
+								$elm$core$Maybe$Just(saved.selection));
+							var selection = _v2.a;
+							var effects = _v2.b;
+							var loaded = _Utils_update(
+								model,
+								{
+									notice: matches ? model.notice : $elm$core$Maybe$Just('Loaded the saved selection from the server.'),
+									reviewTab: (matches && (!$author$project$Selection$hasChanges(selection))) ? $author$project$Main$Current : $author$project$Main$Changes,
+									selection: selection,
+									serverETag: saved.etag,
+									serverState: $author$project$Main$ServerReady
+								});
+							return _Utils_Tuple2(
+								loaded,
+								A2($author$project$Main$selectionEffects, loaded, effects));
+						}
 					}
-				}();
-				var newModel = _Utils_update(
-					model,
-					{
-						notice: function () {
-							switch (selectionMsg.$) {
-								case 'Edit':
-									return $elm$core$Maybe$Nothing;
-								case 'Apply':
-									return $author$project$Selection$canApply(model.selection) ? $elm$core$Maybe$Nothing : model.notice;
-								case 'Discard':
-									return $elm$core$Maybe$Nothing;
-								default:
-									return model.notice;
-							}
-						}(),
-						reviewTab: tab,
-						selectedGroup: function () {
-							if (!_Utils_eq(tab, model.reviewTab)) {
-								return $elm$core$Maybe$Nothing;
-							} else {
-								switch (selectionMsg.$) {
-									case 'Apply':
-										return $author$project$Selection$canApply(model.selection) ? $elm$core$Maybe$Nothing : model.selectedGroup;
-									case 'Discard':
-										return $elm$core$Maybe$Nothing;
-									default:
-										return model.selectedGroup;
-								}
-							}
-						}(),
-						selection: selection
-					});
-				var fitted = ((!_Utils_eq(
-					$author$project$Main$rawResults(model),
-					$author$project$Main$rawResults(newModel))) || (!_Utils_eq(tab, model.reviewTab))) ? $author$project$Main$refitGraph(newModel) : newModel;
-				return _Utils_Tuple2(
-					fitted,
-					A2($author$project$Main$selectionEffects, fitted, effects));
+				}
+			case 'ConflictResolved':
+				var saved = msg.a;
+				var result = msg.b;
+				if (!_Utils_eq(model.serverState, $author$project$Main$ResolvingConflict)) {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				} else {
+					if (result.$ === 'Err') {
+						var error = result.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									serverState: $author$project$Main$ConflictFailed(error)
+								}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						var groups = result.a;
+						return A2(
+							$author$project$Main$updateSelection,
+							$author$project$Selection$Rebase(
+								{groups: groups, selection: saved.selection}),
+							_Utils_update(
+								model,
+								{reviewingConflict: true, serverETag: saved.etag, serverState: $author$project$Main$ServerReady}));
+					}
+				}
+			case 'SavedSelection':
+				var result = msg.a;
+				if (!_Utils_eq(model.serverState, $author$project$Main$SavingSelection)) {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				} else {
+					if (result.$ === 'Err') {
+						if (result.a.$ === 'Conflict') {
+							var _v5 = result.a;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{notice: $elm$core$Maybe$Nothing, reviewingConflict: true, serverState: $author$project$Main$LoadingConflict}),
+								$author$project$Main$loadSavedSelection);
+						} else {
+							var error = result.a.a;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										serverError: $elm$core$Maybe$Just(error),
+										serverState: $author$project$Main$ServerReady
+									}),
+								$elm$core$Platform$Cmd$none);
+						}
+					} else {
+						var saved = result.a;
+						return A2(
+							$author$project$Main$updateSelection,
+							$author$project$Selection$Apply,
+							_Utils_update(
+								model,
+								{reviewingConflict: false, serverETag: saved.etag, serverError: $elm$core$Maybe$Nothing, serverState: $author$project$Main$ServerReady}));
+					}
+				}
+			case 'RetryLoadSelection':
+				var _v6 = model.serverState;
+				switch (_v6.$) {
+					case 'LoadFailed':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{serverState: $author$project$Main$LoadingSelection}),
+							$author$project$Main$loadSavedSelection);
+					case 'ConflictFailed':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{serverState: $author$project$Main$LoadingConflict}),
+							$author$project$Main$loadSavedSelection);
+					default:
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 			case 'SelectReviewTab':
 				var tab = msg.a;
 				return _Utils_Tuple2(
@@ -8155,7 +8486,7 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none) : _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			case 'ViewMode':
 				if (msg.a.$ === 'Graph') {
-					var _v5 = msg.a;
+					var _v7 = msg.a;
 					var fit = $author$project$Main$fitToView(
 						$author$project$Main$effectiveResults(model));
 					return _Utils_Tuple2(
@@ -8201,8 +8532,8 @@ var $author$project$Main$update = F2(
 				var base = _Utils_update(
 					model,
 					{inlineSingletons: enabled});
-				var _v6 = model.viewMode;
-				if (_v6.$ === 'Graph') {
+				var _v8 = model.viewMode;
+				if (_v8.$ === 'Graph') {
 					var fit = $author$project$Main$fitToView(
 						$author$project$Main$effectiveResults(base));
 					return _Utils_Tuple2(
@@ -8265,9 +8596,9 @@ var $author$project$Main$update = F2(
 			case 'GraphDragMove':
 				var x = msg.a;
 				var y = msg.b;
-				var _v7 = model.graphDrag;
-				if (_v7.$ === 'Just') {
-					var d = _v7.a;
+				var _v9 = model.graphDrag;
+				if (_v9.$ === 'Just') {
+					var d = _v9.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -8287,9 +8618,9 @@ var $author$project$Main$update = F2(
 				var x = msg.a;
 				var y = msg.b;
 				var wasClick = function () {
-					var _v8 = model.graphDrag;
-					if (_v8.$ === 'Just') {
-						var d = _v8.a;
+					var _v10 = model.graphDrag;
+					if (_v10.$ === 'Just') {
+						var d = _v10.a;
 						return ($elm$core$Basics$abs(x - d.startX) + $elm$core$Basics$abs(y - d.startY)) < 4;
 					} else {
 						return false;
@@ -8362,8 +8693,6 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 		}
 	});
-var $author$project$Selection$Apply = {$: 'Apply'};
-var $author$project$Selection$Discard = {$: 'Discard'};
 var $author$project$Main$Proposed = {$: 'Proposed'};
 var $author$project$Selection$Simplify = {$: 'Simplify'};
 var $elm$virtual_dom$VirtualDom$attribute = F2(
@@ -9930,6 +10259,132 @@ var $elm$html$Html$Attributes$rows = function (n) {
 		'rows',
 		$elm$core$String$fromInt(n));
 };
+var $author$project$Main$RetryLoadSelection = {$: 'RetryLoadSelection'};
+var $author$project$Main$serverStatus = function (model) {
+	return A2(
+		$elm$html$Html$div,
+		_List_fromArray(
+			[
+				A2($elm$html$Html$Attributes$attribute, 'aria-live', 'polite')
+			]),
+		_List_fromArray(
+			[
+				function () {
+				var _v0 = model.serverState;
+				switch (_v0.$) {
+					case 'LoadingSelection':
+						return A2(
+							$elm$html$Html$p,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Loading saved selection…')
+								]));
+					case 'SavingSelection':
+						return A2(
+							$elm$html$Html$p,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Saving selection…')
+								]));
+					case 'LoadingConflict':
+						return A2(
+							$elm$html$Html$p,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Loading the latest saved selection for review…')
+								]));
+					case 'ResolvingConflict':
+						return A2(
+							$elm$html$Html$p,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Resolving the latest saved selection for review…')
+								]));
+					case 'ConflictFailed':
+						var error = _v0.a;
+						return A2(
+							$elm$html$Html$div,
+							_List_Nil,
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$p,
+									_List_fromArray(
+										[
+											A2($elm$html$Html$Attributes$style, 'color', '#a32121')
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Could not load the latest selection for review: ' + error)
+										])),
+									A2(
+									$elm$html$Html$button,
+									_List_fromArray(
+										[
+											$elm$html$Html$Events$onClick($author$project$Main$RetryLoadSelection)
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Retry loading latest selection')
+										]))
+								]));
+					case 'LoadFailed':
+						var error = _v0.a;
+						return A2(
+							$elm$html$Html$div,
+							_List_Nil,
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$p,
+									_List_fromArray(
+										[
+											A2($elm$html$Html$Attributes$style, 'color', '#a32121')
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Could not load the saved selection: ' + error)
+										])),
+									A2(
+									$elm$html$Html$button,
+									_List_fromArray(
+										[
+											$elm$html$Html$Events$onClick($author$project$Main$RetryLoadSelection)
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('Retry loading selection')
+										]))
+								]));
+					default:
+						return $elm$html$Html$text('');
+				}
+			}(),
+				model.reviewingConflict ? A2(
+				$elm$html$Html$p,
+				_List_fromArray(
+					[
+						A2($elm$html$Html$Attributes$style, 'color', '#805500')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('The saved selection changed since you loaded it. Your draft has been kept. Review the differences before applying again.')
+					])) : $elm$html$Html$text(''),
+				A2(
+				$author$project$Main$maybeMessage,
+				'#a32121',
+				A2(
+					$elm$core$Maybe$map,
+					function (error) {
+						return 'Could not save selection: ' + (error + ' Your draft has been kept. Try Apply again.');
+					},
+					model.serverError))
+			]));
+};
 var $author$project$Main$removedLine = F2(
 	function (noun, xs) {
 		return $elm$core$List$isEmpty(xs) ? _List_Nil : _List_fromArray(
@@ -10637,8 +11092,10 @@ var $author$project$Main$view = function (model) {
 								_List_Nil,
 								_List_fromArray(
 									[
-										$elm$html$Html$text('Edit a draft, review its resolved items, then apply or discard your changes. Saved on this device.')
+										$elm$html$Html$text(
+										_Utils_eq(model.serverState, $author$project$Main$LocalOnly) ? 'Edit a draft, review its resolved items, then apply or discard your changes. Saved on this device.' : 'Apply saves your selection on the server. Drafts and packing progress are saved on this device.')
 									])),
+								$author$project$Main$serverStatus(model),
 								A2($author$project$Main$maybeMessage, '#555', model.notice),
 								A2(
 								$author$project$Main$maybeMessage,
@@ -10661,7 +11118,7 @@ var $author$project$Main$view = function (model) {
 												$elm$html$Html$Events$onClick(
 												$author$project$Main$SelectionMsg($author$project$Selection$Apply)),
 												$elm$html$Html$Attributes$disabled(
-												!$author$project$Selection$canApply(model.selection))
+												$author$project$Main$selectionLocked(model) || (!$author$project$Selection$canApply(model.selection)))
 											]),
 										_List_fromArray(
 											[
@@ -10673,14 +11130,16 @@ var $author$project$Main$view = function (model) {
 										_List_fromArray(
 											[
 												$elm$html$Html$Events$onClick(
-												$author$project$Main$SelectionMsg($author$project$Selection$Discard))
+												$author$project$Main$SelectionMsg($author$project$Selection$Discard)),
+												$elm$html$Html$Attributes$disabled(
+												$author$project$Main$selectionLocked(model))
 											]),
 										_List_fromArray(
 											[
 												$elm$html$Html$text('Discard changes')
 											])) : $elm$html$Html$text('')
 									])),
-								$author$project$Main$previewStatus(model.selection),
+								$author$project$Main$selectionLocked(model) ? $elm$html$Html$text('') : $author$project$Main$previewStatus(model.selection),
 								A2(
 								$elm$html$Html$div,
 								_List_fromArray(
@@ -10696,7 +11155,7 @@ var $author$project$Main$view = function (model) {
 												$elm$html$Html$Events$onClick(
 												$author$project$Main$SelectionMsg($author$project$Selection$Simplify)),
 												$elm$html$Html$Attributes$disabled(
-												!_Utils_eq(model.selection.pendingSimplify, $elm$core$Maybe$Nothing))
+												$author$project$Main$selectionLocked(model) || (!_Utils_eq(model.selection.pendingSimplify, $elm$core$Maybe$Nothing)))
 											]),
 										_List_fromArray(
 											[
@@ -10723,6 +11182,8 @@ var $author$project$Main$view = function (model) {
 								_List_fromArray(
 									[
 										$elm$html$Html$Attributes$value(model.selection.draftText),
+										$elm$html$Html$Attributes$disabled(
+										$author$project$Main$selectionLocked(model)),
 										$elm$html$Html$Attributes$class('selection-editor'),
 										$elm$html$Html$Events$onInput(
 										A2($elm$core$Basics$composeR, $author$project$Selection$Edit, $author$project$Main$SelectionMsg)),
@@ -10781,8 +11242,13 @@ _Platform_export({'Main':{'init':$author$project$Main$main(
 			return A2(
 				$elm$json$Json$Decode$andThen,
 				function (state) {
-					return $elm$json$Json$Decode$succeed(
-						{state: state, storageError: storageError});
+					return A2(
+						$elm$json$Json$Decode$andThen,
+						function (serverSelection) {
+							return $elm$json$Json$Decode$succeed(
+								{serverSelection: serverSelection, state: state, storageError: storageError});
+						},
+						A2($elm$json$Json$Decode$field, 'serverSelection', $elm$json$Json$Decode$bool));
 				},
 				A2(
 					$elm$json$Json$Decode$field,

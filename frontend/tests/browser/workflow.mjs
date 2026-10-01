@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,6 +20,9 @@ let temporary;
 let server;
 let browser;
 let origin;
+let savedServer;
+let savedOrigin;
+let selectionFile;
 
 before(async () => {
   temporary = await mkdtemp(join(tmpdir(), 'packing-browser-'));
@@ -43,13 +46,20 @@ before(async () => {
   const binary = join(temporary, 'packing-server');
   execFileSync('go', ['build', '-o', binary, './cmd/packing-server'], { cwd: repo, stdio: 'inherit' });
 
+  ({ server, origin } = await startServer(binary, groups));
+  selectionFile = join(temporary, 'trip.selection');
+  ({ server: savedServer, origin: savedOrigin } = await startServer(binary, groups, ['--selection-file', selectionFile]));
+  browser = await chromium.launch();
+}, { timeout: 120000 });
+
+async function startServer(binary, groups, extraArgs = []) {
   const portProbe = createServer();
   portProbe.listen(0, '127.0.0.1');
   await once(portProbe, 'listening');
   const { port } = portProbe.address();
   await new Promise(resolve => portProbe.close(resolve));
-  origin = `http://127.0.0.1:${port}`;
-  server = spawn(binary, ['serve', '--groups-dir', groups, '--port', String(port)], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const origin = `http://127.0.0.1:${port}`;
+  const server = spawn(binary, ['serve', '--groups-dir', groups, '--port', String(port), ...extraArgs], { stdio: ['ignore', 'ignore', 'pipe'] });
   let serverError = '';
   server.stderr.on('data', chunk => { serverError += chunk; });
   for (let attempt = 0; attempt < 100; attempt++) {
@@ -63,23 +73,25 @@ before(async () => {
     if (attempt === 99) throw new Error(`Server did not start: ${serverError}`);
     await delay(50);
   }
-  browser = await chromium.launch();
-}, { timeout: 120000 });
+  return { server, origin };
+}
 
 after(async () => {
   try {
     await browser?.close();
   } finally {
-    if (server && server.exitCode === null) {
-      const exited = once(server, 'exit');
-      server.kill('SIGTERM');
-      await exited;
+    for (const process of [server, savedServer]) {
+      if (process && process.exitCode === null) {
+        const exited = once(process, 'exit');
+        process.kill('SIGTERM');
+        await exited;
+      }
     }
     if (temporary) await rm(temporary, { recursive: true, force: true });
   }
 });
 
-async function openPage(t, saved = legacy, setup = async () => {}) {
+async function openPage(t, saved = legacy, setup = async () => {}, pageOrigin = origin) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   t.after(() => context.close());
   await context.addInitScript(saved => {
@@ -94,14 +106,14 @@ async function openPage(t, saved = legacy, setup = async () => {}) {
   page.on('pageerror', error => errors.push(error.message));
   t.after(() => assert.deepEqual(errors, [], 'No browser runtime errors'));
   await setup(page);
-  await page.goto(origin);
+  await page.goto(pageOrigin);
   return page;
 }
 
 const button = (page, name) => page.getByRole('button', { name, exact: true });
 const editor = page => page.getByRole('textbox', { name: 'Draft selection' });
 const ready = page => page.getByText('Preview ready.', { exact: true }).waitFor();
-const savedState = page => page.evaluate(() => JSON.parse(localStorage.getItem('appState')));
+const savedState = page => page.evaluate(() => JSON.parse(localStorage.getItem(selectionStorageKey || 'appState')));
 const groupItems = page => page.locator('[aria-label="Group items"]');
 const flatItems = page => groupItems(page).locator('li').allTextContents();
 
@@ -435,4 +447,253 @@ test('the selection editor fills the available pane height before scrolling inte
     assert.equal(layout.scrolls, true, 'Long content scrolls after the editor fills the pane');
     if (height === 1200) assert.ok(layout.height > 600, 'Tall windows provide more than the old 30 rows');
   }
+});
+
+test('a missing server selection starts empty and Apply saves exact text for a fresh browser', async t => {
+  const page = await openPage(t, legacy, async () => {}, savedOrigin);
+  await ready(page);
+  await isCurrent(page);
+  assert.equal(await editor(page).inputValue(), '', 'Unrelated browser state must not seed a new trip');
+  assert.equal(await readFile(selectionFile, 'utf8'), '');
+  const text = '# trip notes\nref: sun\n\n  Passport\n';
+  await edit(page, text);
+  assert.equal(await readFile(selectionFile, 'utf8'), '', 'Previewing must not write the selection');
+  let resolutions = 0;
+  page.on('request', request => { if (request.url().endsWith('/selection/')) resolutions++; });
+  await button(page, 'Apply changes').click();
+  await isCurrent(page);
+  assert.equal(await readFile(selectionFile, 'utf8'), text);
+  assert.equal((await savedState(page)).committed.selection, text);
+  assert.equal(resolutions, 0, 'Saving does not resolve the accepted preview again');
+
+  const fresh = await openPage(t, legacy, async () => {}, savedOrigin);
+  await ready(fresh);
+  await isCurrent(fresh);
+  assert.equal(await editor(fresh).inputValue(), text);
+  await fresh.getByText('Passport', { exact: true }).waitFor();
+  await edit(fresh, '');
+  await button(fresh, 'Apply changes').click();
+  await isCurrent(fresh);
+  assert.equal(await readFile(selectionFile, 'utf8'), '');
+});
+
+test('server selections retain local drafts and packing progress without writing them to the server', async t => {
+  await writeFile(selectionFile, original);
+  const page = await openPage(t, legacy, async () => {}, savedOrigin);
+  await ready(page);
+  await isCurrent(page);
+  await page.getByText('Sunscreen', { exact: true }).first().click();
+  await editor(page).fill('ref:');
+  await page.getByText(/Preview failed:/).waitFor();
+  assert.equal(await readFile(selectionFile, 'utf8'), original);
+  await page.reload();
+  await page.getByText(/Preview failed:/).waitFor();
+  await page.getByText('Unapplied draft restored.', { exact: true }).waitFor();
+  assert.equal(await editor(page).inputValue(), 'ref:');
+  assert.deepEqual((await savedState(page)).done, ['Sunscreen']);
+  await button(page, 'Discard changes').click();
+  await isCurrent(page);
+  assert.equal(await editor(page).inputValue(), original);
+  assert.equal(await readFile(selectionFile, 'utf8'), original);
+});
+
+test('Apply waits for the server and keeps its draft and baseline after a failed save', async t => {
+  await writeFile(selectionFile, original);
+  const page = await openPage(t, legacy, async () => {}, savedOrigin);
+  await ready(page);
+  await edit(page, proposal);
+  const baseline = (await savedState(page)).committed;
+  let release;
+  let started;
+  const gate = new Promise(resolve => { release = resolve; });
+  const saving = new Promise(resolve => { started = resolve; });
+  await page.route('**/saved-selection/', async route => {
+    if (route.request().method() === 'PUT') {
+      started();
+      await gate;
+      await route.fulfill({ status: 500, body: 'Test disk write failure' });
+    } else {
+      await route.continue();
+    }
+  });
+  await button(page, 'Apply changes').click();
+  await saving;
+  await page.getByText('Saving selection…', { exact: true }).waitFor();
+  assert.equal(await editor(page).isDisabled(), true);
+  assert.equal(await button(page, 'Apply changes').isDisabled(), true);
+  assert.equal(await button(page, 'Discard changes').isDisabled(), true);
+  assert.deepEqual((await savedState(page)).committed, baseline);
+  assert.equal(await readFile(selectionFile, 'utf8'), original);
+  release();
+  await page.getByText(/Could not save selection:.*Test disk write failure/).waitFor();
+  assert.deepEqual((await savedState(page)).committed, baseline);
+  assert.equal(await editor(page).inputValue(), proposal);
+  assert.equal(await editor(page).isEnabled(), true);
+  await page.unroute('**/saved-selection/');
+  await button(page, 'Apply changes').click();
+  await isCurrent(page);
+  assert.equal(await readFile(selectionFile, 'utf8'), proposal);
+  assert.equal((await savedState(page)).committed.selection, proposal);
+});
+
+test('a failed initial load blocks edits and can be retried without overwriting the file', async t => {
+  await writeFile(selectionFile, original);
+  const page = await openPage(t, legacy, async page => {
+    await page.route('**/saved-selection/', route => route.fulfill({ status: 500, body: 'Test read failure' }));
+  }, savedOrigin);
+  await page.getByText(/Could not load the saved selection:.*Test read failure/).waitFor();
+  assert.equal(await editor(page).isDisabled(), true);
+  assert.equal(await button(page, 'Apply initial selection').isDisabled(), true);
+  assert.equal(await readFile(selectionFile, 'utf8'), original);
+  await page.unroute('**/saved-selection/');
+  await button(page, 'Retry loading selection').click();
+  await ready(page);
+  await isCurrent(page);
+  assert.equal(await editor(page).inputValue(), original);
+});
+
+test('reload uses an externally changed server selection instead of a stale browser snapshot', async t => {
+  await writeFile(selectionFile, original);
+  const page = await openPage(t, legacy, async () => {}, savedOrigin);
+  await ready(page);
+  await writeFile(selectionFile, 'Passport\n# changed outside the UI');
+  await page.reload();
+  await ready(page);
+  await isCurrent(page);
+  assert.equal(await editor(page).inputValue(), 'Passport\n# changed outside the UI');
+  assert.equal((await savedState(page)).committed.selection, 'Passport\n# changed outside the UI');
+});
+
+const conflictNotice = page => page.getByText('The saved selection changed since you loaded it. Your draft has been kept. Review the differences before applying again.', { exact: true });
+
+async function waitForCommitted(page, selection) {
+  await page.waitForFunction(selection => JSON.parse(localStorage.getItem(selectionStorageKey)).committed?.selection === selection, selection);
+}
+
+test('a stale Apply keeps the draft, reviews the newer saved selection, and can discard without writing', async t => {
+  await writeFile(selectionFile, original);
+  const first = await openPage(t, legacy, async () => {}, savedOrigin);
+  const second = await openPage(t, legacy, async () => {}, savedOrigin);
+  await ready(first);
+  await ready(second);
+  await isCurrent(second);
+  await second.getByText('Sunscreen', { exact: true }).first().click();
+  const latest = `${original}\nPassport`;
+  const draft = `${original}\nMap`;
+  await edit(second, draft);
+  await edit(first, latest);
+  await button(first, 'Apply changes').click();
+  await isCurrent(first);
+  let writes = 0;
+  second.on('request', request => {
+    if (request.url().endsWith('/saved-selection/') && request.method() === 'PUT') writes++;
+  });
+  const rejected = second.waitForResponse(response => response.url().endsWith('/saved-selection/') && response.status() === 412);
+  await button(second, 'Apply changes').click();
+  await rejected;
+  await conflictNotice(second).waitFor();
+  await waitForCommitted(second, latest);
+  assert.equal(await editor(second).inputValue(), draft);
+  assert.equal(await readFile(selectionFile, 'utf8'), latest);
+  await second.getByText('1 item added · 1 removed · 4 retained', { exact: true }).waitFor();
+  assert.deepEqual((await savedState(second)).done, ['Sunscreen']);
+
+  await button(second, 'Current list').click();
+  await second.getByText('Passport', { exact: true }).waitFor();
+  assert.equal(await second.getByText('Map', { exact: true }).count(), 0);
+  await button(second, 'Proposed list').click();
+  await second.getByText('Map', { exact: true }).waitFor();
+  assert.equal(await second.getByText('Passport', { exact: true }).count(), 0);
+  await button(second, 'Discard changes').click();
+  await isCurrent(second);
+  assert.equal(await editor(second).inputValue(), latest);
+  assert.equal(await conflictNotice(second).count(), 0);
+  assert.equal(await readFile(selectionFile, 'utf8'), latest);
+  assert.equal(writes, 1, 'Conflict review and Discard must not write the server file');
+});
+
+test('reviewed drafts send the latest ETag and another concurrent save triggers another conflict', async t => {
+  await writeFile(selectionFile, original);
+  const first = await openPage(t, legacy, async () => {}, savedOrigin);
+  const second = await openPage(t, legacy, async () => {}, savedOrigin);
+  await ready(first);
+  await ready(second);
+  const draft = `${original}\nMap`;
+  await edit(second, draft);
+  const etags = [];
+  const matches = [];
+  second.on('response', response => {
+    if (response.url().endsWith('/saved-selection/') && response.status() === 200) etags.push(response.headers().etag);
+  });
+  second.on('request', request => {
+    if (request.url().endsWith('/saved-selection/') && request.method() === 'PUT') matches.push(request.headers()['if-match']);
+  });
+  for (const latest of [`${original}\nPassport`, `${original}\nPassport\n# updated again`]) {
+    await edit(first, latest);
+    await button(first, 'Apply changes').click();
+    await isCurrent(first);
+    const rejected = second.waitForResponse(response => response.url().endsWith('/saved-selection/') && response.status() === 412);
+    await button(second, 'Apply changes').click();
+    await rejected;
+    await waitForCommitted(second, latest);
+    assert.equal(await editor(second).inputValue(), draft);
+    assert.equal(await readFile(selectionFile, 'utf8'), latest);
+  }
+  // Incorporate the new item manually, then explicitly Apply the reviewed draft.
+  const merged = `${draft}\nPassport`;
+  await edit(second, merged);
+  const accepted = second.waitForResponse(response => response.url().endsWith('/saved-selection/') && response.status() === 204);
+  await button(second, 'Apply changes').click();
+  await accepted;
+  await isCurrent(second);
+  assert.equal(await readFile(selectionFile, 'utf8'), merged);
+  assert.equal(await conflictNotice(second).count(), 0);
+  assert.equal(matches.length, 3);
+  assert.equal(etags.length, 2);
+  assert.equal(matches[1], etags[0]);
+  assert.equal(matches[2], etags[1]);
+  assert.notEqual(matches[0], matches[1]);
+});
+
+test('failed conflict recovery blocks Apply and preserves the draft across reload and retry', async t => {
+  await writeFile(selectionFile, original);
+  const page = await openPage(t, legacy, async () => {}, savedOrigin);
+  await ready(page);
+  const draft = `${original}\nMap`;
+  const latest = `${original}\nPassport`;
+  await edit(page, draft);
+  await writeFile(selectionFile, latest);
+  await page.route('**/saved-selection/', route => {
+    if (route.request().method() === 'GET') return route.fulfill({ status: 500, body: 'Test conflict load failure' });
+    return route.continue();
+  });
+  await button(page, 'Apply changes').click();
+  await page.getByText(/Could not load the latest selection for review:.*Test conflict load failure/).waitFor();
+  assert.equal(await button(page, 'Apply changes').isDisabled(), true);
+  assert.equal(await button(page, 'Discard changes').isDisabled(), true);
+  assert.equal(await editor(page).inputValue(), draft);
+  assert.equal(await readFile(selectionFile, 'utf8'), latest);
+  await page.unroute('**/saved-selection/');
+
+  // A failed resolution must not install a new hash alongside the old baseline.
+  await page.route('**/selection/', route => {
+    if (route.request().postData() === latest) return route.fulfill({ status: 500, body: 'Test latest resolution failure' });
+    return route.continue();
+  });
+  await button(page, 'Retry loading latest selection').click();
+  await page.getByText(/Could not load the latest selection for review:.*Test latest resolution failure/).waitFor();
+  assert.equal(await button(page, 'Apply changes').isDisabled(), true);
+  assert.equal((await savedState(page)).committed.selection, original);
+  await page.unroute('**/selection/');
+
+  // Reloading while recovery is unfinished must still retain the local draft.
+  await page.reload();
+  await waitForCommitted(page, latest);
+  await ready(page);
+  await conflictNotice(page).waitFor();
+  assert.equal(await editor(page).inputValue(), draft);
+  assert.equal(await readFile(selectionFile, 'utf8'), latest);
+  await button(page, 'Apply changes').click();
+  await isCurrent(page);
+  assert.equal(await readFile(selectionFile, 'utf8'), draft);
 });

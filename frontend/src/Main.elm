@@ -40,7 +40,28 @@ main =
 type alias Flags =
     { state : Maybe String
     , storageError : Maybe String
+    , serverSelection : Bool
     }
+
+
+type ServerState
+    = LocalOnly
+    | LoadingSelection
+    | LoadFailed String
+    | ServerReady
+    | SavingSelection
+    | LoadingConflict
+    | ResolvingConflict
+    | ConflictFailed String
+
+
+type alias SavedDocument =
+    { selection : String, etag : String }
+
+
+type SaveError
+    = Conflict
+    | ServerFailure String
 
 
 type alias Model =
@@ -48,6 +69,10 @@ type alias Model =
     , reviewTab : ReviewTab
     , notice : Maybe String
     , storageError : Maybe String
+    , serverState : ServerState
+    , serverError : Maybe String
+    , serverETag : String
+    , reviewingConflict : Bool
     , viewMode : ViewMode
     , selectedGroup : Maybe String
     , done : Set.Set String
@@ -203,6 +228,10 @@ defaultModel =
     , reviewTab = Changes
     , notice = Nothing
     , storageError = Nothing
+    , serverState = LocalOnly
+    , serverError = Nothing
+    , serverETag = ""
+    , reviewingConflict = False
     , viewMode = ToDo
     , selectedGroup = Nothing
     , done = Set.empty
@@ -222,13 +251,20 @@ defaultModel =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
+        fallbackSelection =
+            if flags.serverSelection then
+                ""
+
+            else
+                defaultSelectionText
+
         decoded =
             flags.state
-                |> Maybe.map (Json.Decode.decodeString (StoredState.decoder defaultSelectionText))
-                |> Maybe.withDefault (Ok (StoredState.empty defaultSelectionText))
+                |> Maybe.map (Json.Decode.decodeString (StoredState.decoder fallbackSelection))
+                |> Maybe.withDefault (Ok (StoredState.empty fallbackSelection))
 
         stored =
-            Result.withDefault (StoredState.empty defaultSelectionText) decoded
+            Result.withDefault (StoredState.empty fallbackSelection) decoded
 
         ( selection, effects ) =
             Selection.init stored.committed stored.draftText stored.legacySelection
@@ -258,9 +294,21 @@ init flags =
                         Changes
                 , notice = notice
                 , storageError = flags.storageError
+                , serverState =
+                    if flags.serverSelection then
+                        LoadingSelection
+
+                    else
+                        LocalOnly
             }
     in
-    ( model, selectionEffects model effects )
+    ( model
+    , if flags.serverSelection then
+        loadSavedSelection
+
+      else
+        selectionEffects model effects
+    )
 
 
 
@@ -269,6 +317,10 @@ init flags =
 
 type Msg
     = SelectionMsg Selection.Msg
+    | LoadedSelection (Result SaveError SavedDocument)
+    | SavedSelection (Result SaveError SavedDocument)
+    | ConflictResolved SavedDocument (Result String (List Group))
+    | RetryLoadSelection
     | SelectReviewTab ReviewTab
     | StorageResult { state : String, error : Maybe String }
     | ViewMode ViewMode
@@ -295,89 +347,119 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SelectionMsg selectionMsg ->
-            let
-                ( selection, effects ) =
-                    Selection.update selectionMsg model.selection
+            if selectionLocked model then
+                ( model, Cmd.none )
 
-                tab =
-                    case selectionMsg of
-                        Selection.Apply ->
-                            if Selection.canApply model.selection then
-                                Current
+            else if selectionMsg == Selection.Apply && model.serverState == ServerReady && Selection.canApply model.selection then
+                ( { model | serverState = SavingSelection, serverError = Nothing }
+                , savedSelectionRequest "PUT" [ Http.header "If-Match" model.serverETag ] (Http.stringBody "text/plain" model.selection.draftText) SavedSelection
+                )
 
-                            else
-                                model.reviewTab
+            else
+                updateSelection selectionMsg model
 
-                        Selection.Discard ->
-                            if model.selection.committed /= Nothing then
-                                Current
+        LoadedSelection result ->
+            if model.serverState /= LoadingSelection && model.serverState /= LoadingConflict then
+                ( model, Cmd.none )
 
-                            else
-                                model.reviewTab
+            else
+                case result of
+                    Err error ->
+                        ( { model
+                            | serverState =
+                                if model.serverState == LoadingConflict then
+                                    ConflictFailed (saveErrorText error)
 
-                        Selection.BootstrapResolved _ _ ->
-                            if selection.committed /= Nothing && not (Selection.hasChanges selection) then
-                                Current
+                                else
+                                    LoadFailed (saveErrorText error)
+                          }
+                        , Cmd.none
+                        )
 
-                            else
-                                model.reviewTab
+                    Ok saved ->
+                        let
+                            matches =
+                                Maybe.map .selection model.selection.committed == Just saved.selection
 
-                        _ ->
-                            if not (Selection.hasChanges model.selection) && Selection.hasChanges selection then
-                                Changes
+                            hasLocalDraft =
+                                model.selection.committed
+                                    |> Maybe.map (\baseline -> baseline.selection /= model.selection.draftText)
+                                    |> Maybe.withDefault False
+                        in
+                        if model.serverState == LoadingConflict || (not matches && hasLocalDraft) then
+                            -- Also preserve drafts when reloading during conflict recovery.
+                            ( { model | serverState = ResolvingConflict, reviewingConflict = True, notice = Nothing }
+                            , resolveSelection (ConflictResolved saved) saved.selection
+                            )
 
-                            else
-                                model.reviewTab
-
-                newModel =
-                    { model
-                        | selection = selection
-                        , reviewTab = tab
-                        , selectedGroup =
-                            if tab /= model.reviewTab then
-                                Nothing
-
-                            else
-                                case selectionMsg of
-                                    Selection.Apply ->
-                                        if Selection.canApply model.selection then
-                                            Nothing
-
-                                        else
-                                            model.selectedGroup
-
-                                    Selection.Discard ->
-                                        Nothing
-
-                                    _ ->
-                                        model.selectedGroup
-                        , notice =
-                            case selectionMsg of
-                                Selection.Edit _ ->
-                                    Nothing
-
-                                Selection.Apply ->
-                                    if Selection.canApply model.selection then
-                                        Nothing
+                        else
+                            let
+                                ( selection, effects ) =
+                                    if matches then
+                                        Selection.init model.selection.committed model.selection.draftText Nothing
 
                                     else
-                                        model.notice
+                                        Selection.init Nothing saved.selection (Just saved.selection)
 
-                                Selection.Discard ->
-                                    Nothing
+                                loaded =
+                                    { model
+                                        | selection = selection
+                                        , serverState = ServerReady
+                                        , serverETag = saved.etag
+                                        , reviewTab =
+                                            if matches && not (Selection.hasChanges selection) then
+                                                Current
 
-                                _ ->
-                                    model.notice
-                    }
+                                            else
+                                                Changes
+                                        , notice =
+                                            if matches then
+                                                model.notice
 
-                fitted =
-                    if rawResults model /= rawResults newModel || tab /= model.reviewTab then
-                        refitGraph newModel
+                                            else
+                                                Just "Loaded the saved selection from the server."
+                                    }
+                            in
+                            ( loaded, selectionEffects loaded effects )
 
-                    else
-                        newModel
-            in
-            ( fitted, selectionEffects fitted effects )
+        ConflictResolved saved result ->
+            if model.serverState /= ResolvingConflict then
+                ( model, Cmd.none )
+
+            else
+                case result of
+                    Err error ->
+                        ( { model | serverState = ConflictFailed error }, Cmd.none )
+
+                    Ok groups ->
+                        updateSelection (Selection.Rebase { selection = saved.selection, groups = groups })
+                            { model | serverState = ServerReady, serverETag = saved.etag, reviewingConflict = True }
+
+        SavedSelection result ->
+            if model.serverState /= SavingSelection then
+                ( model, Cmd.none )
+
+            else
+                case result of
+                    Err Conflict ->
+                        ( { model | serverState = LoadingConflict, reviewingConflict = True, notice = Nothing }, loadSavedSelection )
+
+                    Err (ServerFailure error) ->
+                        ( { model | serverState = ServerReady, serverError = Just error }, Cmd.none )
+
+                    Ok saved ->
+                        updateSelection Selection.Apply { model | serverState = ServerReady, serverETag = saved.etag, serverError = Nothing, reviewingConflict = False }
+
+        RetryLoadSelection ->
+            case model.serverState of
+                LoadFailed _ ->
+                    ( { model | serverState = LoadingSelection }, loadSavedSelection )
+
+                ConflictFailed _ ->
+                    ( { model | serverState = LoadingConflict }, loadSavedSelection )
+
+                _ ->
+                    ( model, Cmd.none )
 
         SelectReviewTab tab ->
             ( refitGraph { model | reviewTab = tab, selectedGroup = Nothing }, Cmd.none )
@@ -636,9 +718,173 @@ update msg model =
             ( { model | graphScale = fit.scale, graphPanX = fit.panX, graphPanY = fit.panY, graphSelected = Nothing }, Cmd.none )
 
 
+updateSelection : Selection.Msg -> Model -> ( Model, Cmd Msg )
+updateSelection selectionMsg model =
+    let
+        ( selection, effects ) =
+            Selection.update selectionMsg model.selection
+
+        tab =
+            case selectionMsg of
+                Selection.Apply ->
+                    if Selection.canApply model.selection then
+                        Current
+
+                    else
+                        model.reviewTab
+
+                Selection.Discard ->
+                    if model.selection.committed /= Nothing then
+                        Current
+
+                    else
+                        model.reviewTab
+
+                Selection.Rebase _ ->
+                    Changes
+
+                Selection.BootstrapResolved _ _ ->
+                    if selection.committed /= Nothing && not (Selection.hasChanges selection) then
+                        Current
+
+                    else
+                        model.reviewTab
+
+                _ ->
+                    if not (Selection.hasChanges model.selection) && Selection.hasChanges selection then
+                        Changes
+
+                    else
+                        model.reviewTab
+
+        newModel =
+            { model
+                | selection = selection
+                , reviewTab = tab
+                , reviewingConflict =
+                    if selectionMsg == Selection.Discard then
+                        False
+
+                    else
+                        model.reviewingConflict
+                , serverError =
+                    if selectionMsg == Selection.Discard then
+                        Nothing
+
+                    else
+                        model.serverError
+                , selectedGroup =
+                    if tab /= model.reviewTab then
+                        Nothing
+
+                    else
+                        case selectionMsg of
+                            Selection.Apply ->
+                                if Selection.canApply model.selection then
+                                    Nothing
+
+                                else
+                                    model.selectedGroup
+
+                            Selection.Discard ->
+                                Nothing
+
+                            _ ->
+                                model.selectedGroup
+                , notice =
+                    case selectionMsg of
+                        Selection.Edit _ ->
+                            Nothing
+
+                        Selection.Apply ->
+                            if Selection.canApply model.selection then
+                                Nothing
+
+                            else
+                                model.notice
+
+                        Selection.Discard ->
+                            Nothing
+
+                        _ ->
+                            model.notice
+            }
+
+        fitted =
+            if rawResults model /= rawResults newModel || tab /= model.reviewTab then
+                refitGraph newModel
+
+            else
+                newModel
+    in
+    ( fitted, selectionEffects fitted effects )
+
+
 serialiseStateForStorage : Model -> String
 serialiseStateForStorage model =
     StoredState.encode model.selection (Set.toList model.done) (doneDisplayKey model.doneDisplay)
+
+
+selectionLocked : Model -> Bool
+selectionLocked model =
+    case model.serverState of
+        LocalOnly ->
+            False
+
+        ServerReady ->
+            False
+
+        _ ->
+            True
+
+
+loadSavedSelection : Cmd Msg
+loadSavedSelection =
+    savedSelectionRequest "GET" [] Http.emptyBody LoadedSelection
+
+
+saveErrorText : SaveError -> String
+saveErrorText error =
+    case error of
+        Conflict ->
+            "The saved selection has changed."
+
+        ServerFailure message ->
+            message
+
+
+savedSelectionRequest : String -> List Http.Header -> Http.Body -> (Result SaveError SavedDocument -> Msg) -> Cmd Msg
+savedSelectionRequest method headers body toMsg =
+    Http.request
+        { method = method
+        , headers = headers
+        , url = "/saved-selection/"
+        , body = body
+        , expect =
+            Http.expectStringResponse toMsg <|
+                \response ->
+                    case response of
+                        Http.GoodStatus_ metadata text ->
+                            -- HTTP header names are case-insensitive.
+                            case metadata.headers |> Dict.toList |> List.filter (\( name, _ ) -> String.toLower name == "etag") |> List.head of
+                                Just ( _, etag ) ->
+                                    Ok { selection = text, etag = etag }
+
+                                Nothing ->
+                                    Err (ServerFailure "The server did not return a selection version. Reload and try again.")
+
+                        Http.BadStatus_ metadata text ->
+                            if metadata.statusCode == 412 then
+                                Err Conflict
+
+                            else
+                                Err (ServerFailure ("Server error " ++ String.fromInt metadata.statusCode ++ ": " ++ String.trim text))
+
+                        _ ->
+                            Err (ServerFailure "Unable to reach the server. Check your connection and try again.")
+        , timeout = Just 10000
+        , tracker = Nothing
+        }
 
 
 selectionEffects : Model -> List Selection.Effect -> Cmd Msg
@@ -665,13 +911,18 @@ selectionEffects model effects =
 
 
 fetch : (Result String (List Group) -> Selection.Msg) -> String -> Cmd Msg
-fetch toMsg selectionText =
+fetch toMsg =
+    resolveSelection (toMsg >> SelectionMsg)
+
+
+resolveSelection : (Result String (List Group) -> Msg) -> String -> Cmd Msg
+resolveSelection toMsg selectionText =
     Http.request
         { method = "POST"
         , headers = []
         , url = "/selection/"
         , body = Http.stringBody "text/plain" selectionText
-        , expect = expectGroups (toMsg >> SelectionMsg)
+        , expect = expectGroups toMsg
         , timeout = Just 5000
         , tracker = Nothing
         }
@@ -771,11 +1022,20 @@ button:disabled { cursor: default; }
                             "Selection · Current"
                         )
                     ]
-                , p [] [ text "Edit a draft, review its resolved items, then apply or discard your changes. Saved on this device." ]
+                , p []
+                    [ text
+                        (if model.serverState == LocalOnly then
+                            "Edit a draft, review its resolved items, then apply or discard your changes. Saved on this device."
+
+                         else
+                            "Apply saves your selection on the server. Drafts and packing progress are saved on this device."
+                        )
+                    ]
+                , serverStatus model
                 , maybeMessage "#555" model.notice
                 , maybeMessage "#a32121" (Maybe.map (\error -> "Could not save on this device: " ++ error ++ " Your changes remain in this tab.") model.storageError)
                 , div []
-                    [ button [ onClick (SelectionMsg Selection.Apply), disabled (not (Selection.canApply model.selection)) ]
+                    [ button [ onClick (SelectionMsg Selection.Apply), disabled (selectionLocked model || not (Selection.canApply model.selection)) ]
                         [ text
                             (if model.selection.committed == Nothing then
                                 "Apply initial selection"
@@ -785,14 +1045,18 @@ button:disabled { cursor: default; }
                             )
                         ]
                     , if model.selection.committed /= Nothing then
-                        button [ onClick (SelectionMsg Selection.Discard) ] [ text "Discard changes" ]
+                        button [ onClick (SelectionMsg Selection.Discard), disabled (selectionLocked model) ] [ text "Discard changes" ]
 
                       else
                         text ""
                     ]
-                , previewStatus model.selection
+                , if selectionLocked model then
+                    text ""
+
+                  else
+                    previewStatus model.selection
                 , div [ style "margin-bottom" "0.5rem" ]
-                    [ button [ onClick (SelectionMsg Selection.Simplify), disabled (model.selection.pendingSimplify /= Nothing) ]
+                    [ button [ onClick (SelectionMsg Selection.Simplify), disabled (selectionLocked model || model.selection.pendingSimplify /= Nothing) ]
                         [ text
                             (if model.selection.pendingSimplify /= Nothing then
                                 "Simplifying…"
@@ -808,6 +1072,7 @@ button:disabled { cursor: default; }
                 , simplifyNoteView model.selection.simplifyNote
                 , textarea
                     [ value model.selection.draftText
+                    , disabled (selectionLocked model)
                     , Html.Attributes.class "selection-editor"
                     , onInput (Selection.Edit >> SelectionMsg)
                     , Html.Attributes.attribute "aria-label" "Draft selection"
@@ -838,6 +1103,46 @@ button:disabled { cursor: default; }
             ]
         ]
     }
+
+
+serverStatus : Model -> Html Msg
+serverStatus model =
+    div [ Html.Attributes.attribute "aria-live" "polite" ]
+        [ case model.serverState of
+            LoadingSelection ->
+                p [] [ text "Loading saved selection…" ]
+
+            SavingSelection ->
+                p [] [ text "Saving selection…" ]
+
+            LoadingConflict ->
+                p [] [ text "Loading the latest saved selection for review…" ]
+
+            ResolvingConflict ->
+                p [] [ text "Resolving the latest saved selection for review…" ]
+
+            ConflictFailed error ->
+                div []
+                    [ p [ style "color" "#a32121" ] [ text ("Could not load the latest selection for review: " ++ error) ]
+                    , button [ onClick RetryLoadSelection ] [ text "Retry loading latest selection" ]
+                    ]
+
+            LoadFailed error ->
+                div []
+                    [ p [ style "color" "#a32121" ] [ text ("Could not load the saved selection: " ++ error) ]
+                    , button [ onClick RetryLoadSelection ] [ text "Retry loading selection" ]
+                    ]
+
+            _ ->
+                text ""
+        , if model.reviewingConflict then
+            p [ style "color" "#805500" ]
+                [ text "The saved selection changed since you loaded it. Your draft has been kept. Review the differences before applying again." ]
+
+          else
+            text ""
+        , maybeMessage "#a32121" (Maybe.map (\error -> "Could not save selection: " ++ error ++ " Your draft has been kept. Try Apply again.") model.serverError)
+        ]
 
 
 maybeMessage : String -> Maybe String -> Html msg

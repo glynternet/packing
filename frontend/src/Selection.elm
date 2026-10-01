@@ -42,6 +42,7 @@ type Msg
     | Resolve
     | Resolved Token (Result String (List Group))
     | BootstrapResolved Token (Result String (List Group))
+    | Rebase Snapshot
     | Apply
     | Discard
     | Simplify
@@ -235,6 +236,39 @@ update msg model =
 
                 Nothing ->
                     ( model, [] )
+
+        Rebase baseline ->
+            let
+                revision =
+                    model.revision + 1
+
+                rebased =
+                    { model
+                        | committed = Just baseline
+                        , revision = revision
+                        , preview =
+                            case ready model of
+                                Just snapshot ->
+                                    Ready { revision = revision, request = model.nextRequest } snapshot
+
+                                Nothing ->
+                                    Waiting
+                        , bootstrap = Nothing
+                        , baselineError = Nothing
+                        , pendingSimplify = Nothing
+                        , simplifyError = Nothing
+                        , simplifyNote = Nothing
+                    }
+            in
+            if ready rebased /= Nothing then
+                ( rebased, [ Persist ] )
+
+            else
+                let
+                    ( resolving, effects ) =
+                        update Resolve rebased
+                in
+                ( resolving, Persist :: effects )
 
         Apply ->
             case ready model of

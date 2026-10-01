@@ -361,4 +361,161 @@ mainTests =
                     |> Tuple.first
                     |> .storageError
                     |> Expect.equal model.storageError
+        , test "server startup blocks edits until the file loads" <|
+            \_ ->
+                let
+                    model =
+                        Main.init { state = Nothing, storageError = Nothing, serverSelection = True } |> Tuple.first
+
+                    edited =
+                        Main.update (Main.SelectionMsg (Edit "Passport")) model |> Tuple.first
+                in
+                Expect.equal ( Main.LoadingSelection, "", model ) ( model.serverState, model.selection.draftText, edited )
+        , test "loading the same server text retains the accepted snapshot and local draft" <|
+            \_ ->
+                let
+                    base =
+                        Main.defaultModel
+
+                    model =
+                        { base | selection = draft "Passport" [], serverState = Main.LoadingSelection }
+
+                    loaded =
+                        Main.update (Main.LoadedSelection (Ok { selection = baseline.selection, etag = "baseline" })) model |> Tuple.first
+                in
+                Expect.equal ( Just baseline, "Passport", Main.ServerReady )
+                    ( loaded.selection.committed, loaded.selection.draftText, loaded.serverState )
+        , test "a changed server file replaces the stale local selection" <|
+            \_ ->
+                let
+                    base =
+                        Main.defaultModel
+
+                    model =
+                        { base | selection = initial, serverState = Main.LoadingSelection }
+
+                    loaded =
+                        Main.update (Main.LoadedSelection (Ok { selection = "Passport", etag = "passport" })) model |> Tuple.first
+                in
+                Expect.equal ( Nothing, "Passport", Just "Passport" )
+                    ( loaded.selection.committed, loaded.selection.draftText, Maybe.map .selection loaded.selection.bootstrap )
+        , test "saving freezes the preview and commits it only after success, with failed saves retryable" <|
+            \_ ->
+                let
+                    base =
+                        Main.defaultModel
+
+                    model =
+                        { base | selection = draft "Passport" [ group "Individual Items" [] [ "Passport" ] ], serverState = Main.ServerReady }
+
+                    stepMain msg =
+                        Main.update msg >> Tuple.first
+
+                    saving =
+                        stepMain (Main.SelectionMsg Apply) model
+
+                    interrupted =
+                        List.foldl (Main.SelectionMsg >> stepMain) saving [ Edit "Other", Discard, Resolve, Simplify, Apply ]
+
+                    failed =
+                        stepMain (Main.SavedSelection (Err (Main.ServerFailure "disk full"))) saving
+
+                    applied =
+                        failed |> stepMain (Main.SelectionMsg Apply) |> stepMain (Main.SavedSelection (Ok { selection = "", etag = "applied" }))
+                in
+                Expect.all
+                    [ \_ -> Expect.equal saving interrupted
+                    , \_ -> Expect.equal ( Main.SavingSelection, Just baseline ) ( saving.serverState, saving.selection.committed )
+                    , \_ -> Expect.equal ( Main.ServerReady, Just "disk full", model.selection ) ( failed.serverState, failed.serverError, failed.selection )
+                    , \_ -> Expect.equal ( Main.Current, Selection.ready model.selection, Nothing ) ( applied.reviewTab, applied.selection.committed, applied.serverError )
+                    ]
+                    ()
+        , test "conflicts keep the old version and draft until the latest selection resolves" <|
+            \_ ->
+                let
+                    base =
+                        Main.defaultModel
+
+                    model =
+                        { base | selection = draft "Passport" [ group "Individual Items" [] [ "Passport" ] ], serverState = Main.ServerReady, serverETag = "old", done = Set.singleton "Towel" }
+
+                    stepMain msg =
+                        Main.update msg >> Tuple.first
+
+                    latest =
+                        { selection = "Map", etag = "latest" }
+
+                    conflict =
+                        model |> stepMain (Main.SelectionMsg Apply) |> stepMain (Main.SavedSelection (Err Main.Conflict))
+
+                    resolving =
+                        stepMain (Main.LoadedSelection (Ok latest)) conflict
+
+                    reviewed =
+                        stepMain (Main.ConflictResolved latest (Ok [ group "Individual Items" [] [ "Map" ] ])) resolving
+                in
+                Expect.all
+                    [ \_ -> Expect.equal ( Main.LoadingConflict, "old", model.selection ) ( conflict.serverState, conflict.serverETag, conflict.selection )
+                    , \_ -> Expect.equal ( Main.ResolvingConflict, "old", model.selection ) ( resolving.serverState, resolving.serverETag, resolving.selection )
+                    , \_ -> Expect.equal ( "latest", Just "Map", "Passport" ) ( reviewed.serverETag, Maybe.map .selection reviewed.selection.committed, reviewed.selection.draftText )
+                    , \_ -> Expect.equal ( Selection.ready model.selection, model.done, Main.Changes ) ( Selection.ready reviewed.selection, reviewed.done, reviewed.reviewTab )
+                    , \_ -> Expect.equal True reviewed.reviewingConflict
+                    ]
+                    ()
+        , test "a failed conflict resolution blocks Apply and Discard until retry completes" <|
+            \_ ->
+                let
+                    base =
+                        Main.defaultModel
+
+                    model =
+                        { base | selection = draft "Passport" [], serverState = Main.ResolvingConflict, serverETag = "old", reviewingConflict = True }
+
+                    failed =
+                        Main.update (Main.ConflictResolved { selection = "ref: missing", etag = "latest" } (Err "missing group")) model |> Tuple.first
+
+                    retried =
+                        Main.update Main.RetryLoadSelection failed |> Tuple.first
+                in
+                Expect.all
+                    [ \_ -> Expect.equal ( Main.ConflictFailed "missing group", "old", model.selection ) ( failed.serverState, failed.serverETag, failed.selection )
+                    , \_ -> Expect.equal failed (Main.update (Main.SelectionMsg Apply) failed |> Tuple.first)
+                    , \_ -> Expect.equal failed (Main.update (Main.SelectionMsg Discard) failed |> Tuple.first)
+                    , \_ -> Expect.equal ( Main.LoadingConflict, model.selection ) ( retried.serverState, retried.selection )
+                    ]
+                    ()
+        , test "reloading with a local draft and newer server text begins conflict review" <|
+            \_ ->
+                let
+                    base =
+                        Main.defaultModel
+
+                    model =
+                        { base | selection = draft "Passport" [], serverState = Main.LoadingSelection }
+
+                    loaded =
+                        Main.update (Main.LoadedSelection (Ok { selection = "Map", etag = "latest" })) model |> Tuple.first
+                in
+                Expect.equal ( Main.ResolvingConflict, model.selection, True ) ( loaded.serverState, loaded.selection, loaded.reviewingConflict )
+        , test "rebasing preserves the reviewed draft and rejects responses from the old revision" <|
+            \_ ->
+                let
+                    preview =
+                        draft "Passport" [ group "Individual Items" [] [ "Passport" ] ]
+
+                    pending =
+                        step Resolve preview
+
+                    rebased =
+                        step (Rebase { selection = "Map", groups = [ group "Individual Items" [] [ "Map" ] ] }) pending
+
+                    withLateResponse =
+                        case pending.preview of
+                            Loading token ->
+                                step (Resolved token (Ok [])) rebased
+
+                            _ ->
+                                rebased
+                in
+                Expect.equal rebased withLateResponse
         ]

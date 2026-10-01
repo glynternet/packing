@@ -42,10 +42,34 @@ go build ./...                                # quick compile check
 
 # run locally
 go run ./cmd/packing-server serve --groups-dir <dir> --port 3865
+go run ./cmd/packing-server serve --groups-dir <dir> --selection-file <trip-file>
 go run ./cmd/packing-cli selection <selection-file> --renderer markdown
 ```
 
 Notes:
+- `serve --selection-file <path>` enables a single shared selection text file.
+  The UI loads it on startup, creating an empty file if missing. Apply writes a
+  temporary file in the same directory, syncs it, then atomically renames it over
+  the selection, preserving existing permissions (new files use `0600`). Use a
+  regular file, not a symlink; its parent directory must exist and be writable.
+  `GET /saved-selection/` reads/creates the file; `PUT /saved-selection/` validates
+  syntax and saves the exact UTF-8 text (up to 1 MiB). GET and successful PUT
+  return a strong content-hash `ETag`. PUT requires that exact ETag in `If-Match`:
+  missing headers return 428 and stale versions return 412 without writing.
+  Reads and compare-and-save operations share a lock within one server instance.
+  Edits made outside the server before the comparison are detected, but external
+  writers and other server processes do not participate in this lock.
+- With this flag, Apply accepts the preview only after the server save succeeds.
+  Load/save errors are shown with retry controls. Drafts, resolved snapshots and
+  packing progress remain local, scoped to the absolute selection-file path.
+  A conflict loads and resolves the latest server selection as Current, retains
+  the draft as Proposed, and opens Changes for review. Apply and Discard stay
+  blocked until the newer baseline resolves; failures offer a retry. Applying
+  again uses the new ETag and can conflict again. No automatic merge is performed.
+  Reload retains the local snapshot and draft when its accepted text matches the
+  server file; changed server text with an unapplied draft starts conflict review.
+  Without a draft it loads the server selection. Without the flag, the existing
+  browser-only storage behavior is unchanged.
 - Build artifacts go to `./build/` (gitignored). When building only to verify, prefer
   building into `/tmp` so nothing lands in the tree.
 - Go tests use `stretchr/testify` and live in external `_test` packages. There is
