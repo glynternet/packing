@@ -30,6 +30,13 @@ before(async () => {
     writeFile(join(groups, 'sun'), 'Sunscreen\nSunglasses'),
     writeFile(join(groups, 'hiking'), 'Sunscreen\nBoots'),
     writeFile(join(groups, 'cold'), 'Sunscreen\nGloves'),
+    writeFile(join(groups, 'group_a'), 'ref: group_b\na_2\na_1'),
+    writeFile(join(groups, 'group_b'), 'b_2\nb_1'),
+    writeFile(join(groups, 'bundle'), 'ref: group_a\nref: branch\nref: passthrough'),
+    writeFile(join(groups, 'branch'), 'ref: group_b\nb_1\nc_1'),
+    writeFile(join(groups, 'passthrough'), 'ref: singleton'),
+    writeFile(join(groups, 'singleton'), 's_1'),
+    writeFile(join(groups, 'empty'), ''),
   ]);
   // Build the embedded UI and isolate the server binary and group fixtures.
   execFileSync('make', ['frontend'], { cwd: repo, stdio: 'inherit' });
@@ -95,6 +102,19 @@ const button = (page, name) => page.getByRole('button', { name, exact: true });
 const editor = page => page.getByRole('textbox', { name: 'Draft selection' });
 const ready = page => page.getByText('Preview ready.', { exact: true }).waitFor();
 const savedState = page => page.evaluate(() => JSON.parse(localStorage.getItem('appState')));
+const groupItems = page => page.locator('[aria-label="Group items"]');
+const flatItems = page => groupItems(page).locator('li').allTextContents();
+
+async function assertFlatItems(page, expected) {
+  await groupItems(page).waitFor();
+  // Elm renders on the next animation frame; wait for the requested list rather
+  // than reading the previous DOM immediately after a click.
+  await page.waitForFunction(expected => {
+    const items = [...document.querySelectorAll('[aria-label="Group items"] li')].map(item => item.textContent);
+    return JSON.stringify(items) === JSON.stringify(expected);
+  }, expected);
+  assert.deepEqual(await flatItems(page), expected);
+}
 
 async function edit(page, selection) {
   await editor(page).fill(selection);
@@ -105,6 +125,122 @@ async function edit(page, selection) {
 async function isCurrent(page) {
   await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent === 'Current list' && b.getAttribute('aria-pressed') === 'true'));
 }
+
+test('group headings open a flat descendant list and return without fetching or changing the selection', async t => {
+  const page = await openPage(t, { selection: 'ref: group_a\nref: cold', done: [], doneDisplay: 'marked' });
+  await ready(page);
+  await isCurrent(page);
+  await button(page, 'show group links').click();
+  const baseline = await savedState(page);
+  const requests = [];
+  page.on('request', request => { requests.push(request.url()); });
+
+  await button(page, 'group_a').focus();
+  await page.keyboard.press('Enter');
+  await assertFlatItems(page, ['a_1', 'a_2', 'b_1', 'b_2']);
+  assert.deepEqual(await groupItems(page).locator('h3').allTextContents(), ['group_a']);
+  assert.equal(await groupItems(page).locator('h4, a').count(), 0);
+  assert.equal(await button(page, 'show group links').count(), 0);
+  assert.equal(await page.getByText('Gloves', { exact: true }).count(), 0);
+
+  await button(page, 'Back to list').click();
+  await page.locator('#group_a').getByRole('link', { name: 'group_b', exact: true }).waitFor();
+  await button(page, 'group_b').click();
+  await assertFlatItems(page, ['b_1', 'b_2']);
+  assert.deepEqual(await savedState(page), baseline);
+  assert.deepEqual(requests, [], 'Group navigation uses the existing snapshot');
+});
+
+test('container lists include deep, shared, and collapsed items once and explain empty groups', async t => {
+  const page = await openPage(t, { selection: 'ref: bundle\nref: empty', done: [] });
+  await ready(page);
+  await isCurrent(page);
+  await button(page, 'show container groups').click();
+  await button(page, 'bundle').click();
+  const expected = ['a_1', 'a_2', 'b_1', 'b_2', 'c_1', 's_1'];
+  await assertFlatItems(page, expected);
+  await button(page, 'Back to list').click();
+  await button(page, 'singletons: inlined').click();
+  await button(page, 'bundle').click();
+  await assertFlatItems(page, expected);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  if (artifacts) await page.screenshot({ path: join(artifacts, 'group-items-mobile.png'), fullPage: true });
+
+  await button(page, 'Back to list').click();
+  await button(page, 'empty').click();
+  await groupItems(page).getByText('This group contains no resolved items.', { exact: true }).waitFor();
+  await assertFlatItems(page, []);
+});
+
+test('flat lists share packing progress and completion filters with the grouped list', async t => {
+  const page = await openPage(t, { selection: 'ref: group_a', done: ['b_1'], doneDisplay: 'hidden' });
+  await ready(page);
+  await isCurrent(page);
+  await button(page, 'group_a').click();
+  await assertFlatItems(page, ['a_1', 'a_2', 'b_2']);
+  await groupItems(page).getByText('b_2', { exact: true }).click();
+  await assertFlatItems(page, ['a_1', 'a_2']);
+  await button(page, 'view done').click();
+  await assertFlatItems(page, ['b_1', 'b_2']);
+  await groupItems(page).getByText('b_1', { exact: true }).click();
+  await assertFlatItems(page, ['b_2']);
+  await button(page, 'Back to list').click();
+  await button(page, 'group_b').click();
+  await assertFlatItems(page, ['b_2']);
+  await groupItems(page).getByText('b_2', { exact: true }).click();
+  await groupItems(page).getByText('No items done in this group.', { exact: true }).waitFor();
+  await button(page, 'view todo').click();
+  await assertFlatItems(page, ['b_1', 'b_2']);
+  await groupItems(page).getByText('b_1', { exact: true }).click();
+  await button(page, 'done: hidden').click();
+  await assertFlatItems(page, ['b_2', 'b_1']);
+  assert.equal(await groupItems(page).getByText('b_1', { exact: true }).evaluate(el => getComputedStyle(el).opacity), '0.45');
+  assert.deepEqual((await savedState(page)).done, ['b_1']);
+
+  await page.reload();
+  await ready(page);
+  await isCurrent(page);
+  assert.equal(await button(page, 'Back to list').count(), 0);
+  await button(page, 'group_a').click();
+  await assertFlatItems(page, ['a_1', 'a_2', 'b_2', 'b_1']);
+});
+
+test('group lists respect Current and Proposed snapshots and reset navigation on Apply and Discard', async t => {
+  const committed = {
+    selection: 'ref: group_a',
+    groups: [{ name: 'group_a', contents: { refs: [], items: ['Old item'] } }],
+  };
+  const page = await openPage(t, { version: 2, committed, draftText: committed.selection, done: ['b_1'], doneDisplay: 'hidden' });
+  await ready(page);
+  await button(page, 'Current list').click();
+  await button(page, 'group_a').click();
+  await assertFlatItems(page, ['Old item']);
+  await button(page, 'Proposed list').click();
+  await button(page, 'Back to list').waitFor({ state: 'hidden' });
+  assert.equal(await button(page, 'Back to list').count(), 0);
+  await button(page, 'group_a').click();
+  await assertFlatItems(page, ['a_1', 'a_2', 'b_2', 'b_1']);
+  await groupItems(page).getByText('b_2', { exact: true }).click();
+  assert.deepEqual((await savedState(page)).done, ['b_1']);
+  assert.equal(await button(page, 'done: hidden').count(), 0);
+  await button(page, 'Discard changes').click();
+  await isCurrent(page);
+  assert.equal(await button(page, 'Back to list').count(), 0);
+  await button(page, 'group_a').click();
+  await assertFlatItems(page, ['Old item']);
+
+  await button(page, 'Refresh preview').click();
+  await ready(page);
+  await button(page, 'Proposed list').click();
+  await button(page, 'group_a').click();
+  await button(page, 'Apply changes').click();
+  await isCurrent(page);
+  assert.equal(await button(page, 'Back to list').count(), 0);
+  await button(page, 'group_a').click();
+  await assertFlatItems(page, ['a_1', 'a_2', 'b_2']);
+});
 
 test('review a group swap, preserve shared items and packing progress, then apply the exact preview', async t => {
   const page = await openPage(t);

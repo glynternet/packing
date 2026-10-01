@@ -1,5 +1,6 @@
-module Packing exposing (ContentsDefinition, Group, Snapshot, canonical, decodeGroups, decodeSnapshot, encodeSnapshot, nullableList)
+module Packing exposing (ContentsDefinition, Group, Snapshot, canonical, decodeGroups, decodeSnapshot, encodeSnapshot, nullableList, resolvedItems)
 
+import Dict
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Set
@@ -15,6 +16,40 @@ type alias ContentsDefinition =
 
 type alias Snapshot =
     { selection : String, groups : List Group }
+
+
+{-| Collect unique items from a group and every descendant in the raw snapshot.
+Following only child references excludes ancestors and unrelated groups. A visited
+set handles shared descendants and cycles; Set.toList gives stable name ordering.
+Nothing distinguishes a missing root from a group that resolves to no items.
+-}
+resolvedItems : String -> List Group -> Maybe (List String)
+resolvedItems name groups =
+    let
+        index =
+            groups |> List.map (\group -> ( group.name, group.contents )) |> Dict.fromList
+
+        collect pending visited items =
+            case pending of
+                [] ->
+                    Set.toList items
+
+                current :: rest ->
+                    if Set.member current visited then
+                        collect rest visited items
+
+                    else
+                        case Dict.get current index of
+                            Nothing ->
+                                collect rest (Set.insert current visited) items
+
+                            Just contents ->
+                                collect (contents.refs ++ rest)
+                                    (Set.insert current visited)
+                                    (List.foldl Set.insert items contents.items)
+    in
+    Dict.get name index
+        |> Maybe.map (\_ -> collect [ name ] Set.empty Set.empty)
 
 
 nullableList : Decode.Decoder a -> Decode.Decoder (List a)

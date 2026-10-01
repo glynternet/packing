@@ -94,7 +94,9 @@ invalid-draft reload recovery, delayed responses, Simplify, empty selections,
 changed group files, storage failures, responsive layout, and the editor filling
 the available pane height before scrolling its contents. Delayed-response
 tests use explicit request gates rather than fixed sleeps. Browser runtime errors
-fail tests. Add pure behavior tests to `frontend/tests/*.elm` and user workflow
+fail tests. Group-item tests cover recursive flattening, shared descendants and
+cycles, navigation without fetching, completion filters, snapshot isolation, and
+mobile layout. Add pure behavior tests to `frontend/tests/*.elm` and user workflow
 tests to `frontend/tests/browser/*.mjs`.
 
 ## Architecture
@@ -139,12 +141,16 @@ Elm 0.19.2 app. `make frontend` compiles it to
 perform both steps automatically.
 
 - `src/Main.elm`: UI, list/graph presentation, and interpretation of selection effects.
+  Clicking a list group heading opens its flat descendant item list. This temporary
+  view uses the active raw snapshot, shares packing progress and completion filters,
+  and resets on review-tab changes, Apply, or Discard. Proposed group lists are read-only.
 - `src/Selection.elm`: pure draft/accepted state machine. Revision/request tokens
   reject stale resolve and Simplify responses. Apply accepts the matching preview;
   Discard restores the accepted snapshot without fetching. Packing progress is
   kept outside this state machine.
 - `src/Packing.elm`: shared group/snapshot types and JSON codecs. Canonical group
-  comparisons ignore ordering and repeated memberships.
+  comparisons ignore ordering and repeated memberships. `resolvedItems` follows
+  child references with cycle protection and returns unique items sorted by name.
 - `src/SelectionDiff.elm` and `src/Review.elm`: unique resolved item additions/removals,
   directly containing source groups, and raw selection line diffs. Diff data is
   computed before singleton collapsing or completed-item filtering.

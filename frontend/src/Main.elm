@@ -3,7 +3,7 @@ module Main exposing (..)
 import Browser
 import Browser.Events
 import Dict exposing (Dict)
-import Html exposing (Html, a, button, div, h3, h4, p, span, text, textarea)
+import Html exposing (Html, a, button, div, h3, h4, li, p, span, text, textarea, ul)
 import Html.Attributes exposing (disabled, href, id, rows, style, value)
 import Html.Events exposing (onClick, onInput)
 import Http
@@ -49,6 +49,7 @@ type alias Model =
     , notice : Maybe String
     , storageError : Maybe String
     , viewMode : ViewMode
+    , selectedGroup : Maybe String
     , done : Set.Set String
 
     -- showGroupLinks mirrors the CLI's --include-group-references: show the links
@@ -203,6 +204,7 @@ defaultModel =
     , notice = Nothing
     , storageError = Nothing
     , viewMode = ToDo
+    , selectedGroup = Nothing
     , done = Set.empty
     , showGroupLinks = False
     , showContainerGroups = False
@@ -270,6 +272,8 @@ type Msg
     | SelectReviewTab ReviewTab
     | StorageResult { state : String, error : Maybe String }
     | ViewMode ViewMode
+    | OpenGroup String
+    | BackToList
     | ItemDone String Bool
     | ShowGroupLinks Bool
     | ShowContainerGroups Bool
@@ -329,6 +333,24 @@ update msg model =
                     { model
                         | selection = selection
                         , reviewTab = tab
+                        , selectedGroup =
+                            if tab /= model.reviewTab then
+                                Nothing
+
+                            else
+                                case selectionMsg of
+                                    Selection.Apply ->
+                                        if Selection.canApply model.selection then
+                                            Nothing
+
+                                        else
+                                            model.selectedGroup
+
+                                    Selection.Discard ->
+                                        Nothing
+
+                                    _ ->
+                                        model.selectedGroup
                         , notice =
                             case selectionMsg of
                                 Selection.Edit _ ->
@@ -358,7 +380,13 @@ update msg model =
             ( fitted, selectionEffects fitted effects )
 
         SelectReviewTab tab ->
-            ( refitGraph { model | reviewTab = tab }, Cmd.none )
+            ( refitGraph { model | reviewTab = tab, selectedGroup = Nothing }, Cmd.none )
+
+        OpenGroup name ->
+            ( { model | selectedGroup = Just name }, Cmd.none )
+
+        BackToList ->
+            ( { model | selectedGroup = Nothing }, Cmd.none )
 
         StorageResult result ->
             if result.state == serialiseStateForStorage model then
@@ -967,6 +995,39 @@ otherDoneDisplay display =
 
 controlsView : Model -> Html Msg
 controlsView model =
+    case model.selectedGroup of
+        Just _ ->
+            div []
+                (button [ onClick BackToList ] [ text "Back to list" ] :: completionControls model)
+
+        Nothing ->
+            overviewControlsView model
+
+
+completionControls : Model -> List (Html Msg)
+completionControls model =
+    if model.reviewTab /= Current then
+        []
+
+    else
+        button [ onClick <| SetDoneDisplay (otherDoneDisplay model.doneDisplay) ]
+            [ text (doneDisplayLabel model.doneDisplay) ]
+            :: (case model.doneDisplay of
+                    Hide ->
+                        [ if model.viewMode == Done then
+                            button [ onClick <| ViewMode ToDo ] [ text "view todo" ]
+
+                          else
+                            button [ onClick <| ViewMode Done ] [ text "view done" ]
+                        ]
+
+                    Mark ->
+                        []
+               )
+
+
+overviewControlsView : Model -> Html Msg
+overviewControlsView model =
     case model.viewMode of
         Graph ->
             div []
@@ -988,29 +1049,7 @@ controlsView model =
 
         _ ->
             div []
-                ((if model.reviewTab == Current then
-                    [ button [ onClick <| SetDoneDisplay (otherDoneDisplay model.doneDisplay) ]
-                        [ text (doneDisplayLabel model.doneDisplay) ]
-                    ]
-
-                  else
-                    []
-                 )
-                    -- The todo/done pages only exist while done work is hidden;
-                    -- Mark puts both on one page.
-                    ++ (case model.doneDisplay of
-                            Hide ->
-                                [ case model.viewMode of
-                                    Done ->
-                                        button [ onClick <| ViewMode ToDo ] [ text "view todo" ]
-
-                                    _ ->
-                                        button [ onClick <| ViewMode Done ] [ text "view done" ]
-                                ]
-
-                            Mark ->
-                                []
-                       )
+                (completionControls model
                     ++ [ button [ onClick <| ViewMode Graph ] [ text "graph view" ]
                        , button [ onClick <| ShowGroupLinks (not model.showGroupLinks) ] [ text "show group links" ]
                        , button [ onClick <| ShowContainerGroups (not model.showContainerGroups) ] [ text "show container groups" ]
@@ -1029,6 +1068,47 @@ controlsView model =
 
 resultsView : Model -> Html Msg
 resultsView model =
+    case model.selectedGroup of
+        Just name ->
+            groupItemsView model name
+
+        Nothing ->
+            overviewResultsView model
+
+
+groupItemsView : Model -> String -> Html Msg
+groupItemsView model name =
+    div [ Html.Attributes.attribute "aria-label" "Group items" ]
+        [ h3 [] [ text name ]
+        , p [] [ text ("Viewing " ++ viewingLabel model) ]
+        , case rawResults model of
+            Nothing ->
+                p [] [ text "Resolved items are not available for this selection." ]
+
+            Just groups ->
+                case Packing.resolvedItems name groups of
+                    Nothing ->
+                        p [] [ text "This group is no longer in this selection." ]
+
+                    Just resolved ->
+                        let
+                            items =
+                                itemsForView model False resolved
+                        in
+                        if List.isEmpty resolved then
+                            p [] [ text "This group contains no resolved items." ]
+
+                        else if List.isEmpty items then
+                            p [] [ text ("No items " ++ viewingLabel model ++ " in this group.") ]
+
+                        else
+                            ul [ style "list-style" "none", style "padding" "0" ]
+                                (List.map (\item -> li [] [ itemView model item (Tuple.first item) ]) items)
+        ]
+
+
+overviewResultsView : Model -> Html Msg
+overviewResultsView model =
     div []
         (case effectiveResults model of
             Nothing ->
@@ -1270,6 +1350,48 @@ viewingLabel model =
             "to do"
 
 
+{-| Share completion filtering and styling between grouped and flat lists.
+When a whole group is already faded, avoid fading its items a second time.
+-}
+itemsForView : Model -> Bool -> List String -> List ( String, Bool )
+itemsForView model groupFaded items =
+    let
+        ( todoItems, doneItems ) =
+            List.partition (\item -> not (Set.member item model.done)) items
+    in
+    case ( model.doneDisplay, model.viewMode ) of
+        ( Mark, _ ) ->
+            List.map (\item -> ( item, False )) todoItems
+                ++ List.map (\item -> ( item, not groupFaded )) doneItems
+
+        ( Hide, Done ) ->
+            doneItems |> List.map (\item -> ( item, False ))
+
+        ( Hide, _ ) ->
+            todoItems |> List.map (\item -> ( item, False ))
+
+
+itemView : Model -> ( String, Bool ) -> String -> Html Msg
+itemView model ( itemKey, faded ) itemText =
+    p
+        ((if model.reviewTab == Current then
+            [ style "cursor" "pointer"
+            , onClick (ItemDone itemKey (not (Set.member itemKey model.done)))
+            ]
+
+          else
+            []
+         )
+            ++ (if faded then
+                    [ style "opacity" "0.45", style "color" "#555" ]
+
+                else
+                    []
+               )
+        )
+        [ text itemText ]
+
+
 groupsView : Model -> List Group -> List (Html Msg)
 groupsView model groups =
     let
@@ -1321,50 +1443,15 @@ groupsView model groups =
                                    )
                             )
                             (let
-                                ( todoItems, doneItems ) =
-                                    group.contents.items
-                                        |> List.partition (\item -> not (Set.member item model.done))
-
-                                -- The items to show, each paired with whether to
-                                -- render it faded.
                                 items =
-                                    case ( model.doneDisplay, model.viewMode ) of
-                                        ( Mark, _ ) ->
-                                            List.map (\item -> ( item, False )) todoItems
-                                                ++ List.map (\item -> ( item, not (isDoneGroup group) )) doneItems
-
-                                        ( Hide, Done ) ->
-                                            -- Everything on this page is done, so
-                                            -- fading it all would say nothing.
-                                            doneItems |> List.map (\item -> ( item, False ))
-
-                                        ( Hide, _ ) ->
-                                            todoItems |> List.map (\item -> ( item, False ))
-
-                                toClickableItem ( itemKey, faded ) itemText =
-                                    p
-                                        ((if model.reviewTab == Current then
-                                            [ style "cursor" "pointer"
-                                            , Html.Events.onClick (ItemDone itemKey (not (Set.member itemKey model.done)))
-                                            ]
-
-                                          else
-                                            []
-                                         )
-                                            ++ (if faded then
-                                                    [ style "opacity" "0.45", style "color" "#555" ]
-
-                                                else
-                                                    []
-                                               )
-                                        )
-                                        [ text itemText ]
+                                    itemsForView model (isDoneGroup group) group.contents.items
                              in
                              if model.itemsOnly > 0 then
                                 items
                                     |> List.map
                                         (\item ->
-                                            toClickableItem item
+                                            itemView model
+                                                item
                                                 ((if model.itemsOnly == 1 then
                                                     group.name ++ ":"
 
@@ -1410,7 +1497,7 @@ groupsView model groups =
                                                 else
                                                     [ h4 [] [ text "items" ] ]
                                                         ++ (items
-                                                                |> List.map (\item -> toClickableItem item (Tuple.first item))
+                                                                |> List.map (\item -> itemView model item (Tuple.first item))
                                                            )
                                                )
                                 in
@@ -1423,7 +1510,25 @@ groupsView model groups =
                                     []
 
                                 else
-                                    List.concat [ [ h3 [] [ text group.name ] ], parentsLine, groupDisplayContents ]
+                                    List.concat
+                                        [ [ h3 []
+                                                [ button
+                                                    [ onClick (OpenGroup group.name)
+                                                    , style "font" "inherit"
+                                                    , style "color" "#175a9e"
+                                                    , style "text-decoration" "underline"
+                                                    , style "background" "none"
+                                                    , style "border" "0"
+                                                    , style "padding" "0"
+                                                    , style "margin" "0"
+                                                    , Html.Attributes.title ("View all items in " ++ group.name)
+                                                    ]
+                                                    [ text group.name ]
+                                                ]
+                                          ]
+                                        , parentsLine
+                                        , groupDisplayContents
+                                        ]
                             )
                     )
            )
