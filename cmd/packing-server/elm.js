@@ -4582,6 +4582,52 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 {
 	return a >>> offset;
 });
+
+
+
+function _Time_now(millisToPosix)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(millisToPosix(Date.now())));
+	});
+}
+
+var _Time_setInterval = F2(function(interval, task)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
+		return function() { clearInterval(id); };
+	});
+});
+
+function _Time_here()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(
+			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
+		));
+	});
+}
+
+
+function _Time_getZoneName()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		try
+		{
+			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
+		}
+		catch (e)
+		{
+			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
+		}
+		callback(_Scheduler_succeed(name));
+	});
+}
 var $elm$core$Maybe$Just = function (a) {
 	return {$: 'Just', a: a};
 };
@@ -6116,6 +6162,9 @@ var $author$project$Main$defaultModel = {
 	graphPanY: 20,
 	graphScale: 1,
 	graphSelected: $elm$core$Maybe$Nothing,
+	hosted: false,
+	hostedApplyLocked: false,
+	hostedPackingLocked: false,
 	inlineSingletons: true,
 	itemsOnly: 0,
 	notice: $elm$core$Maybe$Nothing,
@@ -8997,7 +9046,7 @@ var $author$project$Main$overviewControlsView = function (model) {
 									$elm$html$Html$text('toggle items only')
 								]))
 						]),
-					_Utils_eq(model.reviewTab, $author$project$Main$Current) ? _List_fromArray(
+					(_Utils_eq(model.reviewTab, $author$project$Main$Current) && (!model.hosted)) ? _List_fromArray(
 						[
 							A2(
 							$elm$html$Html$button,
@@ -9227,7 +9276,7 @@ var $author$project$Main$itemView = F3(
 		return A2(
 			$elm$html$Html$p,
 			_Utils_ap(
-				_Utils_eq(model.reviewTab, $author$project$Main$Current) ? _List_fromArray(
+				(_Utils_eq(model.reviewTab, $author$project$Main$Current) && (!model.hostedPackingLocked)) ? _List_fromArray(
 					[
 						A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
 						$elm$html$Html$Events$onClick(
@@ -11093,7 +11142,7 @@ var $author$project$Main$view = function (model) {
 								_List_fromArray(
 									[
 										$elm$html$Html$text(
-										_Utils_eq(model.serverState, $author$project$Main$LocalOnly) ? 'Edit a draft, review its resolved items, then apply or discard your changes. Saved on this device.' : 'Apply saves your selection on the server. Drafts and packing progress are saved on this device.')
+										model.hosted ? 'Drafts and packing progress sync to this private trip. Apply publishes the reviewed list.' : (_Utils_eq(model.serverState, $author$project$Main$LocalOnly) ? 'Edit a draft, review its resolved items, then apply or discard your changes. Saved on this device.' : 'Apply saves your selection on the server. Drafts and packing progress are saved on this device.'))
 									])),
 								$author$project$Main$serverStatus(model),
 								A2($author$project$Main$maybeMessage, '#555', model.notice),
@@ -11118,7 +11167,7 @@ var $author$project$Main$view = function (model) {
 												$elm$html$Html$Events$onClick(
 												$author$project$Main$SelectionMsg($author$project$Selection$Apply)),
 												$elm$html$Html$Attributes$disabled(
-												$author$project$Main$selectionLocked(model) || (!$author$project$Selection$canApply(model.selection)))
+												model.hostedApplyLocked || ($author$project$Main$selectionLocked(model) || (!$author$project$Selection$canApply(model.selection))))
 											]),
 										_List_fromArray(
 											[
@@ -11136,7 +11185,8 @@ var $author$project$Main$view = function (model) {
 											]),
 										_List_fromArray(
 											[
-												$elm$html$Html$text('Discard changes')
+												$elm$html$Html$text(
+												model.hosted ? 'Restore draft to accepted list' : 'Discard changes')
 											])) : $elm$html$Html$text('')
 									])),
 								$author$project$Main$selectionLocked(model) ? $elm$html$Html$text('') : $author$project$Main$previewStatus(model.selection),
@@ -11235,7 +11285,1407 @@ var $author$project$Main$view = function (model) {
 };
 var $author$project$Main$main = $elm$browser$Browser$document(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main(
+var $elm$json$Json$Decode$map8 = _Json_map8;
+var $elm$core$Tuple$pair = F2(
+	function (a, b) {
+		return _Utils_Tuple2(a, b);
+	});
+var $author$project$HostedSync$Write = F9(
+	function (mutationId, kind, etag, epoch, generation, draftRevision, text, item, packed) {
+		return {draftRevision: draftRevision, epoch: epoch, etag: etag, generation: generation, item: item, kind: kind, mutationId: mutationId, packed: packed, text: text};
+	});
+var $author$project$HostedSync$writeDecoder = A3(
+	$elm$json$Json$Decode$map2,
+	F2(
+		function (partial, packed) {
+			return partial(packed);
+		}),
+	A9(
+		$elm$json$Json$Decode$map8,
+		$author$project$HostedSync$Write,
+		A2($elm$json$Json$Decode$field, 'mutationId', $elm$json$Json$Decode$string),
+		A2($elm$json$Json$Decode$field, 'kind', $elm$json$Json$Decode$string),
+		A2($elm$json$Json$Decode$field, 'etag', $elm$json$Json$Decode$string),
+		A2($elm$json$Json$Decode$field, 'epoch', $elm$json$Json$Decode$string),
+		A2($elm$json$Json$Decode$field, 'generation', $elm$json$Json$Decode$int),
+		A2($elm$json$Json$Decode$field, 'draftRevision', $elm$json$Json$Decode$int),
+		A2($elm$json$Json$Decode$field, 'text', $elm$json$Json$Decode$string),
+		A2($elm$json$Json$Decode$field, 'item', $elm$json$Json$Decode$string)),
+	A2($elm$json$Json$Decode$field, 'packed', $elm$json$Json$Decode$bool));
+var $author$project$HostedMain$recoveryDecoder = function (base) {
+	return A2(
+		$elm$json$Json$Decode$andThen,
+		function (_v0) {
+			var version = _v0.a;
+			var trip = _v0.b;
+			return ((version !== 1) || (!_Utils_eq(trip, base.tripId))) ? $elm$json$Json$Decode$fail('Wrong recovery schema or trip') : A9(
+				$elm$json$Json$Decode$map8,
+				F8(
+					function (_v1, started, _v2, epoch, draft, baseDraft, baseRevision, writes) {
+						var ui = base.ui;
+						var selectionModel = ui.selection;
+						var key = function (w) {
+							return (w.kind === 'item') ? ('item-' + w.item) : w.kind;
+						};
+						return _Utils_update(
+							base,
+							{
+								baseDraft: baseDraft,
+								baseRevision: baseRevision,
+								client: base.client,
+								dirty: !_Utils_eq(draft, baseDraft),
+								epoch: epoch,
+								next: base.next,
+								pending: $elm$core$Dict$fromList(
+									A2(
+										$elm$core$List$map,
+										function (w) {
+											return _Utils_Tuple2(
+												key(w),
+												{
+													error: $elm$core$Maybe$Just('Recovered unsynced edit. Retry to check its acknowledgement.'),
+													sending: false,
+													write: w
+												});
+										},
+										writes)),
+								started: $elm$core$List$isEmpty(writes) ? base.started : started,
+								ui: _Utils_update(
+									ui,
+									{
+										selection: _Utils_update(
+											selectionModel,
+											{draftText: draft})
+									})
+							});
+					}),
+				A2($elm$json$Json$Decode$field, 'client', $elm$json$Json$Decode$string),
+				A2($elm$json$Json$Decode$field, 'started', $elm$json$Json$Decode$float),
+				A2($elm$json$Json$Decode$field, 'next', $elm$json$Json$Decode$int),
+				A2($elm$json$Json$Decode$field, 'epoch', $elm$json$Json$Decode$string),
+				A2($elm$json$Json$Decode$field, 'draft', $elm$json$Json$Decode$string),
+				A2($elm$json$Json$Decode$field, 'baseDraft', $elm$json$Json$Decode$string),
+				A2($elm$json$Json$Decode$field, 'baseRevision', $elm$json$Json$Decode$int),
+				A2(
+					$elm$json$Json$Decode$field,
+					'writes',
+					$elm$json$Json$Decode$list($author$project$HostedSync$writeDecoder)));
+		},
+		A3(
+			$elm$json$Json$Decode$map2,
+			$elm$core$Tuple$pair,
+			A2($elm$json$Json$Decode$field, 'version', $elm$json$Json$Decode$int),
+			A2($elm$json$Json$Decode$field, 'trip', $elm$json$Json$Decode$string)));
+};
+var $author$project$HostedMain$Loaded = F2(
+	function (a, b) {
+		return {$: 'Loaded', a: a, b: b};
+	});
+var $author$project$HostedMain$baseURL = function (model) {
+	return '/api/v1/sessions/' + model.tripId;
+};
+var $elm$http$Http$BadBody = function (a) {
+	return {$: 'BadBody', a: a};
+};
+var $elm$http$Http$BadStatus = function (a) {
+	return {$: 'BadStatus', a: a};
+};
+var $elm$http$Http$BadUrl = function (a) {
+	return {$: 'BadUrl', a: a};
+};
+var $elm$http$Http$NetworkError = {$: 'NetworkError'};
+var $elm$http$Http$Timeout = {$: 'Timeout'};
+var $elm$http$Http$resolve = F2(
+	function (toResult, response) {
+		switch (response.$) {
+			case 'BadUrl_':
+				var url = response.a;
+				return $elm$core$Result$Err(
+					$elm$http$Http$BadUrl(url));
+			case 'Timeout_':
+				return $elm$core$Result$Err($elm$http$Http$Timeout);
+			case 'NetworkError_':
+				return $elm$core$Result$Err($elm$http$Http$NetworkError);
+			case 'BadStatus_':
+				var metadata = response.a;
+				return $elm$core$Result$Err(
+					$elm$http$Http$BadStatus(metadata.statusCode));
+			default:
+				var body = response.b;
+				return A2(
+					$elm$core$Result$mapError,
+					$elm$http$Http$BadBody,
+					toResult(body));
+		}
+	});
+var $elm$http$Http$expectJson = F2(
+	function (toMsg, decoder) {
+		return A2(
+			$elm$http$Http$expectStringResponse,
+			toMsg,
+			$elm$http$Http$resolve(
+				function (string) {
+					return A2(
+						$elm$core$Result$mapError,
+						$elm$json$Json$Decode$errorToString,
+						A2($elm$json$Json$Decode$decodeString, decoder, string));
+				}));
+	});
+var $elm$http$Http$get = function (r) {
+	return $elm$http$Http$request(
+		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
+};
+var $author$project$HostedSync$Item = F4(
+	function (id, name, packed, revision) {
+		return {id: id, name: name, packed: packed, revision: revision};
+	});
+var $author$project$HostedSync$Trip = F8(
+	function (id, epoch, revision, draft, draftRevision, generation, snapshot, items) {
+		return {draft: draft, draftRevision: draftRevision, epoch: epoch, generation: generation, id: id, items: items, revision: revision, snapshot: snapshot};
+	});
+var $elm$json$Json$Decode$map4 = _Json_map4;
+var $author$project$HostedSync$tripDecoder = A9(
+	$elm$json$Json$Decode$map8,
+	$author$project$HostedSync$Trip,
+	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'epoch', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'revision', $elm$json$Json$Decode$int),
+	A2($elm$json$Json$Decode$field, 'draft', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'draftRevision', $elm$json$Json$Decode$int),
+	A2($elm$json$Json$Decode$field, 'generation', $elm$json$Json$Decode$int),
+	A2($elm$json$Json$Decode$field, 'snapshot', $author$project$Packing$decodeSnapshot),
+	A2(
+		$elm$json$Json$Decode$field,
+		'items',
+		$elm$json$Json$Decode$dict(
+			A5(
+				$elm$json$Json$Decode$map4,
+				$author$project$HostedSync$Item,
+				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string),
+				A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string),
+				A2($elm$json$Json$Decode$field, 'packed', $elm$json$Json$Decode$bool),
+				A2($elm$json$Json$Decode$field, 'revision', $elm$json$Json$Decode$int)))));
+var $author$project$HostedMain$refresh = function (model) {
+	var serial = model.fetchSerial + 1;
+	return _Utils_Tuple2(
+		_Utils_update(
+			model,
+			{fetchSerial: serial, loading: true}),
+		$elm$http$Http$get(
+			{
+				expect: A2(
+					$elm$http$Http$expectJson,
+					$author$project$HostedMain$Loaded(serial),
+					$author$project$HostedSync$tripDecoder),
+				url: $author$project$HostedMain$baseURL(model)
+			}));
+};
+var $author$project$HostedMain$init = function (flags) {
+	var ui = $author$project$Main$defaultModel;
+	var _v0 = A3(
+		$author$project$Selection$init,
+		$elm$core$Maybe$Just(
+			{groups: _List_Nil, selection: ''}),
+		'',
+		$elm$core$Maybe$Nothing);
+	var empty = _v0.a;
+	var base = {
+		baseDraft: '',
+		baseRevision: 0,
+		client: flags.client,
+		conflict: false,
+		dirty: false,
+		epoch: '',
+		error: $elm$core$Maybe$Nothing,
+		fetchSerial: 0,
+		loading: false,
+		next: 0,
+		now: flags.now,
+		pending: $elm$core$Dict$empty,
+		remote: $elm$core$Maybe$Nothing,
+		started: flags.now,
+		storageError: flags.storageError,
+		tripId: flags.trip,
+		ui: _Utils_update(
+			ui,
+			{hosted: true, selection: empty}),
+		unreadableRecovery: $elm$core$Maybe$Nothing
+	};
+	var restored = function () {
+		var _v1 = flags.recovery;
+		if (_v1.$ === 'Nothing') {
+			return base;
+		} else {
+			var raw = _v1.a;
+			var _v2 = A2(
+				$elm$json$Json$Decode$decodeString,
+				$author$project$HostedMain$recoveryDecoder(base),
+				raw);
+			if (_v2.$ === 'Ok') {
+				var cached = _v2.a;
+				return _Utils_update(
+					cached,
+					{
+						conflict: A2(
+							$elm$core$Result$withDefault,
+							false,
+							A2(
+								$elm$json$Json$Decode$decodeString,
+								A2($elm$json$Json$Decode$field, 'conflict', $elm$json$Json$Decode$bool),
+								raw))
+					});
+			} else {
+				return _Utils_update(
+					base,
+					{
+						conflict: true,
+						error: $elm$core$Maybe$Just('Could not read device recovery data. Export it before clearing browser storage.'),
+						unreadableRecovery: $elm$core$Maybe$Just(raw)
+					});
+			}
+		}
+	}();
+	return $author$project$HostedMain$refresh(restored);
+};
+var $author$project$HostedMain$Refresh = {$: 'Refresh'};
+var $author$project$HostedMain$Stored = function (a) {
+	return {$: 'Stored', a: a};
+};
+var $author$project$HostedMain$UI = function (a) {
+	return {$: 'UI', a: a};
+};
+var $elm$core$Platform$Sub$map = _Platform_map;
+var $author$project$HostedMain$recoveryResult = _Platform_incomingPort(
+	'recoveryResult',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (state) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (error) {
+					return $elm$json$Json$Decode$succeed(
+						{error: error, state: state});
+				},
+				A2(
+					$elm$json$Json$Decode$field,
+					'error',
+					$elm$json$Json$Decode$oneOf(
+						_List_fromArray(
+							[
+								$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
+								A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, $elm$json$Json$Decode$string)
+							]))));
+		},
+		A2($elm$json$Json$Decode$field, 'state', $elm$json$Json$Decode$string)));
+var $author$project$HostedMain$refreshRequested = _Platform_incomingPort(
+	'refreshRequested',
+	$elm$json$Json$Decode$null(_Utils_Tuple0));
+var $author$project$HostedMain$subscriptions = function (model) {
+	return $elm$core$Platform$Sub$batch(
+		_List_fromArray(
+			[
+				A2(
+				$elm$core$Platform$Sub$map,
+				$author$project$HostedMain$UI,
+				$author$project$Main$graphSubscriptions(model.ui)),
+				$author$project$HostedMain$refreshRequested(
+				function (_v0) {
+					return $author$project$HostedMain$Refresh;
+				}),
+				$author$project$HostedMain$recoveryResult($author$project$HostedMain$Stored)
+			]));
+};
+var $author$project$HostedMain$RetryAt = function (a) {
+	return {$: 'RetryAt', a: a};
+};
+var $author$project$HostedMain$SaveDraft = function (a) {
+	return {$: 'SaveDraft', a: a};
+};
+var $author$project$HostedSync$encodeWrite = function (w) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'mutationId',
+				$elm$json$Json$Encode$string(w.mutationId)),
+				_Utils_Tuple2(
+				'kind',
+				$elm$json$Json$Encode$string(w.kind)),
+				_Utils_Tuple2(
+				'etag',
+				$elm$json$Json$Encode$string(w.etag)),
+				_Utils_Tuple2(
+				'epoch',
+				$elm$json$Json$Encode$string(w.epoch)),
+				_Utils_Tuple2(
+				'generation',
+				$elm$json$Json$Encode$int(w.generation)),
+				_Utils_Tuple2(
+				'draftRevision',
+				$elm$json$Json$Encode$int(w.draftRevision)),
+				_Utils_Tuple2(
+				'text',
+				$elm$json$Json$Encode$string(w.text)),
+				_Utils_Tuple2(
+				'item',
+				$elm$json$Json$Encode$string(w.item)),
+				_Utils_Tuple2(
+				'packed',
+				$elm$json$Json$Encode$bool(w.packed))
+			]));
+};
+var $elm$json$Json$Encode$float = _Json_wrap;
+var $author$project$HostedMain$encodeRecovery = function (model) {
+	return A2(
+		$elm$json$Json$Encode$encode,
+		0,
+		$elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'version',
+					$elm$json$Json$Encode$int(1)),
+					_Utils_Tuple2(
+					'trip',
+					$elm$json$Json$Encode$string(model.tripId)),
+					_Utils_Tuple2(
+					'client',
+					$elm$json$Json$Encode$string(model.client)),
+					_Utils_Tuple2(
+					'started',
+					$elm$json$Json$Encode$float(model.started)),
+					_Utils_Tuple2(
+					'next',
+					$elm$json$Json$Encode$int(model.next)),
+					_Utils_Tuple2(
+					'epoch',
+					$elm$json$Json$Encode$string(model.epoch)),
+					_Utils_Tuple2(
+					'draft',
+					$elm$json$Json$Encode$string(model.ui.selection.draftText)),
+					_Utils_Tuple2(
+					'baseDraft',
+					$elm$json$Json$Encode$string(model.baseDraft)),
+					_Utils_Tuple2(
+					'baseRevision',
+					$elm$json$Json$Encode$int(model.baseRevision)),
+					_Utils_Tuple2(
+					'dirty',
+					$elm$json$Json$Encode$bool(model.dirty)),
+					_Utils_Tuple2(
+					'conflict',
+					$elm$json$Json$Encode$bool(model.conflict)),
+					_Utils_Tuple2(
+					'writes',
+					A2(
+						$elm$json$Json$Encode$list,
+						$author$project$HostedSync$encodeWrite,
+						A2(
+							$elm$core$List$map,
+							function ($) {
+								return $.write;
+							},
+							$elm$core$Dict$values(model.pending))))
+				])));
+};
+var $author$project$HostedMain$errorText = function (error) {
+	_v0$6:
+	while (true) {
+		if (error.$ === 'BadStatus') {
+			switch (error.a) {
+				case 401:
+					return 'Access expired. Open the private access link again; your pending edits remain on this device.';
+				case 403:
+					return 'Access was refused. Your edits have not been acknowledged.';
+				case 409:
+					return 'The trip changed. Review the shared state before editing again.';
+				case 412:
+					return 'Changed on another device — review before replacing shared work.';
+				case 422:
+					return 'This selection cannot be resolved. The draft can still be saved.';
+				case 413:
+					return 'The selection is too large to save.';
+				default:
+					break _v0$6;
+			}
+		} else {
+			break _v0$6;
+		}
+	}
+	return 'Save or refresh failed. Edits remain unsynced on this device. Retry when connected.';
+};
+var $author$project$HostedMain$exportRecovery = _Platform_outgoingPort('exportRecovery', $elm$json$Json$Encode$string);
+var $elm$core$Dict$isEmpty = function (dict) {
+	if (dict.$ === 'RBEmpty_elm_builtin') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $elm$core$Platform$Cmd$map = _Platform_map;
+var $author$project$HostedMain$mutationId = function (model) {
+	return model.client + ('-' + $elm$core$String$fromInt(model.next));
+};
+var $elm$time$Time$Name = function (a) {
+	return {$: 'Name', a: a};
+};
+var $elm$time$Time$Offset = function (a) {
+	return {$: 'Offset', a: a};
+};
+var $elm$time$Time$Zone = F2(
+	function (a, b) {
+		return {$: 'Zone', a: a, b: b};
+	});
+var $elm$time$Time$customZone = $elm$time$Time$Zone;
+var $elm$time$Time$Posix = function (a) {
+	return {$: 'Posix', a: a};
+};
+var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
+var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
+var $author$project$HostedMain$storeRecovery = _Platform_outgoingPort('storeRecovery', $elm$json$Json$Encode$string);
+var $author$project$HostedMain$persist = function (model) {
+	return (!_Utils_eq(model.unreadableRecovery, $elm$core$Maybe$Nothing)) ? $elm$core$Platform$Cmd$none : $author$project$HostedMain$storeRecovery(
+		$author$project$HostedMain$encodeRecovery(model));
+};
+var $elm$time$Time$posixToMillis = function (_v0) {
+	var millis = _v0.a;
+	return millis;
+};
+var $author$project$HostedSync$newest = F2(
+	function (incoming, previous) {
+		if (previous.$ === 'Just') {
+			var old = previous.a;
+			return (_Utils_eq(old.epoch, incoming.epoch) && (_Utils_cmp(old.revision, incoming.revision) > 0)) ? old : incoming;
+		} else {
+			return incoming;
+		}
+	});
+var $elm$http$Http$jsonBody = function (value) {
+	return A2(
+		_Http_pair,
+		'application/json',
+		A2($elm$json$Json$Encode$encode, 0, value));
+};
+var $author$project$HostedMain$post = F4(
+	function (model, path, content, expect) {
+		return $elm$http$Http$request(
+			{
+				body: $elm$http$Http$jsonBody(
+					$elm$json$Json$Encode$object(
+						_List_fromArray(
+							[
+								_Utils_Tuple2(
+								'text',
+								$elm$json$Json$Encode$string(content))
+							]))),
+				expect: expect,
+				headers: _List_fromArray(
+					[
+						A2($elm$http$Http$header, 'X-Packing-Request', '1')
+					]),
+				method: 'POST',
+				timeout: $elm$core$Maybe$Just(10000),
+				tracker: $elm$core$Maybe$Nothing,
+				url: _Utils_ap(
+					$author$project$HostedMain$baseURL(model),
+					path)
+			});
+	});
+var $author$project$HostedMain$selectionEffects = F2(
+	function (model, effects) {
+		var run = function (effect) {
+			switch (effect.$) {
+				case 'Debounce':
+					var revision = effect.a;
+					return A2(
+						$elm$core$Task$perform,
+						function (_v1) {
+							return $author$project$HostedMain$UI(
+								$author$project$Main$SelectionMsg(
+									$author$project$Selection$DebounceElapsed(revision)));
+						},
+						$elm$core$Process$sleep(250));
+				case 'Fetch':
+					var token = effect.a;
+					var content = effect.b;
+					return A4(
+						$author$project$HostedMain$post,
+						model,
+						'/preview',
+						content,
+						A2(
+							$elm$http$Http$expectJson,
+							A2(
+								$elm$core$Basics$composeR,
+								$elm$core$Result$mapError($author$project$HostedMain$errorText),
+								A2(
+									$elm$core$Basics$composeR,
+									$author$project$Selection$Resolved(token),
+									A2($elm$core$Basics$composeR, $author$project$Main$SelectionMsg, $author$project$HostedMain$UI))),
+							$author$project$Packing$decodeGroups));
+				case 'SimplifyFetch':
+					var token = effect.a;
+					var content = effect.b;
+					return A4(
+						$author$project$HostedMain$post,
+						model,
+						'/simplify',
+						content,
+						A2(
+							$elm$http$Http$expectJson,
+							A2(
+								$elm$core$Basics$composeR,
+								$elm$core$Result$mapError($author$project$HostedMain$errorText),
+								A2(
+									$elm$core$Basics$composeR,
+									$author$project$Selection$Simplified(token),
+									A2($elm$core$Basics$composeR, $author$project$Main$SelectionMsg, $author$project$HostedMain$UI))),
+							$author$project$Main$decodeSimplify));
+				case 'Persist':
+					return $elm$core$Platform$Cmd$none;
+				default:
+					return $elm$core$Platform$Cmd$none;
+			}
+		};
+		return $elm$core$Platform$Cmd$batch(
+			A2($elm$core$List$map, run, effects));
+	});
+var $author$project$HostedMain$reconcile = F2(
+	function (incoming, model) {
+		if (!_Utils_eq(incoming.id, model.tripId)) {
+			return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+		} else {
+			var ui = model.ui;
+			var trip = A2($author$project$HostedSync$newest, incoming, model.remote);
+			var hasIntent = model.dirty || (!$elm$core$Dict$isEmpty(model.pending));
+			var preserve = hasIntent || model.conflict;
+			var draft = preserve ? model.ui.selection.draftText : trip.draft;
+			var done = $elm$core$Set$fromList(
+				A2(
+					$elm$core$List$map,
+					function ($) {
+						return $.name;
+					},
+					A2(
+						$elm$core$List$filter,
+						function ($) {
+							return $.packed;
+						},
+						$elm$core$Dict$values(trip.items))));
+			var optimistic = A3(
+				$elm$core$List$foldl,
+				F2(
+					function (pending, acc) {
+						var _v1 = A2($elm$core$Dict$get, pending.write.item, trip.items);
+						if (_v1.$ === 'Just') {
+							var item = _v1.a;
+							return (pending.write.kind === 'item') ? (pending.write.packed ? A2($elm$core$Set$insert, item.name, acc) : A2($elm$core$Set$remove, item.name, acc)) : acc;
+						} else {
+							return acc;
+						}
+					}),
+				done,
+				$elm$core$Dict$values(model.pending));
+			var current = ui.selection;
+			var changedEpoch = (model.epoch !== '') && (!_Utils_eq(model.epoch, trip.epoch));
+			var baseSelection = _Utils_update(
+				current,
+				{
+					committed: $elm$core$Maybe$Just(trip.snapshot)
+				});
+			var _v0 = A2(
+				$author$project$Selection$update,
+				$author$project$Selection$Edit(draft),
+				baseSelection);
+			var selectionModel = _v0.a;
+			var effects = _v0.b;
+			var updated = _Utils_update(
+				model,
+				{
+					baseDraft: preserve ? model.baseDraft : trip.draft,
+					baseRevision: preserve ? model.baseRevision : trip.draftRevision,
+					conflict: model.conflict || (changedEpoch && hasIntent),
+					epoch: (preserve && changedEpoch) ? model.epoch : trip.epoch,
+					remote: $elm$core$Maybe$Just(trip),
+					ui: _Utils_update(
+						ui,
+						{
+							done: optimistic,
+							reviewTab: _Utils_eq(draft, trip.snapshot.selection) ? $author$project$Main$Current : $author$project$Main$Changes,
+							selectedGroup: $elm$core$Maybe$Nothing,
+							selection: selectionModel
+						})
+				});
+			return _Utils_Tuple2(
+				updated,
+				$elm$core$Platform$Cmd$batch(
+					_List_fromArray(
+						[
+							A2($author$project$HostedMain$selectionEffects, updated, effects),
+							$author$project$HostedMain$persist(updated)
+						])));
+		}
+	});
+var $author$project$HostedMain$Written = F3(
+	function (a, b, c) {
+		return {$: 'Written', a: a, b: b, c: c};
+	});
+var $author$project$HostedSync$Ack = F4(
+	function (draftRevision, generation, revision, trip) {
+		return {draftRevision: draftRevision, generation: generation, revision: revision, trip: trip};
+	});
+var $author$project$HostedSync$ackDecoder = A5(
+	$elm$json$Json$Decode$map4,
+	$author$project$HostedSync$Ack,
+	A2(
+		$elm$json$Json$Decode$at,
+		_List_fromArray(
+			['outcome', 'draftRevision']),
+		$elm$json$Json$Decode$int),
+	A2(
+		$elm$json$Json$Decode$at,
+		_List_fromArray(
+			['outcome', 'generation']),
+		$elm$json$Json$Decode$int),
+	A2(
+		$elm$json$Json$Decode$at,
+		_List_fromArray(
+			['outcome', 'revision']),
+		$elm$json$Json$Decode$int),
+	A2($elm$json$Json$Decode$field, 'trip', $author$project$HostedSync$tripDecoder));
+var $author$project$HostedMain$request = F3(
+	function (model, key, w) {
+		return $elm$http$Http$request(
+			{
+				body: $elm$http$Http$jsonBody(
+					$author$project$HostedSync$encodeWrite(w)),
+				expect: A2(
+					$elm$http$Http$expectJson,
+					A2($author$project$HostedMain$Written, key, w.mutationId),
+					$author$project$HostedSync$ackDecoder),
+				headers: _List_fromArray(
+					[
+						A2($elm$http$Http$header, 'If-Match', w.etag),
+						A2($elm$http$Http$header, 'X-Packing-Request', '1')
+					]),
+				method: (w.kind === 'apply') ? 'POST' : 'PUT',
+				timeout: $elm$core$Maybe$Just(15000),
+				tracker: $elm$core$Maybe$Nothing,
+				url: _Utils_ap(
+					$author$project$HostedMain$baseURL(model),
+					(w.kind === 'item') ? ('/items/' + w.item) : ('/' + w.kind))
+			});
+	});
+var $elm$core$Maybe$andThen = F2(
+	function (callback, maybeValue) {
+		if (maybeValue.$ === 'Just') {
+			var value = maybeValue.a;
+			return callback(value);
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $author$project$HostedMain$send = F3(
+	function (key, w, model) {
+		var ui = model.ui;
+		var done = function () {
+			var _v0 = A2(
+				$elm$core$Maybe$andThen,
+				function (trip) {
+					return A2($elm$core$Dict$get, w.item, trip.items);
+				},
+				model.remote);
+			if (_v0.$ === 'Just') {
+				var item = _v0.a;
+				return (w.kind === 'item') ? (w.packed ? A2($elm$core$Set$insert, item.name, ui.done) : A2($elm$core$Set$remove, item.name, ui.done)) : ui.done;
+			} else {
+				return ui.done;
+			}
+		}();
+		var updated = _Utils_update(
+			model,
+			{
+				next: model.next + 1,
+				pending: A3(
+					$elm$core$Dict$insert,
+					key,
+					{error: $elm$core$Maybe$Nothing, sending: true, write: w},
+					model.pending),
+				ui: _Utils_update(
+					ui,
+					{done: done})
+			});
+		return _Utils_Tuple2(
+			updated,
+			$elm$core$Platform$Cmd$batch(
+				_List_fromArray(
+					[
+						$author$project$HostedMain$persist(updated),
+						A3($author$project$HostedMain$request, updated, key, w)
+					])));
+	});
+var $author$project$HostedSync$tag = F3(
+	function (trip, resource, revision) {
+		return '\u0022' + (trip.epoch + (':' + (resource + (':' + ($elm$core$String$fromInt(revision) + '\u0022')))));
+	});
+var $author$project$HostedSync$write = F3(
+	function (id, kind, trip) {
+		return {
+			draftRevision: trip.draftRevision,
+			epoch: trip.epoch,
+			etag: A3(
+				$author$project$HostedSync$tag,
+				trip,
+				(kind === 'draft') ? 'draft' : 'snapshot',
+				(kind === 'draft') ? trip.draftRevision : trip.generation),
+			generation: trip.generation,
+			item: '',
+			kind: kind,
+			mutationId: id,
+			packed: false,
+			text: trip.draft
+		};
+	});
+var $author$project$HostedMain$saveDraft = function (model) {
+	var _v0 = model.remote;
+	if (_v0.$ === 'Nothing') {
+		return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+	} else {
+		var trip = _v0.a;
+		var w = A3(
+			$author$project$HostedSync$write,
+			$author$project$HostedMain$mutationId(model),
+			'draft',
+			trip);
+		return A3(
+			$author$project$HostedMain$send,
+			'draft',
+			_Utils_update(
+				w,
+				{
+					epoch: model.epoch,
+					etag: A3(
+						$author$project$HostedSync$tag,
+						_Utils_update(
+							trip,
+							{epoch: model.epoch}),
+						'draft',
+						model.baseRevision),
+					text: model.ui.selection.draftText
+				}),
+			model);
+	}
+};
+var $author$project$HostedMain$selection = F2(
+	function (msg, model) {
+		var _v0 = A2($author$project$Main$updateSelection, msg, model.ui);
+		var ui = _v0.a;
+		var updated = _Utils_update(
+			model,
+			{ui: ui});
+		var _v1 = A2($author$project$Selection$update, msg, model.ui.selection);
+		var effects = _v1.b;
+		return _Utils_Tuple2(
+			updated,
+			A2($author$project$HostedMain$selectionEffects, updated, effects));
+	});
+var $author$project$HostedMain$update = F2(
+	function (msg, model) {
+		switch (msg.$) {
+			case 'Refresh':
+				return $author$project$HostedMain$refresh(model);
+			case 'Loaded':
+				var serial = msg.a;
+				var result = msg.b;
+				if (!_Utils_eq(serial, model.fetchSerial)) {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				} else {
+					if (result.$ === 'Err') {
+						var err = result.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									error: $elm$core$Maybe$Just(
+										$author$project$HostedMain$errorText(err)),
+									loading: false
+								}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						var trip = result.a;
+						return A2(
+							$author$project$HostedMain$reconcile,
+							trip,
+							_Utils_update(
+								model,
+								{
+									error: _Utils_eq(model.unreadableRecovery, $elm$core$Maybe$Nothing) ? $elm$core$Maybe$Nothing : model.error,
+									loading: false
+								}));
+					}
+				}
+			case 'UI':
+				switch (msg.a.$) {
+					case 'SelectionMsg':
+						var selectionMsg = msg.a.a;
+						if (_Utils_eq(model.remote, $elm$core$Maybe$Nothing) || A2($elm$core$Dict$member, 'apply', model.pending)) {
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						} else {
+							if (selectionMsg.$ === 'Apply') {
+								var _v3 = model.remote;
+								if (_v3.$ === 'Just') {
+									var trip = _v3.a;
+									return (model.dirty || (model.conflict || ((!$elm$core$Dict$isEmpty(model.pending)) || (!$author$project$Selection$canApply(model.ui.selection))))) ? _Utils_Tuple2(model, $elm$core$Platform$Cmd$none) : A3(
+										$author$project$HostedMain$send,
+										'apply',
+										A3(
+											$author$project$HostedSync$write,
+											$author$project$HostedMain$mutationId(model),
+											'apply',
+											trip),
+										model);
+								} else {
+									return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+								}
+							} else {
+								var _v4 = A2($author$project$HostedMain$selection, selectionMsg, model);
+								var changed = _v4.a;
+								var command = _v4.b;
+								var dirty = !_Utils_eq(changed.ui.selection.draftText, changed.baseDraft);
+								var updated = _Utils_update(
+									changed,
+									{dirty: dirty});
+								return _Utils_Tuple2(
+									updated,
+									$elm$core$Platform$Cmd$batch(
+										_List_fromArray(
+											[
+												command,
+												$author$project$HostedMain$persist(updated),
+												A2(
+												$elm$core$Task$perform,
+												function (_v5) {
+													return $author$project$HostedMain$SaveDraft(updated.ui.selection.revision);
+												},
+												$elm$core$Process$sleep(500))
+											])));
+							}
+						}
+					case 'ItemDone':
+						var _v6 = msg.a;
+						var name = _v6.a;
+						var packed = _v6.b;
+						var _v7 = model.remote;
+						if (_v7.$ === 'Just') {
+							var trip = _v7.a;
+							if ((!_Utils_eq(model.ui.reviewTab, $author$project$Main$Current)) || ((!$elm$core$Dict$isEmpty(model.pending)) || model.conflict)) {
+								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							} else {
+								var _v8 = $elm$core$List$head(
+									A2(
+										$elm$core$List$filter,
+										function (item) {
+											return _Utils_eq(item.name, name);
+										},
+										$elm$core$Dict$values(trip.items)));
+								if (_v8.$ === 'Just') {
+									var item = _v8.a;
+									var w = A3(
+										$author$project$HostedSync$write,
+										$author$project$HostedMain$mutationId(model),
+										'item',
+										trip);
+									return A3(
+										$author$project$HostedMain$send,
+										'item-' + item.id,
+										_Utils_update(
+											w,
+											{
+												etag: A3($author$project$HostedSync$tag, trip, 'item-' + item.id, item.revision),
+												item: item.id,
+												packed: packed
+											}),
+										model);
+								} else {
+									return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+								}
+							}
+						} else {
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						}
+					case 'ClearDone':
+						var _v9 = msg.a;
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					default:
+						var other = msg.a;
+						var _v10 = A2($author$project$Main$update, other, model.ui);
+						var ui = _v10.a;
+						var command = _v10.b;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{ui: ui}),
+							A2($elm$core$Platform$Cmd$map, $author$project$HostedMain$UI, command));
+				}
+			case 'SaveDraft':
+				var revision = msg.a;
+				return ((!_Utils_eq(revision, model.ui.selection.revision)) || ((!model.dirty) || (model.conflict || A2($elm$core$Dict$member, 'draft', model.pending)))) ? _Utils_Tuple2(model, $elm$core$Platform$Cmd$none) : $author$project$HostedMain$saveDraft(model);
+			case 'Written':
+				var key = msg.a;
+				var id = msg.b;
+				var result = msg.c;
+				var _v11 = A2($elm$core$Dict$get, key, model.pending);
+				if (_v11.$ === 'Nothing') {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				} else {
+					var pending = _v11.a;
+					if (!_Utils_eq(pending.write.mutationId, id)) {
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					} else {
+						if (result.$ === 'Err') {
+							var err = result.a;
+							var conflicted = function () {
+								if (err.$ === 'BadStatus') {
+									var status = err.a;
+									return (status === 409) || (status === 412);
+								} else {
+									return false;
+								}
+							}();
+							var updated = _Utils_update(
+								model,
+								{
+									conflict: model.conflict || conflicted,
+									pending: A3(
+										$elm$core$Dict$insert,
+										key,
+										_Utils_update(
+											pending,
+											{
+												error: $elm$core$Maybe$Just(
+													$author$project$HostedMain$errorText(err)),
+												sending: false
+											}),
+										model.pending)
+								});
+							var _v13 = conflicted ? $author$project$HostedMain$refresh(updated) : _Utils_Tuple2(updated, $elm$core$Platform$Cmd$none);
+							var refreshing = _v13.a;
+							var cmd = _v13.b;
+							return _Utils_Tuple2(
+								refreshing,
+								$elm$core$Platform$Cmd$batch(
+									_List_fromArray(
+										[
+											cmd,
+											$author$project$HostedMain$persist(refreshing)
+										])));
+						} else {
+							var ack = result.a;
+							if (A2(
+								$elm$core$Maybe$withDefault,
+								false,
+								A2(
+									$elm$core$Maybe$map,
+									function (trip) {
+										return !_Utils_eq(trip.epoch, ack.trip.epoch);
+									},
+									model.remote))) {
+								return _Utils_Tuple2(
+									_Utils_update(
+										model,
+										{
+											conflict: true,
+											pending: A3(
+												$elm$core$Dict$insert,
+												key,
+												_Utils_update(
+													pending,
+													{
+														error: $elm$core$Maybe$Just('The dataset changed while saving. Refresh and review this edit.'),
+														sending: false
+													}),
+												model.pending)
+										}),
+									$elm$core$Platform$Cmd$none);
+							} else {
+								var next = _Utils_update(
+									model,
+									{
+										pending: A2($elm$core$Dict$remove, key, model.pending)
+									});
+								var acknowledged = (key === 'draft') ? _Utils_update(
+									next,
+									{
+										baseDraft: pending.write.text,
+										baseRevision: ack.draftRevision,
+										dirty: !_Utils_eq(next.ui.selection.draftText, pending.write.text)
+									}) : next;
+								var _v15 = A2($author$project$HostedMain$reconcile, ack.trip, acknowledged);
+								var merged = _v15.a;
+								var cmd = _v15.b;
+								var _v16 = (merged.dirty && ((!merged.conflict) && (!A2($elm$core$Dict$member, 'draft', merged.pending)))) ? $author$project$HostedMain$saveDraft(merged) : _Utils_Tuple2(merged, $elm$core$Platform$Cmd$none);
+								var saving = _v16.a;
+								var save = _v16.b;
+								return _Utils_Tuple2(
+									saving,
+									$elm$core$Platform$Cmd$batch(
+										_List_fromArray(
+											[
+												cmd,
+												save,
+												$author$project$HostedMain$persist(saving)
+											])));
+							}
+						}
+					}
+				}
+			case 'Retry':
+				return _Utils_Tuple2(
+					model,
+					A2(
+						$elm$core$Task$perform,
+						A2(
+							$elm$core$Basics$composeR,
+							$elm$time$Time$posixToMillis,
+							A2($elm$core$Basics$composeR, $elm$core$Basics$toFloat, $author$project$HostedMain$RetryAt)),
+						$elm$time$Time$now));
+			case 'RetryAt':
+				var now = msg.a;
+				if (model.conflict) {
+					return $author$project$HostedMain$refresh(model);
+				} else {
+					if (_Utils_cmp(now - model.started, (((6 * 24) * 60) * 60) * 1000) > -1) {
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									conflict: true,
+									error: $elm$core$Maybe$Just('These edits are too old to retry safely. Refresh and review them against the shared trip.')
+								}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						var retry = function (pending) {
+							return _Utils_update(
+								pending,
+								{error: $elm$core$Maybe$Nothing, sending: true});
+						};
+						var updated = _Utils_update(
+							model,
+							{
+								pending: A2(
+									$elm$core$Dict$map,
+									function (_v18) {
+										return retry;
+									},
+									model.pending)
+							});
+						return _Utils_Tuple2(
+							updated,
+							$elm$core$Platform$Cmd$batch(
+								A2(
+									$elm$core$List$cons,
+									$author$project$HostedMain$persist(updated),
+									A2(
+										$elm$core$List$map,
+										function (_v17) {
+											var key = _v17.a;
+											var pending = _v17.b;
+											return A3($author$project$HostedMain$request, model, key, pending.write);
+										},
+										$elm$core$Dict$toList(updated.pending)))));
+					}
+				}
+			case 'UseShared':
+				if (A2(
+					$elm$core$List$any,
+					function ($) {
+						return $.sending;
+					},
+					$elm$core$Dict$values(model.pending))) {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				} else {
+					var _v19 = model.remote;
+					if (_v19.$ === 'Nothing') {
+						return $author$project$HostedMain$refresh(model);
+					} else {
+						var trip = _v19.a;
+						return A2(
+							$author$project$HostedMain$reconcile,
+							trip,
+							_Utils_update(
+								model,
+								{conflict: false, dirty: false, epoch: trip.epoch, error: $elm$core$Maybe$Nothing, pending: $elm$core$Dict$empty, unreadableRecovery: $elm$core$Maybe$Nothing}));
+					}
+				}
+			case 'KeepDraft':
+				if (A2(
+					$elm$core$List$any,
+					function ($) {
+						return $.sending;
+					},
+					$elm$core$Dict$values(model.pending))) {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				} else {
+					var _v20 = model.remote;
+					if (_v20.$ === 'Nothing') {
+						return $author$project$HostedMain$refresh(model);
+					} else {
+						var trip = _v20.a;
+						return $author$project$HostedMain$saveDraft(
+							_Utils_update(
+								model,
+								{
+									baseDraft: trip.draft,
+									baseRevision: trip.draftRevision,
+									conflict: false,
+									dirty: !_Utils_eq(model.ui.selection.draftText, trip.draft),
+									epoch: trip.epoch,
+									error: $elm$core$Maybe$Nothing,
+									pending: $elm$core$Dict$empty
+								}));
+					}
+				}
+			case 'Export':
+				return _Utils_Tuple2(
+					model,
+					$author$project$HostedMain$exportRecovery(
+						A2(
+							$elm$core$Maybe$withDefault,
+							$author$project$HostedMain$encodeRecovery(model),
+							model.unreadableRecovery)));
+			default:
+				var result = msg.a;
+				return _Utils_eq(
+					result.state,
+					$author$project$HostedMain$encodeRecovery(model)) ? _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{storageError: result.error}),
+					$elm$core$Platform$Cmd$none) : _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+		}
+	});
+var $author$project$HostedMain$Export = {$: 'Export'};
+var $author$project$HostedMain$KeepDraft = {$: 'KeepDraft'};
+var $author$project$HostedMain$Retry = {$: 'Retry'};
+var $author$project$HostedMain$UseShared = {$: 'UseShared'};
+var $elm$virtual_dom$VirtualDom$map = _VirtualDom_map;
+var $elm$html$Html$map = $elm$virtual_dom$VirtualDom$map;
+var $author$project$HostedMain$view = function (model) {
+	var ui = model.ui;
+	var sending = A2(
+		$elm$core$List$any,
+		function ($) {
+			return $.sending;
+		},
+		$elm$core$Dict$values(model.pending));
+	var errors = A2(
+		$elm$core$List$cons,
+		model.error,
+		A2(
+			$elm$core$List$cons,
+			model.storageError,
+			A2(
+				$elm$core$List$map,
+				function ($) {
+					return $.error;
+				},
+				$elm$core$Dict$values(model.pending))));
+	var busy = !$elm$core$Dict$isEmpty(model.pending);
+	var doc = $author$project$Main$view(
+		_Utils_update(
+			ui,
+			{
+				hostedApplyLocked: busy || (model.dirty || (model.conflict || model.loading)),
+				hostedPackingLocked: busy || (model.conflict || _Utils_eq(model.remote, $elm$core$Maybe$Nothing)),
+				serverState: _Utils_eq(model.remote, $elm$core$Maybe$Nothing) ? $author$project$Main$LoadingSelection : (A2($elm$core$Dict$member, 'apply', model.pending) ? $author$project$Main$SavingSelection : $author$project$Main$LocalOnly)
+			}));
+	var status = _Utils_eq(model.remote, $elm$core$Maybe$Nothing) ? 'Trip not loaded' : (model.loading ? 'Refreshing…' : (model.conflict ? 'Conflicting edits — review required' : (A2(
+		$elm$core$List$any,
+		function ($) {
+			return $.sending;
+		},
+		$elm$core$Dict$values(model.pending)) ? 'Saving…' : ((busy || model.dirty) ? 'Unsynced on this device' : ((!_Utils_eq(model.storageError, $elm$core$Maybe$Nothing)) ? 'Saved on server; device recovery unavailable' : 'Saved')))));
+	return {
+		body: A2(
+			$elm$core$List$cons,
+			A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						A2($elm$html$Html$Attributes$style, 'padding', '1rem'),
+						A2($elm$html$Html$Attributes$attribute, 'aria-label', 'Trip sync')
+					]),
+				_Utils_ap(
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$p,
+							_List_fromArray(
+								[
+									A2($elm$html$Html$Attributes$attribute, 'role', 'status')
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text(status)
+								])),
+							A2(
+							$elm$html$Html$button,
+							_List_fromArray(
+								[
+									$elm$html$Html$Events$onClick($author$project$HostedMain$Refresh)
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Refresh trip')
+								])),
+							A2(
+							$elm$html$Html$button,
+							_List_fromArray(
+								[
+									$elm$html$Html$Events$onClick($author$project$HostedMain$Retry),
+									$elm$html$Html$Attributes$disabled(sending || ((!busy) || model.conflict))
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Retry unsaved edits')
+								])),
+							A2(
+							$elm$html$Html$button,
+							_List_fromArray(
+								[
+									$elm$html$Html$Events$onClick($author$project$HostedMain$Export)
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Export device recovery')
+								]))
+						]),
+					_Utils_ap(
+						A2(
+							$elm$core$List$map,
+							function (err) {
+								return A2(
+									$elm$html$Html$p,
+									_List_fromArray(
+										[
+											A2($elm$html$Html$Attributes$style, 'color', '#a32121')
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text(err)
+										]));
+							},
+							A2($elm$core$List$filterMap, $elm$core$Basics$identity, errors)),
+						(model.conflict || (busy && (!sending))) ? _List_fromArray(
+							[
+								A2(
+								$elm$html$Html$p,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Your draft remains in the editor. Shared draft:')
+									])),
+								A2(
+								$elm$html$Html$pre,
+								_List_fromArray(
+									[
+										A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap')
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text(
+										A2(
+											$elm$core$Maybe$withDefault,
+											'',
+											A2(
+												$elm$core$Maybe$map,
+												function ($) {
+													return $.draft;
+												},
+												model.remote)))
+									])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick($author$project$HostedMain$UseShared),
+										$elm$html$Html$Attributes$disabled(sending)
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Discard device edits and use shared trip')
+									])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick($author$project$HostedMain$KeepDraft),
+										$elm$html$Html$Attributes$disabled(
+										sending || (A2(
+											$elm$core$List$any,
+											function (p) {
+												return p.write.kind === 'item';
+											},
+											$elm$core$Dict$values(model.pending)) || (!_Utils_eq(model.unreadableRecovery, $elm$core$Maybe$Nothing))))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Save my draft over this shared draft')
+									]))
+							]) : _List_Nil))),
+			A2(
+				$elm$core$List$map,
+				$elm$html$Html$map($author$project$HostedMain$UI),
+				doc.body)),
+		title: 'Private packing trip'
+	};
+};
+var $author$project$HostedMain$main = $elm$browser$Browser$document(
+	{init: $author$project$HostedMain$init, subscriptions: $author$project$HostedMain$subscriptions, update: $author$project$HostedMain$update, view: $author$project$HostedMain$view});
+_Platform_export({'HostedMain':{'init':$author$project$HostedMain$main(
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (trip) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (storageError) {
+					return A2(
+						$elm$json$Json$Decode$andThen,
+						function (recovery) {
+							return A2(
+								$elm$json$Json$Decode$andThen,
+								function (now) {
+									return A2(
+										$elm$json$Json$Decode$andThen,
+										function (client) {
+											return $elm$json$Json$Decode$succeed(
+												{client: client, now: now, recovery: recovery, storageError: storageError, trip: trip});
+										},
+										A2($elm$json$Json$Decode$field, 'client', $elm$json$Json$Decode$string));
+								},
+								A2($elm$json$Json$Decode$field, 'now', $elm$json$Json$Decode$float));
+						},
+						A2(
+							$elm$json$Json$Decode$field,
+							'recovery',
+							$elm$json$Json$Decode$oneOf(
+								_List_fromArray(
+									[
+										$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
+										A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, $elm$json$Json$Decode$string)
+									]))));
+				},
+				A2(
+					$elm$json$Json$Decode$field,
+					'storageError',
+					$elm$json$Json$Decode$oneOf(
+						_List_fromArray(
+							[
+								$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
+								A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, $elm$json$Json$Decode$string)
+							]))));
+		},
+		A2($elm$json$Json$Decode$field, 'trip', $elm$json$Json$Decode$string)))(0)},'Main':{'init':$author$project$Main$main(
 	A2(
 		$elm$json$Json$Decode$andThen,
 		function (storageError) {

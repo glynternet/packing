@@ -67,6 +67,7 @@ app.ports.storeState.subscribe(state => {
 var elmJS []byte
 
 func buildCmdTree(logger log.Logger, _ io.Writer, rootCmd *cobra.Command) {
+	addHostedCommands(rootCmd)
 	const (
 		keyPackingGroups = "groups-dir"
 		keyPort          = "port"

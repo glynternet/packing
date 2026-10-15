@@ -1,6 +1,6 @@
 OUT_FILE ?= ../cmd/packing-server/elm.js
 
-ELM_SOURCES ?= ./src/Main.elm
+ELM_SOURCES ?= ./src/Main.elm ./src/HostedMain.elm
 ELM ?= ./node_modules/.bin/elm
 
 default: elm-js

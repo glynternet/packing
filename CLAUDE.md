@@ -201,3 +201,20 @@ perform both steps automatically.
   hand-written JSON structs in `pkg/api/api.go`.
 - **`internal/` vs `pkg/`**: loading/service orchestration is in `internal/`; reusable
   parsing, storage, graph, and render building blocks are in `pkg/`.
+
+## Hosted HTTP synchronization
+
+`packing-server hosted` provisions and operates one private durable trip. See
+[docs/hosting.md](docs/hosting.md) for commands, limits, access rotation,
+backup/restore and deployment verification. `internal/hosted` owns store transactions,
+resource versions, receipts and access records; `cmd/packing-server/hosted.go`
+wires the protected routes and CLI. Hosted mode does not register the legacy
+filesystem routes. `HostedMain.elm` and `HostedSync.elm` reuse Main's view and
+Selection's pure review behavior with authorized HTTP and device recovery.
+The frontend build includes both entry points in the embedded asset.
+
+`frontend/tests/browser/hosted.mjs` exercises synthetic two-device acceptance.
+Browser suites run sequentially because each rebuilds the shared embedded asset.
+Add backend race checks with `go test -race ./internal/hosted ./cmd/packing-server`.
+SSE, a library editor and a general migration UI are not implemented. Verify each
+deployment with actual desktop/phone clients as described in the hosting guide.

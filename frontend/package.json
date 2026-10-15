@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "test": "elm-test",
-    "test:browser": "node --test tests/browser/*.mjs"
+    "test:browser": "node --test --test-concurrency=1 tests/browser/*.mjs"
   },
   "devDependencies": {
     "elm": "0.19.2-0",

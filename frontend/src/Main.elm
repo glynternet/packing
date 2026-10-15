@@ -65,7 +65,10 @@ type SaveError
 
 
 type alias Model =
-    { selection : Selection.Model
+    { hosted : Bool
+    , hostedApplyLocked : Bool
+    , hostedPackingLocked : Bool
+    , selection : Selection.Model
     , reviewTab : ReviewTab
     , notice : Maybe String
     , storageError : Maybe String
@@ -224,7 +227,10 @@ Bart card
 
 defaultModel : Model
 defaultModel =
-    { selection = Selection.init Nothing defaultSelectionText Nothing |> Tuple.first
+    { hosted = False
+    , hostedApplyLocked = False
+    , hostedPackingLocked = False
+    , selection = Selection.init Nothing defaultSelectionText Nothing |> Tuple.first
     , reviewTab = Changes
     , notice = Nothing
     , storageError = Nothing
@@ -1024,7 +1030,10 @@ button:disabled { cursor: default; }
                     ]
                 , p []
                     [ text
-                        (if model.serverState == LocalOnly then
+                        (if model.hosted then
+                            "Drafts and packing progress sync to this private trip. Apply publishes the reviewed list."
+
+                         else if model.serverState == LocalOnly then
                             "Edit a draft, review its resolved items, then apply or discard your changes. Saved on this device."
 
                          else
@@ -1035,7 +1044,7 @@ button:disabled { cursor: default; }
                 , maybeMessage "#555" model.notice
                 , maybeMessage "#a32121" (Maybe.map (\error -> "Could not save on this device: " ++ error ++ " Your changes remain in this tab.") model.storageError)
                 , div []
-                    [ button [ onClick (SelectionMsg Selection.Apply), disabled (selectionLocked model || not (Selection.canApply model.selection)) ]
+                    [ button [ onClick (SelectionMsg Selection.Apply), disabled (model.hostedApplyLocked || selectionLocked model || not (Selection.canApply model.selection)) ]
                         [ text
                             (if model.selection.committed == Nothing then
                                 "Apply initial selection"
@@ -1045,7 +1054,15 @@ button:disabled { cursor: default; }
                             )
                         ]
                     , if model.selection.committed /= Nothing then
-                        button [ onClick (SelectionMsg Selection.Discard), disabled (selectionLocked model) ] [ text "Discard changes" ]
+                        button [ onClick (SelectionMsg Selection.Discard), disabled (selectionLocked model) ]
+                            [ text
+                                (if model.hosted then
+                                    "Restore draft to accepted list"
+
+                                 else
+                                    "Discard changes"
+                                )
+                            ]
 
                       else
                         text ""
@@ -1362,7 +1379,7 @@ overviewControlsView model =
                             [ text (inlineToggleLabel model.inlineSingletons) ]
                        , button [ onClick <| ItemsOnly (remainderBy 3 (model.itemsOnly + 1)) ] [ text "toggle items only" ]
                        ]
-                    ++ (if model.reviewTab == Current then
+                    ++ (if model.reviewTab == Current && not model.hosted then
                             [ button [ onClick ClearDone ] [ text "Clear packing progress" ] ]
 
                         else
@@ -1679,7 +1696,7 @@ itemsForView model groupFaded items =
 itemView : Model -> ( String, Bool ) -> String -> Html Msg
 itemView model ( itemKey, faded ) itemText =
     p
-        ((if model.reviewTab == Current then
+        ((if model.reviewTab == Current && not model.hostedPackingLocked then
             [ style "cursor" "pointer"
             , onClick (ItemDone itemKey (not (Set.member itemKey model.done)))
             ]
